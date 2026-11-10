@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "amount": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 40
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The total exactly as written, e.g. \"2400\", \"2,400.50\" or \"2.4k\". Null if absent."
+    },
+    "currency": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "ISO 4217 code if the text names a currency, e.g. \"INR\". Null otherwise."
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 120
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "A short title for the expense, e.g. \"Dinner\". Null if unclear."
+    },
+    "date": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 10
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The date as YYYY-MM-DD, resolved relative to today. Null if not mentioned."
+    },
+    "payer": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "me",
+            "person",
+            "unknown"
+          ]
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 100
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The payer’s name when kind is \"person\"."
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "description": "Who paid. \"me\" means the user writing the text."
+    },
+    "people": {
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "isMe": {
+            "type": "boolean",
+            "description": "True when this refers to the user writing the text."
+          }
+        },
+        "required": [
+          "name",
+          "isMe"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Everyone mentioned as sharing the expense."
+    },
+    "includesEveryone": {
+      "type": "boolean",
+      "description": "True when the text says to split among everyone in the group."
+    },
+    "split": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": [
+            "equal",
+            "exact",
+            "percent",
+            "shares"
+          ]
+        },
+        "values": {
+          "anyOf": [
+            {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "value": {
+                    "type": "string",
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Per-person amounts, percentages or shares exactly as written. Null for equal."
+        }
+      },
+      "required": [
+        "method",
+        "values"
+      ],
+      "additionalProperties": false
+    },
+    "category": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 60
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "A spending category if obvious, e.g. \"Food\"."
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 1000
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Anything relevant that fits no other field."
+    }
+  },
+  "required": [
+    "amount",
+    "currency",
+    "description",
+    "date",
+    "payer",
+    "people",
+    "includesEveryone",
+    "split",
+    "category",
+    "notes"
+  ],
+  "additionalProperties": false
+}

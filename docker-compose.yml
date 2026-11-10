@@ -1,0 +1,29 @@
+# Local development services. Start with `pnpm db:up`, stop with `pnpm db:down`.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: fairshare
+      POSTGRES_PASSWORD: fairshare
+      POSTGRES_DB: fairshare
+    ports:
+      # 5433 on the host, so it doesn't clash with a locally installed Postgres on 5432.
+      - '5433:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U fairshare -d fairshare']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Catches every email the app sends (OTP codes etc.). Inbox UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # web UI
+
+volumes:
+  postgres-data:

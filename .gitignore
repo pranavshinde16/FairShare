@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+*.tsbuildinfo
+
+# Turborepo
+.turbo/
+
+# Environment files: secrets never go into git (this repo is public)
+.env
+.env.*
+!.env.example
+
+# Test output
+playwright-report/
+test-results/
+
+# Logs and OS files
+*.log
+.DS_Store
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json

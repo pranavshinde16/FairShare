@@ -1,0 +1,13 @@
+# Development log
+
+One file per phase of the implementation plan. Each log records what was built, decisions and
+deviations from the plan, problems found and how they were fixed, verification results, and what
+comes next.
+
+| Phase | Log                                                         | Status      |
+| ----- | ----------------------------------------------------------- | ----------- |
+| 0     | [Project foundation](phase-00-foundation.md)                | Done        |
+| 1     | [Core domain logic](phase-01-core-domain.md)                | Done        |
+| 2     | [Contracts and API client](phase-02-contracts.md)           | Done        |
+| 3     | [Database](phase-03-database.md)                            | Done        |
+| 4     | [API skeleton and staging deploy](phase-04-api-skeleton.md) | In progress |

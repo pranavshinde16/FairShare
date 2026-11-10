@@ -1,0 +1,7 @@
+{
+  "extends": "@fairshare/config/tsconfig/library.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["src"]
+}

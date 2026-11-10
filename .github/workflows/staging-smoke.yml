@@ -1,0 +1,32 @@
+name: Staging smoke test
+
+# Railway reports each deploy to GitHub as a deployment. When one to the staging environment
+# succeeds, check the live site the same way CI checks the Docker image. Can also be run by hand.
+on:
+  deployment_status:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke test staging
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       contains(github.event.deployment.environment, 'staging'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # Repository variable (Settings → Secrets and variables → Actions → Variables), e.g.
+      # https://fairshare-staging.up.railway.app. Not a secret.
+      STAGING_URL: ${{ vars.STAGING_URL }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check STAGING_URL is set
+        run: test -n "$STAGING_URL" || { echo "Set the STAGING_URL repository variable."; exit 1; }
+
+      - run: scripts/smoke-test.sh "$STAGING_URL"

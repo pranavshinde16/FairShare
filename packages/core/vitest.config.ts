@@ -1,0 +1,14 @@
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    include: ['src/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/testing/**', 'src/index.ts'],
+      // The financial engine is the one place where every line and branch must be exercised.
+      thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
+    },
+  },
+});

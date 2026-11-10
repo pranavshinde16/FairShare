@@ -1,0 +1,4 @@
+{
+  "extends": "@fairshare/config/tsconfig/library.json",
+  "include": ["src"]
+}

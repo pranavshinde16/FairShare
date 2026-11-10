@@ -1,0 +1,40 @@
+{
+  "name": "@fairshare/db",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Drizzle schema, SQL migrations, the ledger view and seed scripts.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "generate": "drizzle-kit generate",
+    "generate:auth": "auth generate --config auth-schema.config.ts --output src/schema/auth.ts --yes && prettier --write src/schema/auth.ts",
+    "migrate": "tsx --env-file-if-exists=../../.env src/scripts/migrate.ts",
+    "seed": "tsx --env-file-if-exists=../../.env src/scripts/seed.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@fairshare/config": "workspace:*",
+    "@fairshare/contracts": "workspace:*",
+    "@fairshare/core": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "auth": "catalog:",
+    "better-auth": "catalog:",
+    "drizzle-kit": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

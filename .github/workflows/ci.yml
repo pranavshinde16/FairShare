@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Integration tests create throwaway databases on this server.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: fairshare
+          POSTGRES_PASSWORD: fairshare
+          POSTGRES_DB: fairshare_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fairshare -d fairshare_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://fairshare:fairshare@localhost:5432/fairshare_test
+      TEST_DATABASE_URL: postgres://fairshare:fairshare@localhost:5432/fairshare_test
+      TURBO_TELEMETRY_DISABLED: 1
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Reads the pnpm version from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+      # The committed migrations must be exactly what the schema generates.
+      - name: Migrations match the schema
+        run: |
+          pnpm --filter @fairshare/db generate
+          git diff --exit-code -- packages/db/migrations
+          test -z "$(git status --porcelain -- packages/db/migrations)"
+
+      - run: pnpm build
+
+  # The deployable artifact: build the Docker image, run its pre-deploy step and the server against
+  # a throwaway database, and smoke-test it exactly as staging is tested after a deploy.
+  image:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: fairshare
+          POSTGRES_PASSWORD: fairshare
+          POSTGRES_DB: fairshare
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fairshare -d fairshare"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://fairshare:fairshare@localhost:5432/fairshare
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - run: docker build -t fairshare:ci .
+
+      - name: Apply migrations with the image (twice, so a re-run is proven harmless)
+        run: |
+          docker run --rm --network host -e DATABASE_URL fairshare:ci node dist/migrate.js
+          docker run --rm --network host -e DATABASE_URL fairshare:ci node dist/migrate.js
+
+      - name: Start the server
+        run: docker run -d --name fairshare --network host -e DATABASE_URL fairshare:ci
+
+      - run: scripts/smoke-test.sh http://localhost:3000
+
+      - name: Server logs
+        if: always()
+        run: docker logs fairshare

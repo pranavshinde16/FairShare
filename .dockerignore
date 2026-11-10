@@ -1,0 +1,19 @@
+# What `docker build` may see. Secrets first: a .env must never end up in an image.
+.env
+.env.*
+!.env.example
+
+# Rebuilt inside the image.
+**/node_modules
+**/dist
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+
+# Not needed to build.
+.git
+.github
+.vscode
+docs
+docker
+*.log
