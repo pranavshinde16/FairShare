@@ -2,6 +2,16 @@ import { X } from 'lucide-react';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
+// Open dialogs lock the page's scrolling. Counted, so when one dialog hands over to another (a form
+// to its confirmation and back) the page stays locked until the last one closes.
+let scrollLocks = 0;
+function lockScroll() {
+  if (scrollLocks++ === 0) document.documentElement.style.overflow = 'hidden';
+}
+function unlockScroll() {
+  if (--scrollLocks === 0) document.documentElement.style.overflow = '';
+}
+
 /**
  * A modal on the browser's own <dialog>: it traps focus, closes on Esc and makes the page behind it
  * inert. A bottom sheet on phones, centered from 640px. (Not Radix's Dialog: its scroll lock injects
@@ -35,17 +45,16 @@ export function Dialog({
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-      document.documentElement.style.overflow = 'hidden';
+    if (open) {
+      if (!dialog.open) dialog.showModal();
+      lockScroll();
+      return unlockScroll;
     }
-    if (!open && dialog.open) {
+    if (dialog.open) {
       closingRef.current = true;
       dialog.close();
     }
-    return () => {
-      if (open) document.documentElement.style.overflow = '';
-    };
+    return undefined;
   }, [open]);
 
   return (

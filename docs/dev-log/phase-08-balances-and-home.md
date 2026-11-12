@@ -1,8 +1,8 @@
 # Phase 8: Balances and Home
 
 - **Dates:** 2026-11-12 (code part)
-- **Status:** In progress. The code is done and verified locally (integration, end-to-end, Docker
-  image). It goes live with the next push; then check it on staging (see "Lined up next").
+- **Status:** Done. Committed as c63675e; CI, the deploy and the staging check (the Balances tab
+  with a member's explanation, Home's totals, a friend page, "＋ Expense" from Home) passed.
 - **Plan reference:** Implementation blueprint §4.3 (friend detail), §4.6 (ledger and balances),
   §4.7 (simplification and how the UI explains it), §6.3 (Home, friends, balances endpoints), §7.1
   (query keys and invalidation), §7.2 (Home, Balances tab), §10.4 (friend consistency, load sanity),

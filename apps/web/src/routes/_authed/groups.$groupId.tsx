@@ -19,6 +19,7 @@ import { MembersTab } from '../../features/groups/members-tab';
 import { groupQuery } from '../../features/groups/queries';
 import { groupTitle } from '../../features/groups/title';
 import { currenciesQuery, meQuery } from '../../features/profile/queries';
+import { useFlash } from '../../lib/use-flash';
 import { cn } from '../../lib/utils';
 
 const TABS = ['expenses', 'balances', 'members'] as const;
@@ -47,6 +48,11 @@ function GroupPage() {
     void navigate({ to: '/groups/$groupId/expenses/new', params: { groupId } });
 
   useNewExpenseShortcut(addExpense);
+  // The position line lights up when it changes; not when it first loads.
+  const flash = useFlash(
+    JSON.stringify(balances.data?.me.net ?? null),
+    `${groupId} ${balances.data ? 'loaded' : 'loading'}`,
+  );
 
   if (group.error instanceof ApiError && group.error.status === 404) {
     return (
@@ -103,10 +109,14 @@ function GroupPage() {
       {/* My position stays in view above the tabs (Blueprint 7.2: pinned on phones). */}
       {tab !== 'balances' && balances.data && (
         <Link
+          key={flash.key}
           to="/groups/$groupId"
           params={{ groupId }}
           search={{ tab: 'balances' }}
-          className="-my-2 flex min-h-11 items-center justify-between gap-3 rounded-xl border px-4 py-2 text-sm hover:bg-muted"
+          className={cn(
+            '-my-2 flex min-h-11 items-center justify-between gap-3 rounded-xl border px-4 py-2 text-sm hover:bg-muted',
+            flash.className,
+          )}
         >
           <BalanceText balances={balances.data.me.net} kind="group" className="font-medium" />
           <span className="text-primary">Balances</span>

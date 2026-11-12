@@ -97,7 +97,7 @@ test('the Goa example: balances, Home and the friend page agree', async ({ page 
   await expect(page.getByRole('heading', { name: 'Bilal', exact: true })).toBeVisible();
   await expect(page.getByText('Bilal owes you ₹950.00', { exact: true })).toBeVisible();
   await expect(
-    page.getByRole('region', { name: 'By group' }).getByRole('link', { name: /Goa Trip/ }),
+    page.getByRole('region', { name: 'By group' }).getByRole('link', { name: /^Goa Trip/ }),
   ).toContainText('owes you ₹950.00');
 });
 

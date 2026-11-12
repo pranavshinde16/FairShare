@@ -100,6 +100,51 @@ describe('diffSnapshots', () => {
       'splitMethod',
     ]);
   });
+
+  describe('settlements', () => {
+    // Bilal pays Asha ₹950 by UPI.
+    const settlement: TransactionSnapshot = {
+      description: 'Settlement',
+      amount: 95_000,
+      currency: 'INR',
+      occurredOn: '2026-11-04',
+      notes: null,
+      splitMethod: null,
+      splitInput: null,
+      payers: [line('b', 95_000)],
+      shares: [line('a', 95_000)],
+      paymentMethod: 'upi',
+      paymentRef: null,
+    };
+
+    it('reports a change of method, and of reference, after the other fields', () => {
+      const after: TransactionSnapshot = {
+        ...settlement,
+        notes: 'n',
+        paymentMethod: 'cash',
+        paymentRef: 'UTR 123',
+      };
+      expect(diffSnapshots(settlement, after)).toEqual([
+        { field: 'notes', from: null, to: 'n' },
+        { field: 'paymentMethod', from: 'upi', to: 'cash' },
+        { field: 'paymentRef', from: null, to: 'UTR 123' },
+      ]);
+    });
+
+    it('reports a reference being cleared', () => {
+      expect(diffSnapshots({ ...settlement, paymentRef: 'UTR 1' }, settlement)).toEqual([
+        { field: 'paymentRef', from: 'UTR 1', to: null },
+      ]);
+    });
+
+    it('reports nothing when nothing changed', () => {
+      expect(diffSnapshots(settlement, { ...settlement })).toEqual([]);
+    });
+
+    it('treats an expense’s missing payment fields as null, so expenses diff as before', () => {
+      expect(diffSnapshots(base, { ...base, paymentRef: null })).toEqual([]);
+    });
+  });
 });
 
 describe('canonicalSnapshot', () => {

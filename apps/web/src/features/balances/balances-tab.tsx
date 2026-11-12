@@ -1,10 +1,13 @@
 import type { Group, GroupBalances, Money } from '@fairshare/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, ChevronDown, Info, PartyPopper } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { ArrowLeftRight, ArrowRight, ChevronDown, Info, PartyPopper } from 'lucide-react';
 import { Avatar } from '../../components/common/avatar';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
+import { Button } from '../../components/ui/button';
 import { useFormatMoney } from '../../lib/money';
+import { useFlash } from '../../lib/use-flash';
 import { cn } from '../../lib/utils';
 import { balancesQuery } from './queries';
 
@@ -13,7 +16,8 @@ const OWES = 'text-destructive';
 
 /**
  * Blueprint 7.2 Balances tab, in the order 4.7 explains it: my position first, then the suggested
- * payments, then everyone's balance with what it's made of, so anyone can check their own number.
+ * payments (each with "Settle"), then everyone's balance with what it's made of, so anyone can
+ * check their own number.
  */
 export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
   const balances = useQuery(balancesQuery(group.id));
@@ -28,15 +32,11 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
   const nameOf = (userId: string) =>
     userId === meId ? 'You' : (person(userId)?.name ?? 'Someone');
   const several = data.balances.length > 1;
+  const everyoneSettled = data.balances.every((entry) => entry.transfers.length === 0);
 
   return (
     <div className="flex flex-col gap-6">
-      <section aria-labelledby="position-heading" className="rounded-xl border p-4">
-        <h2 id="position-heading" className="text-sm font-medium text-muted-foreground">
-          Your balance
-        </h2>
-        <Position net={data.me.net} />
-      </section>
+      <PositionCard net={data.me.net} groupId={group.id} />
 
       {data.balances.map((entry) => {
         const mine = (t: { from: string; to: string }) => t.from === meId || t.to === meId;
@@ -56,7 +56,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
               {transfers.length === 0 ? (
                 <p className="flex items-center gap-2 rounded-xl border p-4 text-sm">
                   <PartyPopper aria-hidden className="size-4 text-primary" />
-                  All settled up
+                  {everyoneSettled ? 'All settled up' : `All settled up in ${entry.currency}`}
                 </p>
               ) : (
                 <ul className="flex flex-col divide-y rounded-xl border">
@@ -69,6 +69,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                         : t.to === meId
                           ? `${nameOf(t.from)} pays you`
                           : `${nameOf(t.from)} pays ${nameOf(t.to)}`;
+                    const amount = format({ amount: t.amount, currency: entry.currency });
                     return (
                       <li
                         key={`${t.from} ${t.to}`}
@@ -83,9 +84,24 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                           <Avatar name={to?.name ?? '?'} src={to?.avatarUrl} size="sm" />
                         </span>
                         <span className="min-w-0 flex-1 truncate text-sm">{words}</span>
-                        <span className="text-sm font-medium tabular-nums">
-                          {format({ amount: t.amount, currency: entry.currency })}
-                        </span>
+                        <span className="text-sm font-medium tabular-nums">{amount}</span>
+                        {/* Anyone can record any payment (Blueprint 4.8); mine stand out. */}
+                        {entry.currency === group.currency && (
+                          <Button
+                            asChild
+                            size="sm"
+                            variant={mine(t) ? 'default' : 'outline'}
+                            aria-label={`Settle: ${words} ${amount}`}
+                          >
+                            <Link
+                              to="/groups/$groupId/settle"
+                              params={{ groupId: group.id }}
+                              search={{ tab: 'balances', from: t.from, to: t.to }}
+                            >
+                              Settle
+                            </Link>
+                          </Button>
+                        )}
                       </li>
                     );
                   })}
@@ -102,6 +118,19 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                 </p>
               </details>
             </section>
+
+            {entry.currency === group.currency && (
+              <Button asChild variant="outline" className="self-start">
+                <Link
+                  to="/groups/$groupId/settle"
+                  params={{ groupId: group.id }}
+                  search={{ tab: 'balances' }}
+                >
+                  <ArrowLeftRight aria-hidden />
+                  Record a payment
+                </Link>
+              </Button>
+            )}
 
             <section aria-labelledby={`all-${entry.currency}`} className="flex flex-col gap-3">
               <h2 id={`all-${entry.currency}`} className="text-lg font-semibold">
@@ -137,6 +166,23 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
         );
       })}
     </div>
+  );
+}
+
+/** "Your balance", lighting up briefly when it changes (after a payment, say). */
+function PositionCard({ net, groupId }: { net: Money[]; groupId: string }) {
+  const flash = useFlash(JSON.stringify(net), groupId);
+  return (
+    <section
+      key={flash.key}
+      aria-labelledby="position-heading"
+      className={cn('rounded-xl border p-4', flash.className)}
+    >
+      <h2 id="position-heading" className="text-sm font-medium text-muted-foreground">
+        Your balance
+      </h2>
+      <Position net={net} />
+    </section>
   );
 }
 

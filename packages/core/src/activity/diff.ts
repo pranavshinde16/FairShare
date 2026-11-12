@@ -1,10 +1,15 @@
 import { byUserId } from '../split/allocate';
+import type { PaymentMethod } from '../ledger/types';
 import type { SplitInput, SplitMethod } from '../split/computeShares';
 import type { Line, Minor, UserId } from '../types';
 
 /**
  * What a transaction looked like at one moment, as stored in the activity log's before/after.
  * Arrays are sorted by userId (see canonicalSnapshot) so equal states always serialize identically.
+ *
+ * A settlement also records how it was paid (paymentMethod, paymentRef), so changing only the
+ * method is a real edit with its own history line. Expenses leave both out, which keeps their
+ * snapshots exactly as they were before settlements existed.
  */
 export type TransactionSnapshot = {
   description: string;
@@ -16,9 +21,18 @@ export type TransactionSnapshot = {
   splitInput: SplitInput | null;
   payers: Line[];
   shares: Line[];
+  paymentMethod?: PaymentMethod;
+  paymentRef?: string | null;
 };
 
-export type ScalarField = 'description' | 'currency' | 'occurredOn' | 'notes' | 'splitMethod';
+export type ScalarField =
+  | 'description'
+  | 'currency'
+  | 'occurredOn'
+  | 'notes'
+  | 'splitMethod'
+  | 'paymentMethod'
+  | 'paymentRef';
 
 export type LinesChange = {
   field: 'payers' | 'shares';
@@ -54,8 +68,10 @@ export function diffSnapshots(
 ): FieldChange[] {
   const changes: FieldChange[] = [];
   const scalar = (field: ScalarField) => {
-    if (before[field] !== after[field])
-      changes.push({ field, from: before[field], to: after[field] });
+    // A field a snapshot leaves out (an expense's payment fields) counts as null.
+    const from = before[field] ?? null;
+    const to = after[field] ?? null;
+    if (from !== to) changes.push({ field, from, to });
   };
 
   scalar('description');
@@ -65,6 +81,8 @@ export function diffSnapshots(
   scalar('occurredOn');
   scalar('notes');
   scalar('splitMethod');
+  scalar('paymentMethod');
+  scalar('paymentRef');
 
   for (const field of ['payers', 'shares'] as const) {
     const change = diffLines(field, before[field], after[field]);

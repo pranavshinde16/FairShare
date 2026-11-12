@@ -20,6 +20,7 @@ import { errorMessage } from '../../lib/errors';
 import { afterMembershipChange } from '../../lib/invalidation';
 import { useFormatMoney } from '../../lib/money';
 import { toast } from '../../lib/toast';
+import { useFlash } from '../../lib/use-flash';
 import { cn } from '../../lib/utils';
 
 export const Route = createFileRoute('/_authed/friends/$userId')({
@@ -52,6 +53,10 @@ function FriendPage() {
     if (!open.isPending) open.mutate();
   };
   useNewExpenseShortcut(addExpense);
+  const flash = useFlash(
+    JSON.stringify(friend.data?.total ?? null),
+    `${userId} ${friend.data ? 'loaded' : 'loading'}`,
+  );
 
   if (friend.error instanceof ApiError && friend.error.status === 404) {
     return (
@@ -90,7 +95,11 @@ function FriendPage() {
         </Button>
       </header>
 
-      <section aria-labelledby="total-heading" className="rounded-xl border p-4">
+      <section
+        key={flash.key}
+        aria-labelledby="total-heading"
+        className={cn('rounded-xl border p-4', flash.className)}
+      >
         <h2 id="total-heading" className="text-sm font-medium text-muted-foreground">
           Overall
         </h2>
@@ -103,11 +112,10 @@ function FriendPage() {
         </h2>
         <ul className="flex flex-col divide-y rounded-xl border">
           {breakdown.map((entry) => {
+            const where = entry.kind === 'direct' ? 'Just the two of you' : entry.groupName;
             const row = (
               <>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {entry.kind === 'direct' ? 'Just the two of you' : entry.groupName}
-                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{where}</span>
                 <BalanceText
                   balances={entry.balance.amount === 0 ? [] : [entry.balance]}
                   kind="person"
@@ -117,18 +125,36 @@ function FriendPage() {
             );
             const key = `${entry.groupId} ${entry.balance.currency}`;
             return (
-              <li key={key}>
+              <li key={key} className="flex items-center">
                 {entry.kind === 'group' ? (
                   <Link
                     to="/groups/$groupId"
                     params={{ groupId: entry.groupId }}
                     search={{ tab: 'balances' }}
-                    className="flex min-h-14 items-center gap-3 p-3 hover:bg-muted"
+                    className="flex min-h-14 min-w-0 flex-1 items-center gap-3 p-3 hover:bg-muted"
                   >
                     {row}
                   </Link>
                 ) : (
-                  <div className="flex min-h-14 items-center gap-3 p-3">{row}</div>
+                  <div className="flex min-h-14 min-w-0 flex-1 items-center gap-3 p-3">{row}</div>
+                )}
+                {/* Settling happens one group at a time (C5), so each group has its own button. */}
+                {entry.balance.amount !== 0 && (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="mr-3"
+                    aria-label={`Settle: ${where}`}
+                  >
+                    <Link
+                      to="/friends/$userId/settle"
+                      params={{ userId }}
+                      search={{ groupId: entry.groupId }}
+                    >
+                      Settle
+                    </Link>
+                  </Button>
                 )}
               </li>
             );

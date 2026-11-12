@@ -17,3 +17,14 @@ export function validate<Target extends keyof ValidationTargets, Schema extends 
     if (!result.success) throw new z.ZodRealError(result.error.issues);
   });
 }
+
+/**
+ * Parses a body already read as JSON against a schema chosen later (PUT /transactions/:id picks
+ * the expense or settlement shape by the stored transaction's type). A failure is the same
+ * VALIDATION_FAILED as validate() gives.
+ */
+export function parseBody<Schema extends ZodType>(schema: Schema, body: unknown): z.output<Schema> {
+  const result = schema.safeParse(body);
+  if (!result.success) throw new z.ZodRealError(result.error.issues);
+  return result.data;
+}

@@ -1,18 +1,22 @@
 import {
   CreateExpense,
+  CreateSettlement,
   parseIfMatch,
   TransactionListQuery,
-  UpdateExpense,
   Uuid,
 } from '@fairshare/contracts';
 import { Hono, type Context } from 'hono';
+import { z } from 'zod';
 import type { AuthedEnv } from '../../http/context';
 import { AppError } from '../../http/errors';
 import { validate } from '../../http/validate';
 import type { GroupEnv } from '../groups/membership';
 import type { TransactionsService } from './service';
 
-/** Under /groups/:groupId, behind requireMembership: the group's list, and adding expenses. */
+/**
+ * Under /groups/:groupId, behind requireMembership: the group's list, adding expenses and
+ * recording payments. Both creates answer 201, or 200 for an idempotent replay of the same body.
+ */
 export function groupTransactionsRoutes(transactions: TransactionsService) {
   return new Hono<GroupEnv>()
     .get('/transactions', validate('query', TransactionListQuery), async (c) =>
@@ -27,6 +31,14 @@ export function groupTransactionsRoutes(transactions: TransactionsService) {
         c.req.valid('json'),
       );
       return c.json(transaction, created ? 201 : 200);
+    })
+    .post('/settlements', validate('json', CreateSettlement), async (c) => {
+      const { transaction, created } = await transactions.createSettlement(
+        c.var.user.id,
+        c.var.membership,
+        c.req.valid('json'),
+      );
+      return c.json(transaction, created ? 201 : 200);
     });
 }
 
@@ -34,7 +46,7 @@ export function groupTransactionsRoutes(transactions: TransactionsService) {
 const transactionId = (c: Context) => {
   const id = Uuid.safeParse(c.req.param('id'));
   if (!id.success) {
-    throw new AppError('NOT_FOUND', 'This expense doesn’t exist, or you’re not in its group.');
+    throw new AppError('NOT_FOUND', 'This doesn’t exist, or you’re not in its group.');
   }
   return id.data;
 };
@@ -52,32 +64,35 @@ const ifMatch = (c: Context) => {
 };
 
 /**
- * /transactions/:id. Access is checked against the transaction's group: only its active members
- * see it (404 for everyone else). Settlements are created in Phase 9; delete and restore work for
- * both types already.
+ * /transactions/:id, for expenses and settlements alike. Access is checked against the
+ * transaction's group: only its active members see it (404 for everyone else).
  */
 export function transactionRoutes(transactions: TransactionsService) {
-  return new Hono<AuthedEnv>()
-    .get('/transactions/:id', async (c) =>
-      c.json(await transactions.getTransaction(c.var.user.id, transactionId(c))),
-    )
-    .put('/transactions/:id', validate('json', UpdateExpense), async (c) =>
-      c.json(
-        await transactions.updateExpense(
-          c.var.user.id,
-          transactionId(c),
-          ifMatch(c),
-          c.req.valid('json'),
+  return (
+    new Hono<AuthedEnv>()
+      .get('/transactions/:id', async (c) =>
+        c.json(await transactions.getTransaction(c.var.user.id, transactionId(c))),
+      )
+      // The body's shape depends on the stored type (UpdateExpense or UpdateSettlement), so the
+      // service validates it once it knows which; here it only has to be JSON.
+      .put('/transactions/:id', validate('json', z.unknown()), async (c) =>
+        c.json(
+          await transactions.updateTransaction(
+            c.var.user.id,
+            transactionId(c),
+            ifMatch(c),
+            c.req.valid('json'),
+          ),
         ),
-      ),
-    )
-    .delete('/transactions/:id', async (c) =>
-      c.json(await transactions.deleteTransaction(c.var.user.id, transactionId(c), ifMatch(c))),
-    )
-    .post('/transactions/:id/restore', async (c) =>
-      c.json(await transactions.restoreTransaction(c.var.user.id, transactionId(c), ifMatch(c))),
-    )
-    .get('/transactions/:id/history', async (c) =>
-      c.json(await transactions.history(c.var.user.id, transactionId(c))),
-    );
+      )
+      .delete('/transactions/:id', async (c) =>
+        c.json(await transactions.deleteTransaction(c.var.user.id, transactionId(c), ifMatch(c))),
+      )
+      .post('/transactions/:id/restore', async (c) =>
+        c.json(await transactions.restoreTransaction(c.var.user.id, transactionId(c), ifMatch(c))),
+      )
+      .get('/transactions/:id/history', async (c) =>
+        c.json(await transactions.history(c.var.user.id, transactionId(c))),
+      )
+  );
 }

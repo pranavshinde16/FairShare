@@ -26,9 +26,11 @@ import {
   type AddMember,
   type CreateGroup,
   type CreateExpense,
+  type CreateSettlement,
   type CreateInvite,
   type TransactionListQuery,
   type UpdateExpense,
+  type UpdateSettlement,
   type UpdateGroup,
   type UpdateProfile,
 } from '@fairshare/contracts';
@@ -106,10 +108,20 @@ export function createApiClient(options: ApiClientOptions) {
     ) => request(TransactionPage, `/api/v1/groups/${seg(groupId)}/transactions`, { query, signal }),
     createExpense: (groupId: string, body: CreateExpense) =>
       request(Transaction, `/api/v1/groups/${seg(groupId)}/expenses`, { method: 'POST', body }),
+    /** Records "from paid to" in the group. */
+    createSettlement: (groupId: string, body: CreateSettlement) =>
+      request(Transaction, `/api/v1/groups/${seg(groupId)}/settlements`, { method: 'POST', body }),
     transaction: (id: string, signal?: AbortSignal) =>
       request(Transaction, `/api/v1/transactions/${seg(id)}`, { signal }),
     /** Replaces an expense; `version` is the one the edit started from (If-Match). */
     updateExpense: (id: string, version: number, body: UpdateExpense) =>
+      request(Transaction, `/api/v1/transactions/${seg(id)}`, {
+        method: 'PUT',
+        body,
+        ifMatch: version,
+      }),
+    /** Replaces a settlement; `version` is the one the edit started from (If-Match). */
+    updateSettlement: (id: string, version: number, body: UpdateSettlement) =>
       request(Transaction, `/api/v1/transactions/${seg(id)}`, {
         method: 'PUT',
         body,

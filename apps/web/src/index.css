@@ -73,3 +73,21 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* A changed balance briefly lights up (lib/use-flash.ts). */
+@keyframes balance-flash {
+  from {
+    background-color: var(--accent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.balance-flash {
+  animation: balance-flash 1.5s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .balance-flash {
+    animation: none;
+  }
+}

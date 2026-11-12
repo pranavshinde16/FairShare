@@ -14,4 +14,5 @@ comes next.
 | 5     | [Authentication and profile](phase-05-auth-and-profile.md)             | Done        |
 | 6     | [Groups, members, friends and invites](phase-06-groups-and-invites.md) | Done        |
 | 7     | [Expense creation and editing](phase-07-expenses.md)                   | Done        |
-| 8     | [Balances and Home](phase-08-balances-and-home.md)                     | In progress |
+| 8     | [Balances and Home](phase-08-balances-and-home.md)                     | Done        |
+| 9     | [Settlements](phase-09-settlements.md)                                 | In progress |

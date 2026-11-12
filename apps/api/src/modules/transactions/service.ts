@@ -1,13 +1,16 @@
 import {
   latestOccurredOn,
+  SETTLEMENT_DESCRIPTION,
+  UpdateExpense,
+  UpdateSettlement,
   type ActivityEntry,
   type CreateExpense,
+  type CreateSettlement,
   type DeletedTransaction,
   type Transaction,
   type TransactionHistory,
   type TransactionListQuery,
   type TransactionPage,
-  type UpdateExpense,
   type UserRef,
 } from '@fairshare/contracts';
 import {
@@ -15,6 +18,7 @@ import {
   canonicalSnapshot,
   computeShares,
   DomainError,
+  settlementLines,
   validatePayers,
   type SplitInput,
   type TransactionSnapshot,
@@ -22,6 +26,7 @@ import {
 import { aiRequests, findPgError, withTx, type Db, type Tx } from '@fairshare/db';
 import { and, eq } from 'drizzle-orm';
 import { AppError } from '../../http/errors';
+import { parseBody } from '../../http/validate';
 import { recordActivity } from '../activity/record';
 import * as groupsRepo from '../groups/repo';
 import { invalid, type Membership } from '../groups/service';
@@ -29,11 +34,21 @@ import * as repo from './repo';
 
 export type TransactionsService = ReturnType<typeof createTransactionsService>;
 
-/** The money facts of an expense, computed exactly as the browser's preview does (seed = its ID). */
-type PreparedExpense = {
+/**
+ * A transaction ready to write: its snapshot (Blueprint 4.9) and payer and share rows. An expense's
+ * shares are computed exactly as the browser's preview does (seed = its ID).
+ */
+type Prepared = {
   snapshot: TransactionSnapshot;
   lines: repo.TransactionLines;
 };
+
+type TransactionType = repo.TransactionRow['type'];
+
+/** What the person-facing messages call each type. */
+const NOUN: Record<TransactionType, string> = { expense: 'expense', settlement: 'payment' };
+
+const NOT_FOUND_MESSAGE = 'This doesn’t exist, or you’re not in its group.';
 
 /**
  * `clock` is injectable so tests can pin "today" (the latest allowed date is today + 365 days).
@@ -43,9 +58,7 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
   async function access(handle: Db | Tx, me: string, id: string) {
     const row = await repo.findTransaction(handle, id);
     const membership = row && (await groupsRepo.findActiveMembership(handle, row.groupId, me));
-    if (!row || !membership) {
-      throw new AppError('NOT_FOUND', 'This expense doesn’t exist, or you’re not in its group.');
-    }
+    if (!row || !membership) throw new AppError('NOT_FOUND', NOT_FOUND_MESSAGE);
     return { row, group: membership.group };
   }
 
@@ -65,13 +78,16 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
     return (await present([row!], me))[0]!;
   }
 
-  /** Checks an expense against the group (currency, date, members) and computes its lines. */
-  async function prepareForGroup(
+  /**
+   * Checks a transaction against its group, holding the group still meanwhile: the group's
+   * currency, the date, and that everyone it names is an active member (I8).
+   */
+  async function checkAgainstGroup(
     tx: Tx,
-    id: string,
     groupId: string,
-    input: UpdateExpense,
-  ): Promise<PreparedExpense> {
+    type: TransactionType,
+    input: { currency: string; occurredOn: string; people: string[] },
+  ): Promise<void> {
     const group = await repo.shareLockGroup(tx, groupId);
     if (input.currency !== group!.currency) {
       throw new AppError('CURRENCY_MISMATCH', `Use the group’s currency, ${group!.currency}.`, {
@@ -83,20 +99,129 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
       throw invalid(['occurredOn'], 'That date is too far in the future.');
     }
     const states = await repo.memberStates(tx, groupId);
-    for (const userId of peopleIn(input)) {
+    for (const userId of input.people) {
       const active = states.get(userId.toLowerCase());
       if (active === undefined) {
-        throw new AppError('NOT_A_MEMBER', 'Everyone in the expense must be in the group.', {
+        throw new AppError('NOT_A_MEMBER', `Everyone in the ${NOUN[type]} must be in the group.`, {
           userId,
         });
       }
       if (!active) {
-        throw new AppError('MEMBER_INACTIVE', 'Someone in the expense has left the group.', {
+        throw new AppError('MEMBER_INACTIVE', `Someone in the ${NOUN[type]} has left the group.`, {
           userId,
         });
       }
     }
+  }
+
+  async function prepareExpenseForGroup(tx: Tx, id: string, groupId: string, input: UpdateExpense) {
+    await checkAgainstGroup(tx, groupId, 'expense', { ...input, people: peopleIn(input) });
     return prepareExpense(id, input);
+  }
+
+  async function prepareSettlementForGroup(
+    tx: Tx,
+    id: string,
+    groupId: string,
+    input: UpdateSettlement,
+  ) {
+    // From = to is SETTLEMENT_SAME_USER whether or not they're members, so check that first.
+    const prepared = prepareSettlement(id, input);
+    await checkAgainstGroup(tx, groupId, 'settlement', {
+      ...input,
+      people: [input.fromUserId, input.toUserId],
+    });
+    return prepared;
+  }
+
+  /**
+   * Inserts a new transaction and its "created" activity entry. The ID is the client's: a retry of
+   * the same transaction by the same person returns the stored one (created: false); anything else
+   * with that ID is ID_CONFLICT (C6).
+   */
+  async function create(
+    me: string,
+    groupId: string,
+    id: string,
+    type: TransactionType,
+    write: (tx: Tx) => Promise<{ prepared: Prepared; extra?: Partial<repo.NewTransactionRow> }>,
+    isReplay: (stored: TransactionSnapshot) => boolean,
+  ): Promise<{ transaction: Transaction; created: boolean }> {
+    const replay = async () => {
+      const existing = await repo.findTransaction(db, id);
+      if (
+        existing &&
+        existing.createdBy === me &&
+        existing.groupId === groupId &&
+        existing.type === type &&
+        isReplay(snapshotOf(existing, (await repo.linesFor(db, [id])).get(id)!))
+      ) {
+        return { transaction: await one(id, me), created: false };
+      }
+      throw new AppError('ID_CONFLICT', `Another ${NOUN[type]} already has this ID.`);
+    };
+    if (await repo.findTransaction(db, id)) return replay();
+
+    try {
+      await withTx(db, async (tx) => {
+        const { prepared, extra } = await write(tx);
+        await repo.insertTransaction(
+          tx,
+          { id, groupId, type, ...columnsOf(prepared.snapshot), ...extra, createdBy: me },
+          prepared.lines,
+        );
+        await recordActivity(tx, {
+          groupId,
+          actorId: me,
+          verb: 'transaction.created',
+          entityType: 'transaction',
+          entityId: id,
+          after: prepared.snapshot,
+        });
+      });
+    } catch (error) {
+      // Two requests with the same new ID at once: the loser hits the primary key.
+      if (findPgError(error)?.code === '23505') return replay();
+      throw error;
+    }
+    return { transaction: await one(id, me), created: true };
+  }
+
+  /**
+   * Replaces a transaction with a new version of the same type. A stale version is
+   * VERSION_CONFLICT with the current one, so the UI can reload; an unchanged body is a no-op.
+   */
+  async function edit(
+    me: string,
+    id: string,
+    ifMatch: number,
+    prepare: (tx: Tx, row: repo.TransactionRow) => Promise<Prepared>,
+  ): Promise<Transaction> {
+    await withTx(db, async (tx) => {
+      const row = await lockedForWrite(tx, me, id, ifMatch);
+      if (row.deletedAt) {
+        throw new AppError(
+          'TRANSACTION_DELETED',
+          `This ${NOUN[row.type]} was deleted. Restore it first.`,
+        );
+      }
+      const after = await prepare(tx, row);
+      const before = snapshotOf(row, (await repo.linesFor(tx, [row.id])).get(row.id)!);
+      if (sameSnapshot(before, after.snapshot)) return;
+
+      await repo.replaceLines(tx, row.id, after.lines);
+      await repo.saveEdit(tx, row.id, columnsOf(after.snapshot), row.version + 1, me);
+      await recordActivity(tx, {
+        groupId: row.groupId,
+        actorId: me,
+        verb: 'transaction.updated',
+        entityType: 'transaction',
+        entityId: row.id,
+        before,
+        after: after.snapshot,
+      });
+    });
+    return one(id.toLowerCase(), me);
   }
 
   async function checkAiRequest(tx: Tx, me: string, aiRequestId: number | undefined) {
@@ -119,47 +244,46 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
       input: CreateExpense,
     ): Promise<{ transaction: Transaction; created: boolean }> {
       const id = input.id.toLowerCase();
-      const replay = async () => {
-        const existing = await repo.findTransaction(db, id);
-        if (existing && (await isSameExpense(db, existing, me, membership.groupId, input))) {
-          return { transaction: await one(id, me), created: false };
-        }
-        throw new AppError('ID_CONFLICT', 'Another expense already has this ID.');
-      };
-      if (await repo.findTransaction(db, id)) return replay();
-
-      try {
-        await withTx(db, async (tx) => {
+      return create(
+        me,
+        membership.groupId,
+        id,
+        'expense',
+        async (tx) => {
           await checkAiRequest(tx, me, input.aiRequestId);
-          const { snapshot, lines } = await prepareForGroup(tx, id, membership.groupId, input);
-          await repo.insertTransaction(
-            tx,
-            {
-              id,
-              groupId: membership.groupId,
-              type: 'expense',
-              ...columnsOf(snapshot),
+          return {
+            prepared: await prepareExpenseForGroup(tx, id, membership.groupId, input),
+            extra: {
               source: input.aiRequestId === undefined ? 'manual' : 'ai_text',
               aiRequestId: input.aiRequestId ?? null,
-              createdBy: me,
             },
-            lines,
-          );
-          await recordActivity(tx, {
-            groupId: membership.groupId,
-            actorId: me,
-            verb: 'transaction.created',
-            entityType: 'transaction',
-            entityId: id,
-            after: snapshot,
-          });
-        });
-      } catch (error) {
-        // Two requests with the same new ID at once: the loser hits the primary key.
-        if (findPgError(error)?.code === '23505') return replay();
-        throw error;
-      }
-      return { transaction: await one(id, me), created: true };
+          };
+        },
+        (stored) => sameAs(stored, () => prepareExpense(id, input)),
+      );
+    },
+
+    /**
+     * POST /groups/:groupId/settlements (Blueprint 4.8): "from paid to". Any member may record a
+     * payment between any two members. Paying more than is owed is allowed (the UI asks first);
+     * the balance then simply flips direction.
+     */
+    async createSettlement(
+      me: string,
+      membership: Membership,
+      input: CreateSettlement,
+    ): Promise<{ transaction: Transaction; created: boolean }> {
+      const id = input.id.toLowerCase();
+      return create(
+        me,
+        membership.groupId,
+        id,
+        'settlement',
+        async (tx) => ({
+          prepared: await prepareSettlementForGroup(tx, id, membership.groupId, input),
+        }),
+        (stored) => sameAs(stored, () => prepareSettlement(id, input)),
+      );
     },
 
     /** GET /transactions/:id, deleted ones included (so they can be restored). */
@@ -193,41 +317,29 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
     },
 
     /**
-     * PUT /transactions/:id with If-Match: replaces the expense. A stale version is
-     * VERSION_CONFLICT with the current one, so the UI can reload; an unchanged body is a no-op.
+     * PUT /transactions/:id with If-Match. The body is the full new version in the shape of the
+     * stored transaction's type: an expense without its id (UpdateExpense), or a settlement
+     * without its id (UpdateSettlement). A transaction never changes type. Access is checked
+     * first, so a stranger gets 404 whatever they send.
      */
-    async updateExpense(
+    async updateTransaction(
       me: string,
       id: string,
       ifMatch: number,
-      input: UpdateExpense,
+      body: unknown,
     ): Promise<Transaction> {
-      await withTx(db, async (tx) => {
-        const row = await lockedForWrite(tx, me, id, ifMatch);
-        if (row.deletedAt) {
-          throw new AppError('TRANSACTION_DELETED', 'This expense was deleted. Restore it first.');
-        }
-        if (row.type !== 'expense') {
-          throw new AppError('VALIDATION_FAILED', 'Editing settlements isn’t available yet.');
-        }
+      const { row } = await access(db, me, id.toLowerCase());
+      if (row.type === 'settlement') {
+        const input = parseBody(UpdateSettlement, body);
+        return edit(me, id, ifMatch, (tx, locked) =>
+          prepareSettlementForGroup(tx, locked.id, locked.groupId, input),
+        );
+      }
+      const input = parseBody(UpdateExpense, body);
+      return edit(me, id, ifMatch, async (tx, locked) => {
         await checkAiRequest(tx, me, input.aiRequestId);
-        const after = await prepareForGroup(tx, row.id, row.groupId, input);
-        const before = snapshotOf(row, (await repo.linesFor(tx, [row.id])).get(row.id)!);
-        if (sameSnapshot(before, after.snapshot)) return;
-
-        await repo.replaceLines(tx, row.id, after.lines);
-        await repo.saveEdit(tx, row.id, columnsOf(after.snapshot), row.version + 1, me);
-        await recordActivity(tx, {
-          groupId: row.groupId,
-          actorId: me,
-          verb: 'transaction.updated',
-          entityType: 'transaction',
-          entityId: row.id,
-          before,
-          after: after.snapshot,
-        });
+        return prepareExpenseForGroup(tx, locked.id, locked.groupId, input);
       });
-      return one(id.toLowerCase(), me);
     },
 
     /** DELETE /transactions/:id with If-Match: a soft delete; balances drop it at once. */
@@ -270,7 +382,7 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
           if (states.get(userId) !== true) {
             throw new AppError(
               'MEMBER_INACTIVE',
-              'Someone in this expense has left the group, so it can’t be restored.',
+              `Someone in this ${NOUN[row.type]} has left the group, so it can’t be restored.`,
               { userId },
             );
           }
@@ -318,19 +430,21 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
   async function lockedForWrite(tx: Tx, me: string, id: string, ifMatch: number) {
     const row = await repo.lockTransaction(tx, id.toLowerCase());
     if (!row || !(await groupsRepo.findActiveMembership(tx, row.groupId, me))) {
-      throw new AppError('NOT_FOUND', 'This expense doesn’t exist, or you’re not in its group.');
+      throw new AppError('NOT_FOUND', NOT_FOUND_MESSAGE);
     }
     if (row.version !== ifMatch) {
-      throw new AppError('VERSION_CONFLICT', 'Someone changed this expense in the meantime.', {
-        currentVersion: row.version,
-      });
+      throw new AppError(
+        'VERSION_CONFLICT',
+        `Someone changed this ${NOUN[row.type]} in the meantime.`,
+        { currentVersion: row.version },
+      );
     }
     return row;
   }
 }
 
 /** Core's checks and computation: payers, shares (seeded by the ID), invariants. No database. */
-export function prepareExpense(id: string, input: UpdateExpense): PreparedExpense {
+export function prepareExpense(id: string, input: UpdateExpense): Prepared {
   const payers = validatePayers(input.amount, input.payers.map(lower));
   const split = lowerSplit(input.split);
   const shares = computeShares(input.amount, split, id);
@@ -356,31 +470,60 @@ export function prepareExpense(id: string, input: UpdateExpense): PreparedExpens
   return { snapshot, lines: { payers: snapshot.payers, shares: snapshot.shares } };
 }
 
-/** Whether a stored expense is exactly what this request would create (an idempotent replay). */
-async function isSameExpense(
-  db: Db,
-  row: repo.TransactionRow,
-  me: string,
-  groupId: string,
-  input: CreateExpense,
-): Promise<boolean> {
-  if (row.createdBy !== me || row.groupId !== groupId || row.type !== 'expense') return false;
-  let requested: PreparedExpense;
+/**
+ * A settlement as a transaction (Blueprint 4.8): one payer (from) and one share (to) for the same
+ * amount, a fixed description, and how it was paid. Core rejects paying yourself.
+ */
+export function prepareSettlement(id: string, input: UpdateSettlement): Prepared {
+  const { payers, shares } = settlementLines({
+    fromUserId: input.fromUserId.toLowerCase(),
+    toUserId: input.toUserId.toLowerCase(),
+    amount: input.amount,
+  });
+  assertTransactionInvariants({
+    id,
+    type: 'settlement',
+    currency: input.currency,
+    amount: input.amount,
+    payers,
+    shares,
+  });
+  const snapshot = canonicalSnapshot({
+    description: SETTLEMENT_DESCRIPTION,
+    amount: input.amount,
+    currency: input.currency,
+    occurredOn: input.occurredOn,
+    notes: input.note ? input.note : null,
+    splitMethod: null,
+    splitInput: null,
+    payers,
+    shares,
+    paymentMethod: input.method,
+    paymentRef: input.reference ?? null,
+  });
+  return { snapshot, lines: { payers, shares } };
+}
+
+/** Whether a stored snapshot is exactly what a request would create (an idempotent replay). */
+function sameAs(stored: TransactionSnapshot, prepare: () => Prepared): boolean {
+  let requested: Prepared;
   try {
-    requested = prepareExpense(row.id, input);
+    requested = prepare();
   } catch (error) {
-    if (error instanceof DomainError) return false; // a body that couldn't be the same expense
+    if (error instanceof DomainError) return false; // a body that couldn't be the same transaction
     throw error;
   }
-  const stored = (await repo.linesFor(db, [row.id])).get(row.id)!;
-  return sameSnapshot(snapshotOf(row, stored), requested.snapshot);
+  return sameSnapshot(stored, requested.snapshot);
 }
 
 const sameSnapshot = (a: TransactionSnapshot, b: TransactionSnapshot) =>
   JSON.stringify(canonicalSnapshot(a)) === JSON.stringify(canonicalSnapshot(b));
 
 /** The snapshot of a stored row (Blueprint 4.9 format). */
-export function snapshotOf(row: repo.TransactionRow, lines: repo.TransactionLines) {
+export function snapshotOf(
+  row: repo.TransactionRow,
+  lines: repo.TransactionLines,
+): TransactionSnapshot {
   return canonicalSnapshot({
     description: row.description,
     amount: row.amount,
@@ -391,6 +534,10 @@ export function snapshotOf(row: repo.TransactionRow, lines: repo.TransactionLine
     splitInput: row.splitInput as SplitInput | null,
     payers: lines.payers,
     shares: lines.shares,
+    ...(row.type === 'settlement' && {
+      paymentMethod: row.paymentMethod!,
+      paymentRef: row.paymentRef,
+    }),
   });
 }
 
@@ -402,6 +549,8 @@ const columnsOf = (s: TransactionSnapshot) => ({
   occurredOn: s.occurredOn,
   splitMethod: s.splitMethod,
   splitInput: s.splitInput,
+  paymentMethod: s.paymentMethod ?? null,
+  paymentRef: s.paymentRef ?? null,
 });
 
 function toTransaction(

@@ -71,6 +71,99 @@ describe('describeEntry', () => {
     );
   });
 
+  it('reads removals as their own verb, not after “changed”', () => {
+    const before = snapshot({ notes: 'Tip included' });
+    expect(describeEntry(entry('transaction.updated', before, snapshot()), name, money)).toBe(
+      'Asha removed the notes',
+    );
+    expect(
+      describeEntry(
+        entry(
+          'transaction.updated',
+          before,
+          snapshot({
+            amount: 1200,
+            payers: [{ userId: A, amount: 1200 }],
+            shares: [
+              { userId: A, amount: 600 },
+              { userId: B, amount: 600 },
+            ],
+          }),
+        ),
+        name,
+        money,
+      ),
+    ).toBe(
+      'Asha changed the amount ₹10.00 → ₹12.00, Asha’s payment ₹10.00 → ₹12.00, Asha’s share ₹5.00 → ₹6.00, Bilal’s share ₹5.00 → ₹6.00 and removed the notes',
+    );
+  });
+
+  it('says “your” when the reader is named “you”', () => {
+    const you = (id: string) => (id === A ? 'you' : name(id));
+    const after = snapshot({ amount: 1200, payers: [{ userId: A, amount: 1200 }] });
+    expect(describeEntry(entry('transaction.updated', snapshot(), after), you, money)).toContain(
+      'your payment ₹10.00 → ₹12.00',
+    );
+  });
+
+  describe('a payment', () => {
+    // Bilal paid Asha ₹9.50 by UPI.
+    const payment = (overrides: Record<string, unknown> = {}) =>
+      snapshot({
+        description: 'Settlement',
+        amount: 950,
+        splitMethod: null,
+        splitInput: null,
+        payers: [{ userId: B, amount: 950 }],
+        shares: [{ userId: A, amount: 950 }],
+        paymentMethod: 'upi',
+        paymentRef: null,
+        ...overrides,
+      });
+
+    it('is recorded rather than added', () => {
+      expect(describeEntry(entry('transaction.created', null, payment()), name, money)).toBe(
+        'Asha recorded it',
+      );
+      expect(describeEntry(entry('transaction.deleted', payment(), null), name, money)).toBe(
+        'Asha deleted it',
+      );
+    });
+
+    it('reads its amount once, not as a payment and a share as well', () => {
+      const after = payment({
+        amount: 1000,
+        payers: [{ userId: B, amount: 1000 }],
+        shares: [{ userId: A, amount: 1000 }],
+      });
+      expect(describeEntry(entry('transaction.updated', payment(), after), name, money)).toBe(
+        'Asha changed the amount ₹9.50 → ₹10.00',
+      );
+    });
+
+    it('names a new payer, recipient, method and reference', () => {
+      const after = payment({
+        payers: [{ userId: C, amount: 950 }],
+        shares: [{ userId: B, amount: 950 }],
+        paymentMethod: 'bank_transfer',
+        paymentRef: 'NEFT 77',
+      });
+      expect(describeEntry(entry('transaction.updated', payment(), after), name, money)).toBe(
+        'Asha changed the method to Bank, the reference to “NEFT 77”, who paid to Chitra and who was paid to Bilal',
+      );
+    });
+
+    it('reads a cleared reference as removed', () => {
+      expect(
+        describeEntry(
+          entry('transaction.updated', payment({ paymentRef: 'R1' }), payment()),
+          name,
+          money,
+        ),
+      ).toBe('Asha removed the reference');
+    });
+  });
+
   it('falls back gracefully on a snapshot it can’t read', () => {
     expect(describeEntry(entry('transaction.updated', { odd: true }, null), name, money)).toBe(
       'Asha edited it',

@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useFormatMoney } from '../../lib/money';
 import { cn } from '../../lib/utils';
+import { methodLabel, paymentSentence } from '../settlements/payment';
 import { transactionsQuery } from './queries';
 import { useIsPending } from './use-create-expense';
 
@@ -135,19 +136,37 @@ function Row({
   const money = (amount: number) => format({ amount, currency: tx.currency });
   const [y, m, d] = tx.occurredOn.split('-').map(Number);
   const date = new Date(y!, m! - 1, d);
+  // A payment reads "Bilal paid you" with its method; an expense, its description and who paid.
+  const title =
+    tx.type === 'settlement'
+      ? paymentSentence(tx.payers[0].userId, tx.shares[0].userId, meId, nameOf)
+      : tx.description;
   const who =
     tx.type === 'settlement'
-      ? `${nameOf(tx.payers[0].userId)} paid ${nameOf(tx.shares[0].userId)}`
+      ? `Payment · ${methodLabel(tx.paymentMethod)}`
       : tx.payers.length === 1
         ? `${nameOf(tx.payers[0]!.userId)} paid ${money(tx.amount)}`
         : `${tx.payers.length} people paid ${money(tx.amount)}`;
   const involved = [...tx.payers, ...tx.shares].some((l) => l.userId === meId);
   const effect =
-    tx.myNet > 0
-      ? { text: `you lent ${money(tx.myNet)}`, className: 'text-emerald-700 dark:text-emerald-400' }
-      : tx.myNet < 0
-        ? { text: `you borrowed ${money(-tx.myNet)}`, className: 'text-destructive' }
-        : { text: involved ? 'even' : 'not involved', className: 'text-muted-foreground' };
+    tx.type === 'settlement'
+      ? {
+          text:
+            tx.myNet > 0
+              ? `you paid ${money(tx.myNet)}`
+              : tx.myNet < 0
+                ? `you received ${money(-tx.myNet)}`
+                : money(tx.amount),
+          className: 'text-muted-foreground',
+        }
+      : tx.myNet > 0
+        ? {
+            text: `you lent ${money(tx.myNet)}`,
+            className: 'text-emerald-700 dark:text-emerald-400',
+          }
+        : tx.myNet < 0
+          ? { text: `you borrowed ${money(-tx.myNet)}`, className: 'text-destructive' }
+          : { text: involved ? 'even' : 'not involved', className: 'text-muted-foreground' };
 
   const content = (
     <>
@@ -168,9 +187,7 @@ function Row({
         )}
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className={cn('truncate font-medium', tx.deletedAt && 'line-through')}>
-          {tx.type === 'settlement' ? 'Settlement' : tx.description}
-        </span>
+        <span className={cn('truncate font-medium', tx.deletedAt && 'line-through')}>{title}</span>
         <span className="truncate text-xs text-muted-foreground">
           {pending ? 'Saving…' : who}
           {tx.deletedAt && ' · deleted'}

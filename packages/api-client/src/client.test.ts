@@ -164,6 +164,7 @@ describe('group, invite, friend and claim endpoints', () => {
 
 describe('every endpoint method', () => {
   const ID = '01900000-0000-7000-8000-000000000100';
+  const OTHER = '01900000-0000-7000-8000-000000000200';
   const USER = { id: ID, name: 'Asha', avatarUrl: null, isPlaceholder: false };
   const MEMBER = { user: USER, role: 'owner', joinedAt: '2026-11-01T08:00:00.000Z', leftAt: null };
   const GROUP = {
@@ -206,6 +207,29 @@ describe('every endpoint method', () => {
     deletedAt: null,
     version: 3,
     myNet: 0,
+  };
+
+  const NEW_SETTLEMENT = {
+    id: ID,
+    fromUserId: ID,
+    toUserId: OTHER,
+    amount: 1000,
+    currency: 'INR',
+    occurredOn: '2026-11-01',
+    method: 'upi' as const,
+  };
+  const { id: _settlementId, ...SETTLEMENT_EDIT } = NEW_SETTLEMENT;
+  const SETTLEMENT = {
+    ...EXPENSE,
+    type: 'settlement',
+    description: 'Settlement',
+    splitMethod: null,
+    splitInput: null,
+    payers: [{ userId: ID, amount: 1000 }],
+    shares: [{ userId: OTHER, amount: 1000 }],
+    paymentMethod: 'upi',
+    paymentRef: null,
+    myNet: 1000,
   };
 
   type Case = [
@@ -365,6 +389,23 @@ describe('every endpoint method', () => {
       `/api/v1/groups/${ID}/expenses`,
       EXPENSE,
       NEW_EXPENSE,
+    ],
+    [
+      'createSettlement',
+      (api) => api.createSettlement(ID, NEW_SETTLEMENT),
+      'POST',
+      `/api/v1/groups/${ID}/settlements`,
+      SETTLEMENT,
+      NEW_SETTLEMENT,
+    ],
+    [
+      'updateSettlement',
+      (api) => api.updateSettlement(ID, 3, SETTLEMENT_EDIT),
+      'PUT',
+      `/api/v1/transactions/${ID}`,
+      SETTLEMENT,
+      SETTLEMENT_EDIT,
+      '"3"',
     ],
     ['transaction', (api) => api.transaction(ID), 'GET', `/api/v1/transactions/${ID}`, EXPENSE],
     [

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { page } from './pagination';
 import { Amount, CurrencyCode, IsoDate, Line, Timestamp, Uuid } from './primitives';
 import { SplitInput, SplitMethod } from './split';
+import { PaymentMethod } from './transactions';
 import { UserRef } from './users';
 
 export const ACTIVITY_VERBS = [
@@ -41,6 +42,9 @@ export const TransactionSnapshot = z.object({
   splitInput: SplitInput.nullable(),
   payers: z.array(Line),
   shares: z.array(Line),
+  /** Settlements only; expenses leave both out. */
+  paymentMethod: PaymentMethod.optional(),
+  paymentRef: z.string().nullable().optional(),
 });
 export type TransactionSnapshot = z.infer<typeof TransactionSnapshot>;
 

@@ -20,7 +20,6 @@ import { afterAll, describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 import { uuidv7 } from '../../lib/ids';
 import { integrationApp } from '../../testing/integration';
-import * as transactionsRepo from '../transactions/repo';
 
 const ctx = await integrationApp({ clock: () => new Date('2026-11-12T10:00:00Z') });
 afterAll(() => ctx.drop());
@@ -134,25 +133,19 @@ async function goa() {
   return { asha, bilal, chitra, dev, group, hotel, dinner, fuel };
 }
 
-/** A settlement written straight to the database: creating them through the API is Phase 9. */
-async function settle(groupId: string, from: string, to: string, amount: number) {
-  await withTx(ctx.db, (tx) =>
-    transactionsRepo.insertTransaction(
-      tx,
-      {
-        id: uuidv7(),
-        groupId,
-        type: 'settlement',
-        description: 'Settlement',
-        currency: 'INR',
-        amount,
-        occurredOn: '2026-11-11',
-        paymentMethod: 'upi',
-        createdBy: from,
-      },
-      { payers: [{ userId: from, amount }], shares: [{ userId: to, amount }] },
-    ),
-  );
+/** `who` records that `from` paid `to` (POST /groups/:id/settlements). */
+async function settle(who: Who, groupId: string, from: string, to: string, amount: number) {
+  const res = await ctx.call(who, 'POST', `/api/v1/groups/${groupId}/settlements`, {
+    id: uuidv7(),
+    fromUserId: from,
+    toUserId: to,
+    amount,
+    currency: 'INR',
+    occurredOn: '2026-11-11',
+    method: 'upi',
+  });
+  expect(res.status, JSON.stringify(res.body)).toBe(201);
+  return Transaction.parse(res.body);
 }
 
 describe('the Goa example (Blueprint 5.3)', () => {
@@ -303,7 +296,7 @@ describe('the Goa example (Blueprint 5.3)', () => {
     const { asha, bilal, chitra, dev, group } = await goa();
 
     // Blueprint 5.5: Bilal pays Asha ₹950, so A +900, B 0, C −150, D −750.
-    await settle(group.id, bilal.id, asha.id, 95_000);
+    await settle(bilal, group.id, bilal.id, asha.id, 95_000);
 
     const balances = await balancesOf(asha, group.id);
     expect(balances.balances[0]!.nets).toEqual([

@@ -16,13 +16,17 @@ import { historyQuery, transactionQuery } from '../../features/expenses/queries'
 import { groupQuery } from '../../features/groups/queries';
 import { groupTitle } from '../../features/groups/title';
 import { currenciesQuery, meQuery } from '../../features/profile/queries';
+import { methodLabel, paymentSentence } from '../../features/settlements/payment';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { afterTransactionChange } from '../../lib/invalidation';
 import { toast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 
-/** Blueprint 7.2 "Expense details": the amounts, who paid, each share, my effect, history. */
+/**
+ * Blueprint 7.2 "Expense details": the amounts, who paid, each share, my effect, history. A payment
+ * shows who paid whom, how, and its reference.
+ */
 export const Route = createFileRoute('/_authed/transactions/$id')({
   component: TransactionPage,
 });
@@ -41,7 +45,7 @@ function TransactionPage() {
 
   if (tx.error instanceof ApiError && tx.error.status === 404) {
     return (
-      <EmptyState icon={Receipt} title="Expense not found">
+      <EmptyState icon={Receipt} title="Not found">
         It doesn’t exist, or you’re not in its group.
       </EmptyState>
     );
@@ -68,6 +72,14 @@ function TransactionPage() {
       ? group.data.members.find((m) => m.user.id !== meId)?.user
       : undefined;
   const deleted = data.deletedAt !== null;
+  const settlement = data.type === 'settlement';
+  // "‘Dinner’" for an expense, "the payment" for a settlement, in toasts and the delete question.
+  const what = settlement ? 'the payment' : `‘${data.description}’`;
+  const title =
+    data.type === 'settlement'
+      ? paymentSentence(data.payers[0].userId, data.shares[0].userId, meId, nameOf)
+      : data.description;
+  const editable = data.type === 'settlement' || isEditableHere(data);
 
   async function restore() {
     setRestoring(true);
@@ -75,7 +87,7 @@ function TransactionPage() {
       const restored = await api.restoreTransaction(data.id, data.version);
       queryClient.setQueryData(transactionQuery(data.id).queryKey, restored);
       await afterTransactionChange(queryClient, data.groupId, data.id);
-      toast(`Restored ‘${data.description}’`);
+      toast(`Restored ${what}`);
     } catch (error) {
       toast(errorMessage(error), { tone: 'error' });
     } finally {
@@ -106,7 +118,7 @@ function TransactionPage() {
 
       <header className="flex flex-col gap-1">
         <h1 className={cn('text-2xl font-semibold tracking-tight', deleted && 'line-through')}>
-          {data.type === 'settlement' ? 'Settlement' : data.description}
+          {title}
         </h1>
         <p className="text-3xl font-semibold tabular-nums">{money(data.amount)}</p>
         <p className="text-sm text-muted-foreground">
@@ -118,19 +130,35 @@ function TransactionPage() {
       <p
         className={cn(
           'text-sm font-medium',
-          data.myNet > 0
-            ? 'text-emerald-700 dark:text-emerald-400'
-            : data.myNet < 0
-              ? 'text-destructive'
-              : 'text-muted-foreground',
+          // A payment moves money, it isn't a debt: neutral, as in the list.
+          settlement
+            ? 'text-muted-foreground'
+            : data.myNet > 0
+              ? 'text-emerald-700 dark:text-emerald-400'
+              : data.myNet < 0
+                ? 'text-destructive'
+                : 'text-muted-foreground',
         )}
       >
         {data.myNet > 0
-          ? `You lent ${money(data.myNet)}`
+          ? `${settlement ? 'You paid' : 'You lent'} ${money(data.myNet)}`
           : data.myNet < 0
-            ? `You borrowed ${money(-data.myNet)}`
+            ? `${settlement ? 'You received' : 'You borrowed'} ${money(-data.myNet)}`
             : 'This doesn’t change your balance'}
       </p>
+
+      {data.type === 'settlement' && (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <dt className="text-muted-foreground">Method</dt>
+          <dd>{methodLabel(data.paymentMethod)}</dd>
+          {data.paymentRef && (
+            <>
+              <dt className="text-muted-foreground">Reference</dt>
+              <dd className="break-all">{data.paymentRef}</dd>
+            </>
+          )}
+        </dl>
+      )}
 
       {data.notes && <p className="text-sm whitespace-pre-wrap">{data.notes}</p>}
 
@@ -142,7 +170,7 @@ function TransactionPage() {
           </Button>
         ) : (
           <>
-            {isEditableHere(data) && (
+            {editable && (
               <Button asChild variant="outline">
                 <Link to="/transactions/$id/edit" params={{ id: data.id }}>
                   <Pencil aria-hidden />
@@ -157,7 +185,7 @@ function TransactionPage() {
           </>
         )}
       </div>
-      {!deleted && !isEditableHere(data) && data.type === 'expense' && (
+      {!deleted && !editable && (
         <p className="text-sm text-muted-foreground">
           This expense uses a split the editor can’t change yet.
         </p>
@@ -165,7 +193,7 @@ function TransactionPage() {
 
       <section aria-labelledby="paid-heading" className="flex flex-col gap-2">
         <h2 id="paid-heading" className="text-sm font-semibold">
-          {data.type === 'settlement' ? 'Paid' : 'Paid by'}
+          {settlement ? 'From' : 'Paid by'}
         </h2>
         <LineList lines={data.payers} nameOf={nameOf} person={person} money={money} />
       </section>
@@ -186,7 +214,7 @@ function TransactionPage() {
           <ol className="flex flex-col gap-2 text-sm">
             {history.data.items.map((entry) => (
               <li key={entry.id} className="flex flex-col">
-                <span>{describeEntry(entry, (u) => nameOf(u), money)}</span>
+                <span>{describeEntry(entry, (u) => (u === meId ? 'you' : nameOf(u)), money)}</span>
                 <span className="text-xs text-muted-foreground">
                   {new Intl.DateTimeFormat(undefined, {
                     dateStyle: 'medium',
@@ -204,13 +232,13 @@ function TransactionPage() {
       <ConfirmDialog
         open={deleting}
         onClose={() => setDeleting(false)}
-        title={`Delete ‘${data.description}’?`}
+        title={`Delete ${what}?`}
         confirmLabel="Delete"
         destructive
         onConfirm={async () => {
           const result = await api.deleteTransaction(data.id, data.version);
           await afterTransactionChange(queryClient, data.groupId, data.id);
-          toast(`Deleted ‘${data.description}’`, {
+          toast(`Deleted ${what}`, {
             action: {
               label: 'Undo',
               run: () =>

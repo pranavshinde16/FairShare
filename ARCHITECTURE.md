@@ -256,6 +256,35 @@ separate chunk, loaded only when configured.
 - **Invalidation** (`apps/web/src/lib/invalidation.ts`) is one map from each kind of change to the
   query keys it makes stale; every mutation goes through it.
 
+## Settlements
+
+- **A settlement is a transaction** (Blueprint 4.8, C2): `POST /groups/:id/settlements` stores "from
+  paid to" as one payer row (from) and one share row (to) for the same amount, with the fixed
+  description "Settlement", `note` as notes and `reference` as `payment_ref`. Core's
+  `settlementLines` rejects paying yourself (SETTLEMENT_SAME_USER); the service checks the group's
+  currency, the date and that both people are active members, holding the group still meanwhile;
+  the database trigger checks the shape again at COMMIT (I9).
+- **Same paths as expenses** (`modules/transactions/service.ts`): one `create` (client ID,
+  idempotent replay, ID_CONFLICT for anything else with that ID) and one `edit` (If-Match, no-op
+  when unchanged, an activity entry with before and after), each given how to check and build its
+  type. Delete and restore were already shared.
+- **`PUT /transactions/:id` takes the stored type's body:** `UpdateExpense` for an expense,
+  `UpdateSettlement` for a settlement. The route only requires JSON; the service checks access
+  first (so a stranger gets 404 whatever they send) and then validates against the right schema
+  (`parseBody`, the same VALIDATION_FAILED as `validate`). A transaction never changes type.
+- **Snapshots** of a settlement include `paymentMethod` and `paymentRef`, so a change of method alone
+  is a real edit with its own history line. Expense snapshots leave both out and are unchanged.
+- **Overpaying is allowed** and simply flips the balance. The web app asks first
+  (`features/settlements/payment.ts`): a payment is "over" when it's more than the payer owes in
+  the group, or more than the recipient is owed. An edit is checked against the balances without
+  the payment being edited.
+- **Web:** "Settle" on every suggested payment and "Record a payment" on the Balances tab open the
+  form as a modal route over the group (`/groups/:id/settle?from=&to=`), pre-filled from the
+  suggestion. The friend page has "Settle" on each group with a balance (C5: one group at a time),
+  over the friend page (`/friends/:userId/settle?groupId=`). Payments show in the history as "Bilal
+  paid you · Payment · UPI", open to a payment page, and edit in the same form. A changed balance
+  briefly lights up (`lib/use-flash.ts`).
+
 ## Deployment
 
 - **One image** (`Dockerfile`): build web and API, then `pnpm deploy --prod` the API. tsup bundles
@@ -348,7 +377,7 @@ Issues found while reviewing the implementation plan, and the phase that resolve
 | Signing up with a placeholder's hinted email offers nothing                                                                                | **Done:** `GET /claims` offers them; claiming is the same merge as an invite                                                                        | 6     |
 | Adding someone by email adds their account directly: it reveals who has an account, and adds people without asking                         | **Done:** adding by email always makes a placeholder with the email as its hint; the person is offered to claim it                                  | 6     |
 | A group's balance explanation (`paid`, `share`) folds settlement money in, so "paid · share" no longer explains a net once someone settles | **Done:** the breakdown reports settlement money apart (`sent`, `received`)                                                                         | 8     |
-| Activity snapshots omit a settlement's `paymentMethod` / `paymentRef`, so changing only those leaves no visible diff                       | Add both to core's `TransactionSnapshot` and `diffSnapshots`                                                                                        | 9     |
+| Activity snapshots omit a settlement's `paymentMethod` / `paymentRef`, so changing only those leaves no visible diff                       | **Done:** both are in a settlement's snapshot (expenses leave them out) and in `diffSnapshots`                                                      | 9     |
 | The `groups.name` CHECK (`kind = 'direct' OR length(name) BETWEEN 1 AND 60`) accepts a regular group with a NULL name                      | **Done:** explicit `name IS NOT NULL`, and direct groups must have no name                                                                          | 3     |
 | Grants can't make `activity_log` append-only when the app connects as the table owner (the default on Neon)                                | **Done:** an append-only trigger on top of the grants                                                                                               | 3     |
 | ISO 4217 gives IDR 2 decimals, but CLDR/Intl formats it with 0                                                                             | **Done:** IDR stored with 0 decimals; a test keeps every currency in step with Intl                                                                 | 3     |

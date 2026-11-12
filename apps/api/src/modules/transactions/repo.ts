@@ -86,7 +86,15 @@ async function insertLines(tx: Tx, id: string, { payers, shares }: TransactionLi
 
 type Columns = Pick<
   NewTransactionRow,
-  'description' | 'notes' | 'currency' | 'amount' | 'occurredOn' | 'splitMethod' | 'splitInput'
+  | 'description'
+  | 'notes'
+  | 'currency'
+  | 'amount'
+  | 'occurredOn'
+  | 'splitMethod'
+  | 'splitInput'
+  | 'paymentMethod'
+  | 'paymentRef'
 >;
 
 /** An edit: the new columns, the next version, and who changed it when. */

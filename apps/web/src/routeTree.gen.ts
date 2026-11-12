@@ -21,6 +21,8 @@ import { Route as AuthedFriendsUserIdRouteImport } from './routes/_authed/friend
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups.$groupId'
 import { Route as AuthedGroupsNewRouteImport } from './routes/_authed/groups.new'
 import { Route as AuthedTransactionsIdRouteImport } from './routes/_authed/transactions.$id'
+import { Route as AuthedFriendsUserIdSettleRouteImport } from './routes/_authed/friends.$userId.settle'
+import { Route as AuthedGroupsGroupIdSettleRouteImport } from './routes/_authed/groups.$groupId.settle'
 import { Route as AuthedTransactionsIdEditRouteImport } from './routes/_authed/transactions.$id.edit'
 import { Route as AuthedFriendsUserIdExpensesNewRouteImport } from './routes/_authed/friends.$userId.expenses.new'
 import { Route as AuthedGroupsGroupIdExpensesNewRouteImport } from './routes/_authed/groups.$groupId.expenses.new'
@@ -84,6 +86,18 @@ const AuthedTransactionsIdRoute = AuthedTransactionsIdRouteImport.update({
   path: '/transactions/$id',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedFriendsUserIdSettleRoute =
+  AuthedFriendsUserIdSettleRouteImport.update({
+    id: '/settle',
+    path: '/settle',
+    getParentRoute: () => AuthedFriendsUserIdRoute,
+  } as any)
+const AuthedGroupsGroupIdSettleRoute =
+  AuthedGroupsGroupIdSettleRouteImport.update({
+    id: '/settle',
+    path: '/settle',
+    getParentRoute: () => AuthedGroupsGroupIdRoute,
+  } as any)
 const AuthedTransactionsIdEditRoute =
   AuthedTransactionsIdEditRouteImport.update({
     id: '/edit',
@@ -115,6 +129,8 @@ export interface FileRoutesByFullPath {
   '/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/groups/new': typeof AuthedGroupsNewRoute
   '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
+  '/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
   '/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
   '/friends/$userId/expenses/new': typeof AuthedFriendsUserIdExpensesNewRoute
   '/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
@@ -130,6 +146,8 @@ export interface FileRoutesByTo {
   '/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/groups/new': typeof AuthedGroupsNewRoute
   '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
+  '/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
   '/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
   '/friends/$userId/expenses/new': typeof AuthedFriendsUserIdExpensesNewRoute
   '/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
@@ -148,6 +166,8 @@ export interface FileRoutesById {
   '/_authed/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/_authed/groups/new': typeof AuthedGroupsNewRoute
   '/_authed/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/_authed/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
+  '/_authed/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
   '/_authed/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
   '/_authed/friends/$userId/expenses/new': typeof AuthedFriendsUserIdExpensesNewRoute
   '/_authed/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
@@ -166,6 +186,8 @@ export interface FileRouteTypes {
     | '/groups/$groupId'
     | '/groups/new'
     | '/transactions/$id'
+    | '/friends/$userId/settle'
+    | '/groups/$groupId/settle'
     | '/transactions/$id/edit'
     | '/friends/$userId/expenses/new'
     | '/groups/$groupId/expenses/new'
@@ -181,6 +203,8 @@ export interface FileRouteTypes {
     | '/groups/$groupId'
     | '/groups/new'
     | '/transactions/$id'
+    | '/friends/$userId/settle'
+    | '/groups/$groupId/settle'
     | '/transactions/$id/edit'
     | '/friends/$userId/expenses/new'
     | '/groups/$groupId/expenses/new'
@@ -198,6 +222,8 @@ export interface FileRouteTypes {
     | '/_authed/groups/$groupId'
     | '/_authed/groups/new'
     | '/_authed/transactions/$id'
+    | '/_authed/friends/$userId/settle'
+    | '/_authed/groups/$groupId/settle'
     | '/_authed/transactions/$id/edit'
     | '/_authed/friends/$userId/expenses/new'
     | '/_authed/groups/$groupId/expenses/new'
@@ -295,6 +321,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedTransactionsIdRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/friends/$userId/settle': {
+      id: '/_authed/friends/$userId/settle'
+      path: '/settle'
+      fullPath: '/friends/$userId/settle'
+      preLoaderRoute: typeof AuthedFriendsUserIdSettleRouteImport
+      parentRoute: typeof AuthedFriendsUserIdRoute
+    }
+    '/_authed/groups/$groupId/settle': {
+      id: '/_authed/groups/$groupId/settle'
+      path: '/settle'
+      fullPath: '/groups/$groupId/settle'
+      preLoaderRoute: typeof AuthedGroupsGroupIdSettleRouteImport
+      parentRoute: typeof AuthedGroupsGroupIdRoute
+    }
     '/_authed/transactions/$id/edit': {
       id: '/_authed/transactions/$id/edit'
       path: '/edit'
@@ -320,10 +360,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedFriendsUserIdRouteChildren {
+  AuthedFriendsUserIdSettleRoute: typeof AuthedFriendsUserIdSettleRoute
   AuthedFriendsUserIdExpensesNewRoute: typeof AuthedFriendsUserIdExpensesNewRoute
 }
 
 const AuthedFriendsUserIdRouteChildren: AuthedFriendsUserIdRouteChildren = {
+  AuthedFriendsUserIdSettleRoute: AuthedFriendsUserIdSettleRoute,
   AuthedFriendsUserIdExpensesNewRoute: AuthedFriendsUserIdExpensesNewRoute,
 }
 
@@ -331,10 +373,12 @@ const AuthedFriendsUserIdRouteWithChildren =
   AuthedFriendsUserIdRoute._addFileChildren(AuthedFriendsUserIdRouteChildren)
 
 interface AuthedGroupsGroupIdRouteChildren {
+  AuthedGroupsGroupIdSettleRoute: typeof AuthedGroupsGroupIdSettleRoute
   AuthedGroupsGroupIdExpensesNewRoute: typeof AuthedGroupsGroupIdExpensesNewRoute
 }
 
 const AuthedGroupsGroupIdRouteChildren: AuthedGroupsGroupIdRouteChildren = {
+  AuthedGroupsGroupIdSettleRoute: AuthedGroupsGroupIdSettleRoute,
   AuthedGroupsGroupIdExpensesNewRoute: AuthedGroupsGroupIdExpensesNewRoute,
 }
 

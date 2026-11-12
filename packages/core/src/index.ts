@@ -21,7 +21,12 @@ export {
 export { splitPaymentEqually, validatePayers } from './split/payers';
 
 // ledger and balances
-export type { CurrencyNets, LedgerTransaction, TransactionType } from './ledger/types';
+export type {
+  CurrencyNets,
+  LedgerTransaction,
+  PaymentMethod,
+  TransactionType,
+} from './ledger/types';
 export {
   ledgerLines,
   netsFromTransactions,

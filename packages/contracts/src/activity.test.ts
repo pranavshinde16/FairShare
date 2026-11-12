@@ -121,9 +121,35 @@ describe('TransactionSnapshot', () => {
     shares: expenseTransaction.shares,
   };
 
+  const settlement = {
+    ...snapshot,
+    description: 'Settlement',
+    splitMethod: null,
+    splitInput: null,
+    payers: [{ userId: ids.b, amount: 95_000 }],
+    shares: [{ userId: ids.a, amount: 95_000 }],
+    amount: 95_000,
+    paymentMethod: 'upi',
+    paymentRef: null,
+  };
+
   it('accepts expense and settlement snapshots', () => {
     expectValid(TransactionSnapshot, snapshot);
-    expectValid(TransactionSnapshot, { ...snapshot, splitMethod: null, splitInput: null });
+    expectValid(TransactionSnapshot, settlement);
+    expectValid(TransactionSnapshot, { ...settlement, paymentRef: 'UTR 4312' });
+  });
+
+  it('keeps a settlement’s payment fields, so the web app can show a change of method', () => {
+    expect(TransactionSnapshot.parse(settlement)).toMatchObject({
+      paymentMethod: 'upi',
+      paymentRef: null,
+    });
+  });
+
+  it('rejects an unknown payment method', () => {
+    expect(rejectedPaths(TransactionSnapshot, { ...settlement, paymentMethod: 'cheque' })).toEqual([
+      'paymentMethod',
+    ]);
   });
 
   it('rejects a snapshot with a missing field', () => {
