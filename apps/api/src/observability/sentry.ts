@@ -36,7 +36,7 @@ export function initSentry(
   });
   return (error, { requestId }) => {
     Sentry.withScope((scope) => {
-      scope.setTag('requestId', requestId);
+      if (requestId) scope.setTag('requestId', requestId);
       Sentry.captureException(error);
     });
   };

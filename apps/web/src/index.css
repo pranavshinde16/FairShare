@@ -1,53 +1,75 @@
-/* Placeholder styles. Tailwind and shadcn/ui arrive with the app shell in Phase 5. */
+@import 'tailwindcss';
+
+/* Dark mode follows a class on <html> (set by public/theme.js and src/lib/theme.ts). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. Components use them through Tailwind (bg-background, text-muted-foreground…). */
 :root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #111827;
-  --muted: #6b7280;
-  --ok: #15803d;
-  --bad: #b91c1c;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --accent: #f0fdfa;
+  --accent-foreground: #115e59;
+  --ring: #14b8a6;
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0f14;
-    --fg: #e5e7eb;
-    --muted: #9ca3af;
-    --ok: #4ade80;
-    --bad: #f87171;
+.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
+  --card: #111827;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --border: #1f2937;
+  --input: #334155;
+  --primary: #2dd4bf;
+  --primary-foreground: #042f2e;
+  --accent: #134e4a;
+  --accent-foreground: #ccfbf1;
+  --ring: #2dd4bf;
+  --destructive: #f87171;
+  --destructive-foreground: #450a0a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
   }
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-}
-
-.shell {
-  min-height: 100dvh;
-  display: grid;
-  place-content: center;
-  text-align: center;
-  padding: 0 16px;
-}
-
-.tagline,
-.status-checking {
-  color: var(--muted);
-}
-
-.status-ok {
-  color: var(--ok);
-}
-
-.status-db-down,
-.status-unreachable {
-  color: var(--bad);
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
 }

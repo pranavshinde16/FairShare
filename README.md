@@ -4,8 +4,8 @@ Split shared expenses with friends, roommates and trip groups. No daily limits, 
 basics.
 
 > Status: early development. Phases 0–4 (foundation, core domain logic, API contracts, database,
-> API skeleton with a live staging deploy) are complete. See the
-> [development log](docs/dev-log/README.md).
+> API skeleton with a live staging deploy) are complete; Phase 5 (sign-in and profile) is in
+> progress. See the [development log](docs/dev-log/README.md).
 
 ## Requirements
 
@@ -19,13 +19,16 @@ basics.
 corepack enable
 pnpm install
 cp .env.example .env
+# then set AUTH_SECRET in .env, e.g. to the output of: openssl rand -base64 32
 pnpm db:up        # Postgres on localhost:5433, Mailpit inbox on http://localhost:8025
 pnpm db:migrate   # create the tables (safe to re-run)
 pnpm db:seed      # optional: the demo "Goa Trip" group (safe to re-run)
 pnpm dev          # API on http://localhost:3000, web app on http://localhost:5173
 ```
 
-Open http://localhost:5173. The page reports whether the API and database are reachable.
+Open http://localhost:5173 and sign in with any email address: the code arrives in Mailpit at
+http://localhost:8025. After `pnpm db:seed`, sign in as `asha@example.com` or `bilal@example.com`
+to see the demo data's users.
 
 ## Scripts
 
@@ -34,6 +37,7 @@ Open http://localhost:5173. The page reports whether the API and database are re
 | `pnpm dev`               | Run the API and web app with live reload      |
 | `pnpm build`             | Production builds of both apps                |
 | `pnpm test`              | Unit and integration tests (needs `db:up`)    |
+| `pnpm e2e`               | End-to-end tests (needs `db:up` and `build`)  |
 | `pnpm lint`              | ESLint, including architecture boundary rules |
 | `pnpm typecheck`         | TypeScript in every package                   |
 | `pnpm format`            | Format everything with Prettier               |
@@ -52,11 +56,17 @@ Production is one Docker image: the API serves the built web app, so everything 
 ```bash
 docker build -t fairshare .
 docker run --rm --network host -e DATABASE_URL=... fairshare node dist/migrate.js   # pre-deploy
-docker run --rm --network host -e DATABASE_URL=... fairshare                        # port 3000
+docker run --rm --network host -e DATABASE_URL=... -e APP_URL=http://localhost:3000 \
+  -e AUTH_SECRET=... -e MAILPIT_URL=http://localhost:8025 fairshare                 # port 3000
 scripts/smoke-test.sh http://localhost:3000
 ```
 
-Without Docker: `pnpm build && WEB_DIST_DIR=../web/dist pnpm --filter @fairshare/api start`.
+Without Docker: `pnpm build && APP_URL=http://localhost:3000 WEB_DIST_DIR=../web/dist pnpm --filter
+@fairshare/api start`. The server refuses to start with a missing or invalid setting and names it;
+`.env.example` lists them all.
+
+For the end-to-end tests, install the browser once with
+`pnpm --filter @fairshare/e2e exec playwright install chromium`.
 
 Staging runs on Railway and Neon; see [docs/deploy-staging.md](docs/deploy-staging.md).
 

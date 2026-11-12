@@ -89,6 +89,10 @@ jobs:
 
     env:
       DATABASE_URL: postgres://fairshare:fairshare@localhost:5432/fairshare
+      # Throwaway values for this job only: the smoke test never signs in or sends email.
+      APP_URL: http://localhost:3000
+      AUTH_SECRET: ci-only-secret-not-used-anywhere-else
+      MAILPIT_URL: http://localhost:8025
 
     steps:
       - uses: actions/checkout@v7
@@ -101,10 +105,66 @@ jobs:
           docker run --rm --network host -e DATABASE_URL fairshare:ci node dist/migrate.js
 
       - name: Start the server
-        run: docker run -d --name fairshare --network host -e DATABASE_URL fairshare:ci
+        run: >-
+          docker run -d --name fairshare --network host
+          -e DATABASE_URL -e APP_URL -e AUTH_SECRET -e MAILPIT_URL fairshare:ci
 
       - run: scripts/smoke-test.sh http://localhost:3000
 
       - name: Server logs
         if: always()
         run: docker logs fairshare
+
+  # Sign-in and the profile in a real browser, against the production build with its own database,
+  # reading sign-in codes from Mailpit (e2e/).
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: fairshare
+          POSTGRES_PASSWORD: fairshare
+          POSTGRES_DB: fairshare_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fairshare -d fairshare_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.33
+        ports:
+          - 8025:8025
+
+    env:
+      TEST_DATABASE_URL: postgres://fairshare:fairshare@localhost:5432/fairshare_test
+      MAILPIT_URL: http://localhost:8025
+      TURBO_TELEMETRY_DISABLED: 1
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @fairshare/e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e
+
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

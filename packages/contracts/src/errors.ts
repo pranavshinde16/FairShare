@@ -10,6 +10,8 @@ export const ERROR_HTTP_STATUS = {
   UNAUTHENTICATED: 401,
   NOT_FOUND: 404, // also for non-members, so IDs can't be probed
 
+  ORIGIN_NOT_ALLOWED: 403, // a state-changing request that didn't come from the app's own pages
+
   VERSION_CONFLICT: 409, // details: { currentVersion }
   ID_CONFLICT: 409,
   BALANCE_NOT_ZERO: 409,
@@ -18,6 +20,8 @@ export const ERROR_HTTP_STATUS = {
   CURRENCY_LOCKED: 409, // changing a group's currency after it has transactions
 
   INVITE_EXPIRED: 410,
+
+  PAYLOAD_TOO_LARGE: 413, // request bodies are capped at 64 KB
 
   IF_MATCH_REQUIRED: 428, // a mutation of an existing transaction sent no If-Match header
 
@@ -43,7 +47,10 @@ export const ERROR_HTTP_STATUS = {
 
   INTERNAL: 500,
   AI_UNAVAILABLE: 503,
-} as const satisfies Record<string, 400 | 401 | 404 | 409 | 410 | 422 | 428 | 429 | 500 | 503>;
+} as const satisfies Record<
+  string,
+  400 | 401 | 403 | 404 | 409 | 410 | 413 | 422 | 428 | 429 | 500 | 503
+>;
 
 export type ErrorCode = keyof typeof ERROR_HTTP_STATUS;
 

@@ -19,7 +19,8 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter @fairshare/db migrate",
-    "db:seed": "pnpm --filter @fairshare/db seed"
+    "db:seed": "pnpm --filter @fairshare/db seed",
+    "e2e": "pnpm --filter @fairshare/e2e e2e"
   },
   "devDependencies": {
     "@fairshare/config": "workspace:*",

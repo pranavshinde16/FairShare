@@ -1,7 +1,8 @@
 # Deploying staging
 
-Staging runs on **Railway** (the app), **Neon** (Postgres) and **Sentry** (error tracking), with
-**Cloudflare** in front once there is a domain. Railway deploys `main` automatically after CI
+Staging runs on **Railway** (the app), **Neon** (Postgres), **Sentry** (error tracking), **Resend**
+(sign-in emails) and **Google** (sign-in with Google), with **Cloudflare** in front once there is a
+domain. Railway deploys `main` automatically after CI
 passes, runs the migrations first, and a GitHub workflow smoke-tests the live site after each
 deploy.
 
@@ -13,11 +14,11 @@ What the repository defines:
 | `.github/workflows/staging-smoke.yml` | `scripts/smoke-test.sh` against `STAGING_URL` after each successful staging deploy |
 
 The Railway service settings live in the **Railway dashboard**, listed in
-[step 3](#3-railway-the-app). There is no `railway.json`: Railway's Config as Code is deprecated,
+[step 5](#5-railway-the-app). There is no `railway.json`: Railway's Config as Code is deprecated,
 new services can't opt into it, and existing files stop being read on 2026-12-01.
 
-Everything below is done in each service's dashboard. **Passwords, connection strings and DSNs go
-only into those dashboards, never into the repository or a chat.**
+Everything below is done in each service's dashboard. **Passwords, connection strings, API keys,
+client secrets and DSNs go only into those dashboards, never into the repository or a chat.**
 
 Pick the **same region** everywhere: Singapore is the closest to India that both Railway and Neon
 offer.
@@ -106,7 +107,42 @@ pushed to `main` first. The CI run on that push is what Railway waits for.
 2. Copy each project's **DSN** (Project settings → Client Keys). A DSN only lets someone send
    events, not read them, so it's fine in the browser bundle.
 
-## 3. Railway (the app)
+## 3. Resend (sign-in emails)
+
+1. Sign up at https://resend.com.
+2. **API Keys → Create API key**, permission **Sending access**. Copy it: Resend shows it once.
+3. The sender. Until FairShare has its own domain, use Resend's test address,
+   `FairShare <onboarding@resend.dev>`. It delivers **only to your Resend account's own email
+   address**, so on staging only you can sign in with an email code (Google sign-in works for
+   anyone allowed in step 4). With a domain, verify it under **Domains** (Resend lists the DNS
+   records to add) and change `EMAIL_FROM` to an address on it; see step 7.
+
+## 4. Google sign-in
+
+In the Google Cloud console (https://console.cloud.google.com):
+
+1. Create a project named `FairShare`.
+2. Open **Google Auth Platform** (formerly "OAuth consent screen"):
+   - **Branding:** app name `FairShare`, your email as the support and developer contact.
+   - **Audience:** **External**, left in **Testing**. Add your own Google address, and any friend
+     who will test, under **Test users**: while the app is in testing, only they can sign in.
+     Publishing comes at launch (Phase 14); FairShare asks only for the basic `openid`, `email`
+     and `profile` scopes.
+3. **Clients → Create client**, type **Web application**, name `FairShare staging`:
+   - Authorized JavaScript origins: `https://fairshareapi-staging.up.railway.app`
+   - Authorized redirect URIs:
+     `https://fairshareapi-staging.up.railway.app/api/auth/callback/google`
+
+   Both must match `APP_URL` (step 5) exactly: https, the same host, no trailing slash on the
+   origin. A mismatch shows Google's `redirect_uri_mismatch` error.
+
+4. Copy the **Client ID** and **Client secret**.
+
+To try Google sign-in locally, add `http://localhost:5173` as an origin and
+`http://localhost:5173/api/auth/callback/google` as a redirect URI (on this client, or on a
+separate development client), and put its ID and secret in your `.env`.
+
+## 5. Railway (the app)
 
 1. **New project → Deploy from GitHub repo**, and give Railway's GitHub app access to the
    `FairShare` repository only.
@@ -136,7 +172,7 @@ pushed to `main` first. The CI run on that push is what Railway waits for.
    | **Healthcheck path**                | `/api/health`                 | A deploy whose database is unreachable fails instead of going live            |
    | Healthcheck timeout                 | `120`                         | Seconds; boot takes a few                                                     |
    | Region                              | Southeast Asia (Singapore)    | Next to the Neon database                                                     |
-   | Replicas                            | `1`                           | The planned rate limiter keeps its counts in memory                           |
+   | Replicas                            | `1`                           | Sign-in code limits keep their counts in memory                               |
    | Serverless (sleep when idle)        | off                           | A sleeping service makes the first request slow                               |
    | Restart policy                      | On failure, at most 5 retries | A crash loop stops instead of retrying forever                                |
    | Draining time                       | `15` seconds                  | Longer than the server's own 10-second shutdown, so in-flight requests finish |
@@ -150,6 +186,12 @@ pushed to `main` first. The CI run on that push is what Railway waits for.
    ```text
    DATABASE_URL=<fairshare_api pooled connection string>
    MIGRATION_DATABASE_URL=<neondb_owner direct connection string>
+   APP_URL=https://fairshareapi-staging.up.railway.app
+   AUTH_SECRET=<output of: openssl rand -base64 32>
+   RESEND_API_KEY=<Resend API key>
+   EMAIL_FROM=FairShare <onboarding@resend.dev>
+   GOOGLE_CLIENT_ID=<Google client ID>
+   GOOGLE_CLIENT_SECRET=<Google client secret>
    SENTRY_DSN=<fairshare-api DSN>
    SENTRY_ENVIRONMENT=staging
    SENTRY_RELEASE=${{RAILWAY_GIT_COMMIT_SHA}}
@@ -157,8 +199,17 @@ pushed to `main` first. The CI run on that push is what Railway waits for.
    VITE_SENTRY_ENVIRONMENT=staging
    ```
 
-   Don't set `PORT`: Railway provides it. `VITE_*` values reach the web build automatically,
-   because the Dockerfile declares them as build arguments.
+   - Don't set `PORT`: Railway provides it. `VITE_*` values reach the web build automatically,
+     because the Dockerfile declares them as build arguments.
+   - `APP_URL` is exactly the address people open (the domain generated in item 6 above, later the
+     custom domain). Sign-in redirects are built from it, and the API refuses state-changing
+     requests from any other origin.
+   - Generate `AUTH_SECRET` on your own machine. Changing it later signs everyone out.
+   - Leave `CLIENT_IP_HEADERS` unset: its default, `x-real-ip`, is the header Railway's proxy
+     sets with the visitor's IP.
+   - The server refuses to start without `APP_URL`, `AUTH_SECRET` and an email setting, and names
+     what's missing in the deploy log. Set them **before** pushing code that needs them; until
+     then the health check keeps the previous version live.
 
 8. Deploy. The deploy logs should show:
    - from the pre-deploy step: `Migrations and reference data are up to date.`
@@ -187,7 +238,7 @@ To get unstuck after fixing the cause (a variable, the database, `STAGING_URL`):
 - **Otherwise:** Railway → **Deployments → ⋮ → Deploy commit** deploys the commit by hand. Then
   re-run the failed smoke run as above, so the next automatic redeploy isn't skipped.
 
-## 4. GitHub (post-deploy smoke test)
+## 6. GitHub (post-deploy smoke test)
 
 **Settings → Secrets and variables → Actions → Variables tab → New repository variable:**
 `STAGING_URL` = the Railway URL, e.g. `https://fairshare-staging.up.railway.app` (no trailing
@@ -196,7 +247,7 @@ slash needed).
 It must be a **variable, not a secret**: the workflow reads `vars.STAGING_URL`, and a secret of the
 same name is invisible to it. The URL isn't secret anyway; it's public.
 
-## 5. Cloudflare (once you have a domain)
+## 7. Cloudflare (once you have a domain)
 
 1. Railway service → **Settings → Networking → Custom Domain**: add e.g. `staging.example.com`.
    Railway shows the DNS record(s) it needs.
@@ -204,13 +255,25 @@ same name is invisible to it. The URL isn't secret anyway; it's public.
    shows the domain as verified with a certificate.
 3. Then switch it to **Proxied** (orange cloud), and set **SSL/TLS → Full (strict)**.
 4. Change the `STAGING_URL` variable to the new address.
+5. In Railway, change `APP_URL` to the new address, and add it to the Google client's JavaScript
+   origins and redirect URIs (step 4).
+6. Set `CLIENT_IP_HEADERS=cf-connecting-ip` in Railway: behind Cloudflare, Railway's `x-real-ip`
+   is a Cloudflare address. (The railway.app address stays reachable without Cloudflare and could
+   be sent a forged header; the per-email code limit still applies there.)
+7. Verify the domain in Resend (step 3) and change `EMAIL_FROM` to an address on it.
 
-## 6. Check it works
+## 8. Check it works
 
-- Open the staging URL: the page should say **"Server and database are up"**.
+- Open the staging URL: it shows the **Sign in** page.
+- **Email code:** sign in with your Resend account's address. The code arrives within a minute;
+  you land on Home ("Hi, <name>").
+- **Google:** sign out (Settings → Sign out), then **Continue with Google** with a test-user
+  account. You come back signed in. With the same address as the email-code sign-in, it's the
+  same FairShare account.
+- **Settings:** change your name or default currency, save, reload: the change stays.
 - `scripts/smoke-test.sh <staging-url>` from your machine should pass every check.
 - **GitHub → Actions → "Staging smoke test"** should have run green after the deploy. If it
-  failed at "Check STAGING_URL is set", see step 4. If it didn't run, check the environment name
+  failed at "Check STAGING_URL is set", see step 6. If it didn't run, check the environment name
   under the repository's **Deployments**, and use **Run workflow** to start it by hand.
 - **Browser Sentry:** in the staging page's developer console, run
   `setTimeout(() => { throw new Error('Sentry test') })`. The error appears in `fairshare-web`

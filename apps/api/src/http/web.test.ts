@@ -61,13 +61,22 @@ describe('serving the web app', () => {
     const { app } = testApp({ web });
 
     const missingAsset = await app.request('/assets/gone.js');
-    const apiPage = await app.request('/api/v1/groups', page);
+    const apiPage = await app.request('/api/nope', page);
     const post = await app.request('/groups/123', { ...page, method: 'POST' });
 
     for (const res of [missingAsset, apiPage, post]) {
       expect(res.status).toBe(404);
       expect(res.headers.get('Content-Type')).toMatch(/application\/json/);
     }
+  });
+
+  it('answers an unknown /api/v1 path as the API (sign in first), never with the app page', async () => {
+    const { app } = testApp({ web });
+
+    const res = await app.request('/api/v1/groups', page);
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get('Content-Type')).toMatch(/application\/json/);
   });
 
   it('never serves files from outside the build', async () => {

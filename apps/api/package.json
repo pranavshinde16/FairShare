@@ -19,6 +19,7 @@
     "@hono/node-server": "catalog:",
     "@hono/zod-validator": "catalog:",
     "@sentry/node": "catalog:",
+    "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "pg": "catalog:",

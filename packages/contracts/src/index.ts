@@ -11,6 +11,8 @@ export * from './errors';
 export * from './concurrency';
 export * from './pagination';
 export * from './health';
+export * from './auth';
+export * from './currencies';
 export * from './users';
 export * from './groups';
 export * from './invites';

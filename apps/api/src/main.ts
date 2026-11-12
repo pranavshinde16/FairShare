@@ -1,9 +1,11 @@
+import { createDb } from '@fairshare/db';
 import { serve } from '@hono/node-server';
 import { resolve } from 'node:path';
-import { createApp } from './app';
+import { composeApp } from './compose';
 import { loadEnv, type Env } from './config/env';
 import { createPool, pingDatabase } from './db/pool';
 import { loadWebAssets } from './http/web';
+import { createEmailSender } from './lib/email';
 import { createLogger } from './observability/logger';
 import { flushSentry, initSentry } from './observability/sentry';
 
@@ -19,10 +21,21 @@ const logger = createLogger({ level: env.LOG_LEVEL, pretty: env.NODE_ENV === 'de
 const reportError = initSentry(env);
 const pool = createPool(env.DATABASE_URL, logger);
 const web = env.WEB_DIST_DIR ? loadWebAssets(resolve(env.WEB_DIST_DIR)) : null;
-const app = createApp({ pingDatabase: (log) => pingDatabase(pool, log), logger, reportError, web });
+const app = composeApp({
+  env,
+  db: createDb(pool),
+  pingDatabase: (log) => pingDatabase(pool, log),
+  logger,
+  reportError,
+  emailSender: createEmailSender(env),
+  web,
+});
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, ({ port }) => {
-  logger.info({ port, env: env.NODE_ENV, web: web?.root ?? null }, 'FairShare API listening');
+  logger.info(
+    { port, env: env.NODE_ENV, appUrl: env.APP_URL, web: web?.root ?? null },
+    'FairShare API listening',
+  );
 });
 
 // The platform sends SIGTERM before replacing the container: finish in-flight requests, close the

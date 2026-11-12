@@ -13,8 +13,8 @@ import { AppError } from './errors';
 /** Shown for every unexpected error. The real cause goes to the logs and Sentry, never the client. */
 export const INTERNAL_MESSAGE = 'Something went wrong on our side. Please try again.';
 
-/** Sends an unexpected error to error tracking. */
-export type ErrorReporter = (error: unknown, context: { requestId: string }) => void;
+/** Sends an unexpected error to error tracking, tagged with the request when there is one. */
+export type ErrorReporter = (error: unknown, context: { requestId?: string }) => void;
 
 type Described = { status: ContentfulStatusCode; error: Omit<ErrorEnvelope['error'], 'requestId'> };
 

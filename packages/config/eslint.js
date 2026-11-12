@@ -150,6 +150,21 @@ export function createConfig({ tsconfigRootDir }) {
       extends: [reactHooks.configs.flat['recommended-latest']],
       languageOptions: { globals: globals.browser },
     },
+    // Route guards redirect by throwing TanStack Router's redirect(), its documented pattern.
+    {
+      files: ['apps/web/src/**/*.{ts,tsx}'],
+      rules: {
+        '@typescript-eslint/only-throw-error': [
+          'error',
+          { allow: [{ from: 'package', package: '@tanstack/router-core', name: 'Redirect' }] },
+        ],
+      },
+    },
+    // Plain scripts the web app serves as-is (public/theme.js).
+    {
+      files: ['apps/web/public/**/*.js'],
+      languageOptions: { globals: globals.browser },
+    },
 
     // Must be last: turns off rules that conflict with Prettier formatting.
     prettier,

@@ -21,13 +21,14 @@ or anything that touches amounts.
 ## Layout
 
 ```text
-apps/web            React SPA (Vite). In production the API serves its build.
+apps/web            React SPA (Vite, TanStack Router and Query, Tailwind). The API serves its build.
 apps/api            Hono REST API: routes → service → repo per module.
 packages/core       Pure domain logic. Zero dependencies.
 packages/contracts  zod request/response schemas shared by every client and the API.
 packages/db         Drizzle schema, SQL migrations, ledger view, seed.
 packages/api-client Typed fetch wrapper built on contracts.
 packages/config     Shared tsconfig presets and the ESLint config.
+e2e                 Playwright tests against the production build.
 ```
 
 Workspace packages export their TypeScript source directly (no per-package build step). Vite
@@ -44,7 +45,7 @@ so a violation fails `pnpm lint` and CI.
 | `packages/contracts`    | `zod`, `@fairshare/core` (types)                           | Business rules beyond input shape (sums are core's job)               |
 | `packages/db`           | `drizzle-orm`, `pg` (seed and tests also: core, contracts) | Feature queries (they live in each API module's `repo.ts`)            |
 | `packages/api-client`   | `@fairshare/contracts`                                     | React hooks, database access                                          |
-| `apps/web`              | api-client, contracts, core                                | Server code: `@fairshare/db`, `pg`, `drizzle-orm`, `hono`             |
+| `apps/web`              | api-client, contracts, core, Better Auth's browser client  | Server code: `@fairshare/db`, `pg`, `drizzle-orm`, `hono`             |
 | `apps/api` `routes.ts`  | contracts, its service                                     | Business logic, SQL                                                   |
 | `apps/api` `service.ts` | core, repos, activity helper                               | HTTP concerns                                                         |
 | `apps/api` `repo.ts`    | db                                                         | Policy decisions, calculations                                        |
@@ -88,8 +89,14 @@ Every request passes through the same middleware, in this order (`apps/api/src/a
 3. **Security headers.** A strict CSP (`script-src 'self'`, `frame-ancestors 'none'`, connections
    only to ourselves and Sentry), HSTS, `nosniff`, `X-Frame-Options: DENY`,
    `Referrer-Policy: no-referrer`. No CORS headers: the web app is same-origin.
-4. **Routes:** `/api/health` (200, or 503 when the database is down) and, from Phase 5, `/api/v1`.
-5. **Web app** (when `WEB_DIST_DIR` is set): static files, with `/assets/*` (content-hashed) cached
+4. **Body-size cap** on `/api/*`: 64 KB, else 413 `PAYLOAD_TOO_LARGE`.
+5. **Routes:**
+   - `/api/health`: 200, or 503 when the database is down (the reason is logged).
+   - `/api/auth/*`: Better Auth (see "Sign-in and sessions").
+   - `/api/v1`: first `protectMutations` (below), then the public `GET /sign-in-options`, then
+     `requireUser`, then every other route. An unknown `/api/v1` path without a session is
+     therefore 401, not 404, so route names can't be probed anonymously.
+6. **Web app** (when `WEB_DIST_DIR` is set): static files, with `/assets/*` (content-hashed) cached
    for a year and everything else revalidated. A browser page load on any other non-API path gets
    `index.html`, for the client-side router. Missing files and API paths get the JSON 404.
 
@@ -105,12 +112,48 @@ Every request passes through the same middleware, in this order (`apps/api/src/a
 | anything else                      | 500 `INTERNAL` with a generic message; logged and sent to Sentry |
 
 Routes validate input with `validate(target, schema)` (`http/validate.ts`), which wraps
-`@hono/zod-validator`. A body without a JSON content type is read as `{}` and fails its schema.
+`@hono/zod-validator`.
+
+**CSRF** (`http/guards.ts`, `protectMutations`): on `/api/v1`, any method other than GET, HEAD and
+OPTIONS must carry `Origin: <APP_URL>` (403 `ORIGIN_NOT_ALLOWED` otherwise), and a body with a
+Content-Type must be JSON (400 `VALIDATION_FAILED`), which an HTML form on another site can't
+send. Session cookies are also `SameSite=Lax`. Better Auth applies its own origin checks to
+`/api/auth/*`.
 
 **Error tracking** (Sentry, both apps) is on only when a DSN is configured. Sentry 11 collects
 cookies, headers, bodies, query strings, stack-frame variables and query parameters by default;
 every one of those is switched off, since stack traces are all we need. The browser SDK is a
 separate chunk, loaded only when configured.
+
+## Sign-in and sessions
+
+- **Better Auth 1.7** (`modules/auth/auth.ts`), mounted at `/api/auth/*`: email codes and Google.
+  The rest of the API sees it only through `AuthGateway` (`handler`, `getSession`,
+  `signInOptions`), so tests can use a fake.
+- **Email codes:** 6 digits, valid 5 minutes, 3 tries, then locked; stored hashed. Limits: 3 codes
+  per email address per 10 minutes (ours, `TOO_MANY_CODES`), plus Better Auth's per-IP limits in
+  production (3 a minute per path). The client IP comes from `CLIENT_IP_HEADERS`
+  (Railway: `x-real-ip`). Codes are sent inside the request with one retry. Better Auth reports
+  success whatever the outcome, so a failed send is logged and sent to Sentry.
+- **Sessions:** a server-side row (`auth_session`) and an httpOnly, `SameSite=Lax`, `Path=/`
+  cookie named `fairshare.session_token`. Over https it is `Secure`, with the `__Secure-` prefix.
+  Better Auth can't use the `__Host-` prefix, but the attributes are the same: no `Domain`,
+  `Path=/`, `Secure`. 30 days, rolling: a session used at least once a day is extended, and
+  `requireUser` passes the refreshed cookie on. Sign-out deletes the row.
+- **Domain users** (C8): Better Auth owns `auth_*`. Each signed-in person also has a `users` row
+  (UUIDv7), created on first sign-in. The name comes from Google, or else the email
+  ("asha.kapoor@…" → "Asha Kapoor"); the default currency comes from the browser's region
+  (`Accept-Language`), else INR. Better Auth's `user.create.after` hook runs after its own
+  transaction and can fail on its own, so `requireUser` also ensures the row (idempotent,
+  `ON CONFLICT DO NOTHING`), and caches the auth-user → domain-user link in memory.
+- **Google:** an account with the same verified email links to the existing user. A callback URL is
+  accepted only on `APP_URL`, and a failed Google sign-in returns to `/sign-in?error=…`.
+- **Account deletion** (route in Phase 13): `anonymizeUser` keeps the `users` row as "Deleted user",
+  clears its email, picture and UPI ID, and deletes the auth user, its sessions and linked accounts,
+  in one transaction.
+- **Web:** `/sign-in` → `/sign-in/verify` → `returnTo` (only a path on this site; see
+  `safeReturnTo`). The `_authed` layout route checks the session before rendering, and any 401 from
+  the API sends the user back to sign in.
 
 ## Deployment
 
@@ -134,7 +177,8 @@ separate chunk, loaded only when configured.
   Vite bakes them into the bundle. They are public: never a secret.
 - **CI** builds the image on every push, runs its migrations twice against a fresh Postgres, starts
   it and runs `scripts/smoke-test.sh`, the same check that runs against staging after a deploy.
-  One replica is required for now: the planned rate limiter keeps its counts in memory.
+  A separate job runs the end-to-end tests. One replica is required for now: the sign-in code
+  limits (and the planned API rate limiter) keep their counts in memory.
 - **Shutdown:** on SIGTERM the server stops accepting connections, finishes in-flight requests,
   closes the pool and flushes Sentry, or exits after 10 seconds regardless.
 
@@ -152,7 +196,11 @@ separate chunk, loaded only when configured.
   environment's login user is made a member outside migrations. Locally the app connects as the
   owner, which bypasses grants (but not the append-only trigger).
 - **Tests** run against real Postgres: one migrated template database per run, cloned per test file
-  (`@fairshare/db/testing`).
+  (`@fairshare/db/testing`). Each package that runs integration tests names its own template
+  (`TEST_TEMPLATE_DATABASE`), because turbo runs packages' tests at the same time.
+- **End-to-end tests** (`e2e/`, `pnpm e2e`) run the production build (`pnpm build` first) on its own
+  database, in Chromium at desktop and phone sizes, reading sign-in codes from Mailpit. Any browser
+  console error (a CSP violation, say) fails the test.
 
 ## Validation layers
 
@@ -190,7 +238,7 @@ Issues found while reviewing the implementation plan, and the phase that resolve
 | I9 has no database enforcement for settlements                                                                        | **Done:** the same trigger raises `settlement_shape` (migration 0002)                                                            | 3     |
 | `activity_log` is append-only, yet the merge rewrites `target_user`                                                   | Don't rewrite activity (**done:** a trigger rejects UPDATE/DELETE); resolve old IDs through `users.merged_into` at read time (6) | 3, 6  |
 | Settlement body (`note`, `reference`) doesn't map to `description`, `notes`, `payment_ref`                            | **Done:** `settlementColumns` / `settlementInput` in contracts; description is fixed "Settlement"                                | 2, 9  |
-| The domain-user hook runs outside the auth library's DB transaction                                                   | Auth middleware ensures the domain user exists (idempotent)                                                                      | 5     |
+| The domain-user hook runs outside the auth library's DB transaction                                                   | **Done:** `requireUser` ensures the domain user exists (idempotent, cached)                                                      | 5     |
 | Invite tokens appear in URL paths                                                                                     | **Done:** request logs show `[token]`; `Referrer-Policy: no-referrer`. Still to do: scrub them from browser error reports (6)    | 4, 6  |
 | Merge conflict check only considers active memberships                                                                | Include members who left (they can share transactions with the placeholder)                                                      | 6     |
 | Ownership can pass to a placeholder when the owner leaves                                                             | Pass to the longest-standing real member; define the no-real-member case                                                         | 6     |
@@ -214,7 +262,16 @@ Issues found while reviewing the implementation plan, and the phase that resolve
 - Local Postgres runs on host port **5433** to avoid clashing with a system Postgres on 5432.
 - **Drizzle ORM 0.45.x / drizzle-kit 0.31.x**, pinned to patch updates: v1 is still a release
   candidate. Revisit when 1.0 is stable.
-- **Better Auth 1.7.x**. Its CLI is now the `auth` package (`@better-auth/cli` is deprecated).
+- **Better Auth 1.7.x** (1.7.21; 1.8 is in beta). Its CLI is now the `auth` package
+  (`@better-auth/cli` is deprecated).
+- **Web:** TanStack Router 1.170 (file routes, generated `routeTree.gen.ts`, committed), TanStack
+  Query 5, Tailwind CSS 4, React Hook Form 7 with `@hookform/resolvers` 7 (zod 4 support),
+  `radix-ui` 1.8, lucide-react 1.x. The shadcn/ui components are written in the repo by hand in
+  shadcn's style: its CLI's `init` rewrites the stylesheet and installs its own versions, bypassing
+  the catalog.
+- **Playwright 1.65**, Chromium only for now (desktop and Pixel 7 sizes).
+- **Mailpit 1.33**, pinned: the API sends through its HTTP send API and the e2e tests read its
+  search API.
 - **Sentry 11** (`@sentry/node`, `@sentry/react`). v11 replaced `sendDefaultPii` with
   `dataCollection`, which defaults to collecting request data; we switch it all off.
 - **pino 10** for logs, **@hono/zod-validator 0.9** for request validation (supports zod 4).

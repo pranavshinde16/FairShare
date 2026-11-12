@@ -13,7 +13,15 @@ import { runMigrations } from '../migrate';
 export const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? 'postgres://fairshare:fairshare@localhost:5433/fairshare_test';
 
-const TEMPLATE = 'fairshare_test_template';
+/**
+ * The migrated database every test database is cloned from. Packages whose tests run in parallel
+ * (turbo runs each package's tests at once) each name their own in vitest.config.ts, so one
+ * package's setup never drops the template another is cloning from.
+ */
+const TEMPLATE = process.env.TEST_TEMPLATE_DATABASE ?? 'fairshare_test_template';
+if (!/^[a-z_][a-z0-9_]{0,62}$/.test(TEMPLATE)) {
+  throw new Error(`TEST_TEMPLATE_DATABASE must be a plain database name, got "${TEMPLATE}"`);
+}
 
 /** The same server and credentials, a different database. */
 export function databaseUrl(name: string, base = TEST_DATABASE_URL): string {
@@ -76,3 +84,4 @@ export async function createTestDatabase(): Promise<TestDatabase> {
 }
 
 export * from './factories';
+export { SEED_ACCOUNTS, SEED_IDS, seedDemo } from '../seed';

@@ -91,7 +91,8 @@ describe('security headers', () => {
     for (const path of ['/api/health', '/api/nope']) {
       const { headers } = await app.request(path);
       expect(headers.get('Content-Security-Policy')).toBe(
-        "default-src 'self'; script-src 'self'; connect-src 'self' https://*.sentry.io; " +
+        "default-src 'self'; script-src 'self'; img-src 'self' https://*.googleusercontent.com; " +
+          "connect-src 'self' https://*.sentry.io; " +
           "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
       );
       expect(headers.get('Strict-Transport-Security')).toBe('max-age=15552000; includeSubDomains');

@@ -8,3 +8,9 @@ export type AppEnv = {
     log: Logger;
   };
 };
+
+/** The signed-in user: the domain user's ID and the Better Auth user behind it. */
+export type SessionUser = { id: string; authUserId: string };
+
+/** Routes behind requireUser, where the signed-in user is always set. */
+export type AuthedEnv = { Variables: AppEnv['Variables'] & { user: SessionUser } };

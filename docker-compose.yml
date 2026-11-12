@@ -18,9 +18,10 @@ services:
       timeout: 3s
       retries: 10
 
-  # Catches every email the app sends (OTP codes etc.). Inbox UI: http://localhost:8025
+  # Catches every email the app sends (sign-in codes). Inbox: http://localhost:8025
+  # The API sends through its HTTP send API, and the end-to-end tests read codes from it.
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.33
     ports:
       - '1025:1025' # SMTP
       - '8025:8025' # web UI

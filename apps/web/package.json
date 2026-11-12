@@ -14,17 +14,32 @@
   },
   "dependencies": {
     "@fairshare/api-client": "workspace:*",
+    "@fairshare/contracts": "workspace:*",
+    "@hookform/resolvers": "catalog:",
     "@sentry/react": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "better-auth": "catalog:",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "lucide-react": "catalog:",
+    "radix-ui": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "react-hook-form": "catalog:",
+    "tailwind-merge": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@fairshare/config": "workspace:*",
+    "@tailwindcss/vite": "catalog:",
+    "@tanstack/router-plugin": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "eslint": "catalog:",
+    "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
-# Checks that a running FairShare deployment works: the API and its database, the web app, the SPA
-# fallback, and the security headers. Used by CI against the Docker image and after each deploy.
+# Checks that a running FairShare deployment works: the API and its database, sign-in wiring, the
+# web app, the SPA fallback, and the security headers. Used by CI against the Docker image and after
+# each deploy. It never signs in or sends email.
 #
 #   scripts/smoke-test.sh http://localhost:3000
 #   scripts/smoke-test.sh https://staging.example.com
@@ -45,7 +46,13 @@ contains 'responses carry HSTS' 'strict-transport-security: max-age=' "$headers"
 
 contains 'GET / serves the web app' '<title>FairShare</title>' "$(page "$BASE_URL/")"
 contains 'an app route falls back to the web app' '<title>FairShare</title>' "$(page "$BASE_URL/groups/smoke-test")"
-check 'an unknown API path answers 404' 404 "$(status -H 'Accept: text/html' "$BASE_URL/api/v1/smoke-test")"
+check 'an unknown API path answers 404' 404 "$(status -H 'Accept: text/html' "$BASE_URL/api/smoke-test")"
+
+check 'the sign-in options answer' 200 "$(status "$BASE_URL/api/v1/sign-in-options")"
+check 'Better Auth answers (no session)' null "$(curl -s "$BASE_URL/api/auth/get-session")"
+check 'the API needs a session' 401 "$(status "$BASE_URL/api/v1/me")"
+check 'a write from another site is refused' 403 "$(status -X PATCH -H 'Origin: https://smoke-test.invalid' \
+  -H 'Content-Type: application/json' -d '{}' "$BASE_URL/api/v1/me")"
 
 if [ "$failures" -gt 0 ]; then
   printf '%s check(s) failed.\n' "$failures"
