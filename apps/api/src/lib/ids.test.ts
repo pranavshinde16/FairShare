@@ -1,22 +1,47 @@
 import { Uuid } from '@fairshare/contracts';
 import { describe, expect, it } from 'vitest';
-import { uuidv7 } from './ids';
+import { createUuidV7, uuidv7 } from './ids';
 
-describe('uuidv7', () => {
-  it('is a version 7, RFC-variant UUID the contracts accept', () => {
+const SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const timeOf = (id: string) => parseInt(id.replace(/-/g, '').slice(0, 12), 16);
+
+describe('createUuidV7', () => {
+  it('makes version 7, RFC-variant UUIDs the contracts accept', () => {
     const id = uuidv7();
-    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(id).toMatch(SHAPE);
     expect(Uuid.safeParse(id).success).toBe(true);
   });
 
-  it('starts with the timestamp, so later IDs sort later', () => {
+  it('starts each ID with the clock’s milliseconds', () => {
     const now = Date.UTC(2026, 10, 12, 10, 0, 0);
-    expect(uuidv7(now).replace(/-/g, '').slice(0, 12)).toBe(now.toString(16).padStart(12, '0'));
-    expect(uuidv7(now) < uuidv7(now + 1)).toBe(true);
+    expect(timeOf(createUuidV7(() => now)())).toBe(now);
   });
 
-  it('differs between calls in the same millisecond', () => {
-    const ids = new Set(Array.from({ length: 1000 }, () => uuidv7(0)));
-    expect(ids.size).toBe(1000);
+  it('only ever increases, even thousands of times in one millisecond', () => {
+    const next = createUuidV7(() => 1_000);
+    const ids = Array.from({ length: 10_000 }, next);
+    expect(ids.every((id) => SHAPE.test(id))).toBe(true);
+    expect([...ids].sort()).toEqual(ids);
+    expect(new Set(ids).size).toBe(ids.length);
+    // 4096 counter values fit in a millisecond; past that the time moves on.
+    expect(timeOf(ids.at(-1)!)).toBeGreaterThan(1_000);
+  });
+
+  it('keeps increasing when the clock steps back', () => {
+    let now = 5_000;
+    const next = createUuidV7(() => now);
+    const first = next();
+    now = 4_000;
+    const second = next();
+    expect(second > first).toBe(true);
+    expect(timeOf(second)).toBe(5_000);
+  });
+
+  it('follows the clock forward', () => {
+    let now = 1_000;
+    const next = createUuidV7(() => now);
+    next();
+    now = 2_000;
+    expect(timeOf(next())).toBe(2_000);
   });
 });

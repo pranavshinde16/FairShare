@@ -65,6 +65,16 @@ describe('POST /groups', () => {
     expect(log.map((e) => e.verb)).toEqual(['group.created', 'member.added', 'member.added']);
   });
 
+  it('lists people added together in the order they were added', async () => {
+    const asha = await person('asha');
+    const names = Array.from({ length: 20 }, (_, i) => `Person ${String(i).padStart(2, '0')}`);
+    names.reverse(); // not alphabetical, so only the creation order can explain the result
+
+    const group = await createGroup(asha, { members: names.map((name) => ({ name })) });
+
+    expect(group.members.map((m) => m.user.name)).toEqual(['Asha', ...names]);
+  });
+
   it('adds people I share a group with by ID, and refuses anyone else', async () => {
     const asha = await person('asha');
     const bilal = await person('bilal');

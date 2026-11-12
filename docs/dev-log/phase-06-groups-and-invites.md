@@ -83,6 +83,10 @@ Supporting pieces:
 
 ## Decisions and deviations
 
+You reviewed and confirmed four of these on 2026-11-12: adding by email makes a placeholder and
+offers a claim; real balance checks now; the friendship rules; and closing a group when its last
+member with an account leaves.
+
 - **Adding by email never links an existing account.** The plan adds the matching account
   directly and says the response looks the same either way. It can't stay the same: the group
   then shows the real person's name and picture, which reveals the account, and they'd be in the
@@ -145,7 +149,20 @@ Supporting pieces:
 4. **Member rows on phones** squeezed "Not joined yet" into a narrow column beside two buttons
    (seen in the screenshot review). The actions now take their own line below 640px.
 5. **The API client's 100% coverage gate** failed until every new method had a test.
-6. **The Playwright browser was missing:** `~/.cache/ms-playwright` had been removed outside this
+6. **CI failed after the push (commit f099be3) on an ordering bug.**
+   - What failed: an invite test took the second member to be Bilal. Placeholders created in one
+     request share a `joined_at` and got their IDs in the same millisecond, and the ID's random
+     tail decided their order.
+   - What users would see: people added together could be listed in any order.
+   - The fix: the server's UUIDv7s now use a 12-bit counter within a millisecond (RFC 9562
+     "method 1"), so they only ever increase within a process, and people show in the order
+     they were added.
+   - A new test adds 20 people in reverse-alphabetical order and expects that order back. It fails
+     3 of 3 runs with the old random IDs.
+   - The invite test now finds members by name.
+7. **Tests timed out under load.** Two tests that create an extra database timed out at Vitest's
+   default 5 seconds when every package's tests ran at once. The API's tests now allow 20 seconds.
+8. **The Playwright browser was missing:** `~/.cache/ms-playwright` had been removed outside this
    session. It was reinstalled.
 
 ## Verification
@@ -158,9 +175,9 @@ Supporting pieces:
   | contracts  | 283     |
   | api-client | 48      |
   | db         | 97      |
-  | api        | 246     |
+  | api        | 249     |
   | web        | 18      |
-  | **Total**  | **939** |
+  | **Total**  | **942** |
 
 - **Authorization matrix: 42 cases.** 8 group routes × {signed out, stranger, former member,
   member, owner}, plus malformed, unknown and deleted groups. Strangers and former members get

@@ -79,7 +79,8 @@ describe('the public preview', () => {
   it('shows the group, the inviter, the unclaimed placeholders and the target, without signing in', async () => {
     const asha = await person('asha');
     const group = await groupWith(asha, ['Bilal', 'Chitra']);
-    const chitra = group.members[2]!.user.id;
+    const idOf = (name: string) => group.members.find((m) => m.user.name === name)!.user.id;
+    const chitra = idOf('Chitra');
     const created = await invite(asha, group.id, chitra);
 
     const res = await ctx.call(null, 'GET', `/api/v1/invites/${tokenOf(created)}`);
@@ -89,7 +90,7 @@ describe('the public preview', () => {
       group: { name: 'Goa Trip', emoji: '🏖️', memberCount: 3 },
       invitedBy: { name: 'Asha' },
       placeholders: [
-        { id: group.members[1]!.user.id, name: 'Bilal' },
+        { id: idOf('Bilal'), name: 'Bilal' },
         { id: chitra, name: 'Chitra' },
       ],
       targetPlaceholderId: chitra,
