@@ -1,16 +1,8 @@
-import type {
-  AddFriend,
-  AddFriendResponse,
-  FriendList,
-  PeopleList,
-  UserRef,
-} from '@fairshare/contracts';
+import type { AddFriend, AddFriendResponse, PeopleList, UserRef } from '@fairshare/contracts';
 import { directPairs, findPgError, groups, users, withTx, type Db } from '@fairshare/db';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { uuidv7 } from '../../lib/ids';
 import { recordActivity } from '../activity/record';
-import { pairwiseBalances, toMoney } from '../balances/pairwise';
-import { netsForGroups } from '../balances/repo';
 import * as groupsRepo from '../groups/repo';
 import { invalid, memberAdded, resolveNewMember, toUserRef } from '../groups/service';
 
@@ -99,53 +91,6 @@ export function createFriendsService(db: Db) {
         throw error;
       }
       return { response: { groupId, friend: await userRef(friendId) }, created: true };
-    },
-
-    /**
-     * GET /friends: the other person in each of my friendships, plus anyone else I have a non-zero
-     * balance with in a shared group. Non-zero balances first, then by name.
-     */
-    async listFriends(me: string): Promise<FriendList> {
-      const mine = await groupsRepo.listMyGroups(db, me);
-      const directIds = mine.filter((g) => g.kind === 'direct').map((g) => g.id);
-      const [directMembers, nets] = await Promise.all([
-        groupsRepo.listMembersOf(db, directIds),
-        netsForGroups(
-          db,
-          mine.map((g) => g.id),
-        ),
-      ]);
-      const balances = pairwiseBalances(me, nets);
-
-      const directGroupOf = new Map<string, string>();
-      for (const m of directMembers) if (m.userId !== me) directGroupOf.set(m.userId, m.groupId);
-      const ids = new Set([...directGroupOf.keys()]);
-      for (const [userId, perCurrency] of balances) {
-        if (toMoney(perCurrency).length > 0) ids.add(userId);
-      }
-      if (ids.size === 0) return { items: [] };
-
-      const people = await db
-        .select({
-          id: users.id,
-          name: users.name,
-          avatarUrl: users.avatarUrl,
-          isPlaceholder: users.isPlaceholder,
-        })
-        .from(users)
-        .where(inArray(users.id, [...ids]));
-      const items = people.map((person) => ({
-        user: toUserRef(person),
-        balances: toMoney(balances.get(person.id)),
-        directGroupId: directGroupOf.get(person.id) ?? null,
-      }));
-      items.sort(
-        (a, b) =>
-          Number(b.balances.length > 0) - Number(a.balances.length > 0) ||
-          a.user.name.localeCompare(b.user.name) ||
-          a.user.id.localeCompare(b.user.id),
-      );
-      return { items };
     },
 
     /** GET /people: everyone I share an active group with, by name. */

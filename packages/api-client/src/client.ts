@@ -4,10 +4,13 @@ import {
   ClaimList,
   ClaimResponse,
   CurrencyList,
+  FriendDetail,
   FriendList,
   Group,
+  GroupBalances,
   GroupList,
   HealthResponse,
+  Home,
   InviteCreated,
   InvitePreview,
   Member,
@@ -84,7 +87,13 @@ export function createApiClient(options: ApiClientOptions) {
         body,
       }),
 
+    home: (signal?: AbortSignal) => request(Home, '/api/v1/home', { signal }),
+    groupBalances: (groupId: string, signal?: AbortSignal) =>
+      request(GroupBalances, `/api/v1/groups/${seg(groupId)}/balances`, { signal }),
+
     friends: (signal?: AbortSignal) => request(FriendList, '/api/v1/friends', { signal }),
+    friend: (userId: string, signal?: AbortSignal) =>
+      request(FriendDetail, `/api/v1/friends/${seg(userId)}`, { signal }),
     addFriend: (body: AddFriend) =>
       request(AddFriendResponse, '/api/v1/friends', { method: 'POST', body }),
     people: (signal?: AbortSignal) => request(PeopleList, '/api/v1/people', { signal }),

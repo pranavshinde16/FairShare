@@ -1,23 +1,16 @@
 import type { AddMember, CreateGroup, UpdateGroup } from '@fairshare/contracts';
-import { queryOptions, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { afterGroupChange, afterMembershipChange } from '../../lib/invalidation';
 
-// Query keys (Blueprint 7.1): ['groups'], ['group', id], ['friends'], ['people'], ['claims'].
-export const groupsQuery = queryOptions({
-  queryKey: ['groups'],
-  queryFn: ({ signal }) => api.groups(signal),
-});
-
+// Query keys (Blueprint 7.1): ['group', id], ['people'], ['claims']. The lists of groups and
+// friends come from ['home'] (features/balances/queries.ts).
+// What each change invalidates is in lib/invalidation.ts.
 export const groupQuery = (groupId: string) =>
   queryOptions({
     queryKey: ['group', groupId],
     queryFn: ({ signal }) => api.group(groupId, signal),
   });
-
-export const friendsQuery = queryOptions({
-  queryKey: ['friends'],
-  queryFn: ({ signal }) => api.friends(signal),
-});
 
 export const peopleQuery = queryOptions({
   queryKey: ['people'],
@@ -29,24 +22,13 @@ export const claimsQuery = queryOptions({
   queryFn: ({ signal }) => api.claims(signal),
 });
 
-/** After anything that changes who is in which group. */
-export async function refreshMemberships(queryClient: QueryClient, groupId?: string) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['groups'] }),
-    queryClient.invalidateQueries({ queryKey: ['friends'] }),
-    queryClient.invalidateQueries({ queryKey: ['people'] }),
-    queryClient.invalidateQueries({ queryKey: ['claims'] }),
-    groupId && queryClient.invalidateQueries({ queryKey: ['group', groupId] }),
-  ]);
-}
-
 export function useCreateGroup() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateGroup) => api.createGroup(body),
     onSuccess: async (group) => {
       queryClient.setQueryData(groupQuery(group.id).queryKey, group);
-      await refreshMemberships(queryClient);
+      await afterMembershipChange(queryClient, group.id);
     },
   });
 }
@@ -57,7 +39,7 @@ export function useUpdateGroup(groupId: string) {
     mutationFn: (body: UpdateGroup) => api.updateGroup(groupId, body),
     onSuccess: async (group) => {
       queryClient.setQueryData(groupQuery(groupId).queryKey, group);
-      await queryClient.invalidateQueries({ queryKey: ['groups'] });
+      await afterGroupChange(queryClient, groupId);
     },
   });
 }
@@ -66,6 +48,6 @@ export function useAddMember(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: AddMember) => api.addMember(groupId, body),
-    onSuccess: () => refreshMemberships(queryClient, groupId),
+    onSuccess: () => afterMembershipChange(queryClient, groupId),
   });
 }

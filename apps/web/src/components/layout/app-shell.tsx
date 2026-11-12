@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, type LinkProps } from '@tanstack/react-router';
 import { Activity, House, Plus, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { friendsQuery, groupsQuery } from '../../features/groups/queries';
+import { homeQuery } from '../../features/balances/queries';
 import { meQuery } from '../../features/profile/queries';
 import { Avatar } from '../common/avatar';
 import { Logo } from '../common/logo';
@@ -74,14 +74,14 @@ function SidebarSection({ title, children }: { title: string; children: ReactNod
 }
 
 function SidebarGroups() {
-  const groups = useQuery(groupsQuery);
+  const home = useQuery(homeQuery);
   return (
     <SidebarSection title="Groups">
-      {groups.data?.items.length === 0 && (
+      {home.data?.groups.length === 0 && (
         <p className="px-3 text-sm text-muted-foreground">No groups yet.</p>
       )}
       <ul className="flex flex-col">
-        {groups.data?.items.map((group) => (
+        {home.data?.groups.map(({ group }) => (
           <li key={group.id}>
             <Link
               to="/groups/$groupId"
@@ -106,41 +106,29 @@ function SidebarGroups() {
 }
 
 function SidebarPeople() {
-  const friends = useQuery(friendsQuery);
+  const home = useQuery(homeQuery);
   return (
     <SidebarSection title="People">
-      {friends.data?.items.length === 0 && (
+      {home.data?.people.length === 0 && (
         <p className="px-3 text-sm text-muted-foreground">No friends yet.</p>
       )}
       <ul className="flex flex-col">
-        {friends.data?.items.map((friend) => (
-          <li key={friend.user.id}>
-            {friend.directGroupId ? (
-              <Link
-                to="/groups/$groupId"
-                params={{ groupId: friend.directGroupId }}
-                className={sidebarLink}
-                activeProps={{ className: 'bg-accent text-accent-foreground' }}
-              >
-                <Avatar
-                  name={friend.user.name}
-                  src={friend.user.avatarUrl}
-                  size="sm"
-                  className="size-6 text-[10px]"
-                />
-                <span className="truncate">{friend.user.name}</span>
-              </Link>
-            ) : (
-              <span className={sidebarLink}>
-                <Avatar
-                  name={friend.user.name}
-                  src={friend.user.avatarUrl}
-                  size="sm"
-                  className="size-6 text-[10px]"
-                />
-                <span className="truncate">{friend.user.name}</span>
-              </span>
-            )}
+        {home.data?.people.map(({ user }) => (
+          <li key={user.id}>
+            <Link
+              to="/friends/$userId"
+              params={{ userId: user.id }}
+              className={sidebarLink}
+              activeProps={{ className: 'bg-accent text-accent-foreground' }}
+            >
+              <Avatar
+                name={user.name}
+                src={user.avatarUrl}
+                size="sm"
+                className="size-6 text-[10px]"
+              />
+              <span className="truncate">{user.name}</span>
+            </Link>
           </li>
         ))}
       </ul>

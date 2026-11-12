@@ -17,10 +17,12 @@ import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as SignInIndexRouteImport } from './routes/sign-in.index'
 import { Route as SignInVerifyRouteImport } from './routes/sign-in.verify'
+import { Route as AuthedFriendsUserIdRouteImport } from './routes/_authed/friends.$userId'
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups.$groupId'
 import { Route as AuthedGroupsNewRouteImport } from './routes/_authed/groups.new'
 import { Route as AuthedTransactionsIdRouteImport } from './routes/_authed/transactions.$id'
 import { Route as AuthedTransactionsIdEditRouteImport } from './routes/_authed/transactions.$id.edit'
+import { Route as AuthedFriendsUserIdExpensesNewRouteImport } from './routes/_authed/friends.$userId.expenses.new'
 import { Route as AuthedGroupsGroupIdExpensesNewRouteImport } from './routes/_authed/groups.$groupId.expenses.new'
 
 const AuthedRoute = AuthedRouteImport.update({
@@ -62,6 +64,11 @@ const SignInVerifyRoute = SignInVerifyRouteImport.update({
   path: '/verify',
   getParentRoute: () => SignInRoute,
 } as any)
+const AuthedFriendsUserIdRoute = AuthedFriendsUserIdRouteImport.update({
+  id: '/friends/$userId',
+  path: '/friends/$userId',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedGroupsGroupIdRoute = AuthedGroupsGroupIdRouteImport.update({
   id: '/groups/$groupId',
   path: '/groups/$groupId',
@@ -83,6 +90,12 @@ const AuthedTransactionsIdEditRoute =
     path: '/edit',
     getParentRoute: () => AuthedTransactionsIdRoute,
   } as any)
+const AuthedFriendsUserIdExpensesNewRoute =
+  AuthedFriendsUserIdExpensesNewRouteImport.update({
+    id: '/expenses/new',
+    path: '/expenses/new',
+    getParentRoute: () => AuthedFriendsUserIdRoute,
+  } as any)
 const AuthedGroupsGroupIdExpensesNewRoute =
   AuthedGroupsGroupIdExpensesNewRouteImport.update({
     id: '/expenses/new',
@@ -98,10 +111,12 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/sign-in/verify': typeof SignInVerifyRoute
   '/sign-in/': typeof SignInIndexRoute
+  '/friends/$userId': typeof AuthedFriendsUserIdRouteWithChildren
   '/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/groups/new': typeof AuthedGroupsNewRoute
   '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
   '/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
+  '/friends/$userId/expenses/new': typeof AuthedFriendsUserIdExpensesNewRoute
   '/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
 }
 export interface FileRoutesByTo {
@@ -111,10 +126,12 @@ export interface FileRoutesByTo {
   '/sign-in/verify': typeof SignInVerifyRoute
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInIndexRoute
+  '/friends/$userId': typeof AuthedFriendsUserIdRouteWithChildren
   '/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/groups/new': typeof AuthedGroupsNewRoute
   '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
   '/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
+  '/friends/$userId/expenses/new': typeof AuthedFriendsUserIdExpensesNewRoute
   '/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
 }
 export interface FileRoutesById {
@@ -127,10 +144,12 @@ export interface FileRoutesById {
   '/sign-in/verify': typeof SignInVerifyRoute
   '/_authed/': typeof AuthedIndexRoute
   '/sign-in/': typeof SignInIndexRoute
+  '/_authed/friends/$userId': typeof AuthedFriendsUserIdRouteWithChildren
   '/_authed/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/_authed/groups/new': typeof AuthedGroupsNewRoute
   '/_authed/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
   '/_authed/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
+  '/_authed/friends/$userId/expenses/new': typeof AuthedFriendsUserIdExpensesNewRoute
   '/_authed/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
 }
 export interface FileRouteTypes {
@@ -143,10 +162,12 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/sign-in/verify'
     | '/sign-in/'
+    | '/friends/$userId'
     | '/groups/$groupId'
     | '/groups/new'
     | '/transactions/$id'
     | '/transactions/$id/edit'
+    | '/friends/$userId/expenses/new'
     | '/groups/$groupId/expenses/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -156,10 +177,12 @@ export interface FileRouteTypes {
     | '/sign-in/verify'
     | '/'
     | '/sign-in'
+    | '/friends/$userId'
     | '/groups/$groupId'
     | '/groups/new'
     | '/transactions/$id'
     | '/transactions/$id/edit'
+    | '/friends/$userId/expenses/new'
     | '/groups/$groupId/expenses/new'
   id:
     | '__root__'
@@ -171,10 +194,12 @@ export interface FileRouteTypes {
     | '/sign-in/verify'
     | '/_authed/'
     | '/sign-in/'
+    | '/_authed/friends/$userId'
     | '/_authed/groups/$groupId'
     | '/_authed/groups/new'
     | '/_authed/transactions/$id'
     | '/_authed/transactions/$id/edit'
+    | '/_authed/friends/$userId/expenses/new'
     | '/_authed/groups/$groupId/expenses/new'
   fileRoutesById: FileRoutesById
 }
@@ -242,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInVerifyRouteImport
       parentRoute: typeof SignInRoute
     }
+    '/_authed/friends/$userId': {
+      id: '/_authed/friends/$userId'
+      path: '/friends/$userId'
+      fullPath: '/friends/$userId'
+      preLoaderRoute: typeof AuthedFriendsUserIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/groups/$groupId': {
       id: '/_authed/groups/$groupId'
       path: '/groups/$groupId'
@@ -270,6 +302,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedTransactionsIdEditRouteImport
       parentRoute: typeof AuthedTransactionsIdRoute
     }
+    '/_authed/friends/$userId/expenses/new': {
+      id: '/_authed/friends/$userId/expenses/new'
+      path: '/expenses/new'
+      fullPath: '/friends/$userId/expenses/new'
+      preLoaderRoute: typeof AuthedFriendsUserIdExpensesNewRouteImport
+      parentRoute: typeof AuthedFriendsUserIdRoute
+    }
     '/_authed/groups/$groupId/expenses/new': {
       id: '/_authed/groups/$groupId/expenses/new'
       path: '/expenses/new'
@@ -279,6 +318,17 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthedFriendsUserIdRouteChildren {
+  AuthedFriendsUserIdExpensesNewRoute: typeof AuthedFriendsUserIdExpensesNewRoute
+}
+
+const AuthedFriendsUserIdRouteChildren: AuthedFriendsUserIdRouteChildren = {
+  AuthedFriendsUserIdExpensesNewRoute: AuthedFriendsUserIdExpensesNewRoute,
+}
+
+const AuthedFriendsUserIdRouteWithChildren =
+  AuthedFriendsUserIdRoute._addFileChildren(AuthedFriendsUserIdRouteChildren)
 
 interface AuthedGroupsGroupIdRouteChildren {
   AuthedGroupsGroupIdExpensesNewRoute: typeof AuthedGroupsGroupIdExpensesNewRoute
@@ -306,6 +356,7 @@ interface AuthedRouteChildren {
   AuthedActivityRoute: typeof AuthedActivityRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedFriendsUserIdRoute: typeof AuthedFriendsUserIdRouteWithChildren
   AuthedGroupsGroupIdRoute: typeof AuthedGroupsGroupIdRouteWithChildren
   AuthedGroupsNewRoute: typeof AuthedGroupsNewRoute
   AuthedTransactionsIdRoute: typeof AuthedTransactionsIdRouteWithChildren
@@ -315,6 +366,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedActivityRoute: AuthedActivityRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedFriendsUserIdRoute: AuthedFriendsUserIdRouteWithChildren,
   AuthedGroupsGroupIdRoute: AuthedGroupsGroupIdRouteWithChildren,
   AuthedGroupsNewRoute: AuthedGroupsNewRoute,
   AuthedTransactionsIdRoute: AuthedTransactionsIdRouteWithChildren,

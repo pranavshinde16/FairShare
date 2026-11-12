@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { cn } from '../../lib/utils';
-import { refreshMemberships } from '../groups/queries';
+import { afterMembershipChange } from '../../lib/invalidation';
 
 const NEW = 'new';
 
@@ -30,7 +30,8 @@ export function InviteView({
   const accept = useMutation({
     mutationFn: () => api.acceptInvite(token, choice === NEW ? {} : { claimPlaceholderId: choice }),
     onSuccess: async ({ groupId }) => {
-      await refreshMemberships(queryClient, groupId);
+      // Claiming a placeholder can change other groups it was in, too.
+      await afterMembershipChange(queryClient, choice === NEW ? groupId : undefined);
       await navigate({ to: '/groups/$groupId', params: { groupId }, search: { tab: 'members' } });
     },
   });

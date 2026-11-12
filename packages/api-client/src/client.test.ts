@@ -292,7 +292,56 @@ describe('every endpoint method', () => {
       { groupId: ID },
       {},
     ],
+    [
+      'home',
+      (api) => api.home(),
+      'GET',
+      '/api/v1/home',
+      {
+        totals: [],
+        groups: [{ group: GROUP, myNet: [], lastActivityAt: GROUP.createdAt }],
+        people: [],
+      },
+    ],
+    [
+      'groupBalances',
+      (api) => api.groupBalances(ID),
+      'GET',
+      `/api/v1/groups/${ID}/balances`,
+      {
+        balances: [{ currency: 'INR', nets: [{ userId: ID, amount: 0 }], transfers: [] }],
+        me: { net: [], owes: [], owed: [] },
+        breakdown: [
+          {
+            userId: ID,
+            paid: { amount: 0, currency: 'INR' },
+            share: { amount: 0, currency: 'INR' },
+            sent: { amount: 0, currency: 'INR' },
+            received: { amount: 0, currency: 'INR' },
+          },
+        ],
+      },
+    ],
     ['friends', (api) => api.friends(), 'GET', '/api/v1/friends', { items: [] }],
+    [
+      'friend',
+      (api) => api.friend(ID),
+      'GET',
+      `/api/v1/friends/${ID}`,
+      {
+        user: USER,
+        directGroupId: null,
+        total: [{ amount: -500, currency: 'INR' }],
+        breakdown: [
+          {
+            groupId: ID,
+            groupName: 'Goa',
+            kind: 'group',
+            balance: { amount: -500, currency: 'INR' },
+          },
+        ],
+      },
+    ],
     [
       'addFriend',
       (api) => api.addFriend({ userId: ID }),

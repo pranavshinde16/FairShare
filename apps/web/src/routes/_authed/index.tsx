@@ -1,6 +1,7 @@
+import type { Home as HomeData } from '@fairshare/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { Link2, Plus, UserPlus, Users } from 'lucide-react';
+import { ChevronDown, Link2, Plus, UserPlus, Users } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { BalanceText } from '../../components/common/balance-text';
@@ -8,10 +9,14 @@ import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
 import { ClaimsBanner } from '../../features/claims/claims-banner';
+import { homeQuery } from '../../features/balances/queries';
+import { ExpenseTargetPicker } from '../../features/expenses/expense-target-picker';
+import { useNewExpenseShortcut } from '../../features/expenses/use-new-expense-shortcut';
 import { AddFriendDialog } from '../../features/friends/add-friend-dialog';
-import { friendsQuery, groupsQuery } from '../../features/groups/queries';
 import { JoinWithLink } from '../../features/invites/join-with-link';
 import { meQuery } from '../../features/profile/queries';
+import { useFormatMoney } from '../../lib/money';
+import { cn } from '../../lib/utils';
 
 export const Route = createFileRoute('/_authed/')({
   component: HomePage,
@@ -19,31 +24,43 @@ export const Route = createFileRoute('/_authed/')({
 
 function HomePage() {
   const me = useQuery(meQuery);
-  const groups = useQuery(groupsQuery);
-  const friends = useQuery(friendsQuery);
+  const home = useQuery(homeQuery);
   const [addingFriend, setAddingFriend] = useState(false);
-  const error = me.error ?? groups.error ?? friends.error;
-  if (error) {
+  const [picking, setPicking] = useState(false);
+  useNewExpenseShortcut(() => {
+    if (home.data) setPicking(true);
+  });
+  const error = me.error ?? home.error;
+  // Cached data stays on screen if a refetch fails (Blueprint 7.2); only a first load shows this.
+  if (error && !home.data) {
     return (
-      <ErrorState
-        error={error}
-        onRetry={() => void Promise.all([me.refetch(), groups.refetch(), friends.refetch()])}
-      />
+      <ErrorState error={error} onRetry={() => void Promise.all([me.refetch(), home.refetch()])} />
     );
   }
 
   const firstName = me.data?.name.split(' ')[0];
-  const loading = !groups.data || !friends.data;
-  const empty = !loading && groups.data.items.length === 0 && friends.data.items.length === 0;
+  const data = home.data;
+  const empty = data && data.groups.length === 0 && data.people.length === 0;
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {firstName ? `Hi, ${firstName}` : <Skeleton className="h-8 w-40" />}
-      </h1>
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {firstName ? `Hi, ${firstName}` : <Skeleton className="h-8 w-40" />}
+          </h1>
+          {data && !empty && <Totals totals={data.totals} />}
+        </div>
+        {data && !empty && (
+          <Button className="hidden md:inline-flex" onClick={() => setPicking(true)}>
+            <Plus aria-hidden />
+            Add expense
+          </Button>
+        )}
+      </header>
       <ClaimsBanner />
 
-      {loading && <ListSkeleton />}
+      {!data && <ListSkeleton />}
 
       {empty && (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -65,7 +82,7 @@ function HomePage() {
         </div>
       )}
 
-      {!loading && !empty && (
+      {data && !empty && (
         <>
           <section aria-labelledby="groups-heading" className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -79,38 +96,36 @@ function HomePage() {
                 </Link>
               </Button>
             </div>
-            {groups.data.items.length === 0 ? (
+            {data.groups.length === 0 ? (
               <p className="text-sm text-muted-foreground">No groups yet.</p>
             ) : (
-              <ul className="flex flex-col divide-y rounded-xl border">
-                {groups.data.items.map((group) => (
-                  <li key={group.id}>
-                    <Link
-                      to="/groups/$groupId"
-                      params={{ groupId: group.id }}
-                      className="flex min-h-16 items-center gap-3 p-3 hover:bg-muted"
+              <SettledLast
+                items={data.groups}
+                settled={(g) => g.myNet.length === 0}
+                keyOf={(g) => g.group.id}
+                noun={['group', 'groups']}
+                render={({ group, myNet }) => (
+                  <Link
+                    to="/groups/$groupId"
+                    params={{ groupId: group.id }}
+                    className="flex min-h-16 items-center gap-3 p-3 hover:bg-muted"
+                  >
+                    <span
+                      aria-hidden
+                      className="flex size-10 items-center justify-center rounded-lg bg-accent text-xl"
                     >
-                      <span
-                        aria-hidden
-                        className="flex size-10 items-center justify-center rounded-lg bg-accent text-xl"
-                      >
-                        {group.emoji ?? group.name.slice(0, 1).toUpperCase()}
+                      {group.emoji ?? (group.name ?? '').slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate font-medium">{group.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {group.members.filter((m) => m.leftAt === null).length} people
                       </span>
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate font-medium">{group.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {group.members.filter((m) => m.leftAt === null).length} people
-                        </span>
-                      </span>
-                      <BalanceText
-                        balances={group.myNet}
-                        kind="group"
-                        className="text-right text-sm"
-                      />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                    </span>
+                    <BalanceText balances={myNet} kind="group" className="text-right text-sm" />
+                  </Link>
+                )}
+              />
             )}
           </section>
 
@@ -124,44 +139,35 @@ function HomePage() {
                 Add a friend
               </Button>
             </div>
-            {friends.data.items.length === 0 ? (
+            {data.people.length === 0 ? (
               <p className="text-sm text-muted-foreground">No friends yet.</p>
             ) : (
-              <ul className="flex flex-col divide-y rounded-xl border">
-                {friends.data.items.map((friend) => {
-                  const row = (
-                    <>
-                      <Avatar name={friend.user.name} src={friend.user.avatarUrl} />
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate font-medium">{friend.user.name}</span>
-                        {friend.user.isPlaceholder && (
-                          <span className="text-xs text-muted-foreground">Not joined yet</span>
-                        )}
-                      </span>
-                      <BalanceText
-                        balances={friend.balances}
-                        kind="person"
-                        className="text-right text-sm"
-                      />
-                    </>
-                  );
-                  return (
-                    <li key={friend.user.id}>
-                      {friend.directGroupId ? (
-                        <Link
-                          to="/groups/$groupId"
-                          params={{ groupId: friend.directGroupId }}
-                          className="flex min-h-16 items-center gap-3 p-3 hover:bg-muted"
-                        >
-                          {row}
-                        </Link>
-                      ) : (
-                        <div className="flex min-h-16 items-center gap-3 p-3">{row}</div>
+              <SettledLast
+                items={data.people}
+                settled={(p) => p.balances.length === 0}
+                keyOf={(p) => p.user.id}
+                noun={['person', 'people']}
+                render={(friend) => (
+                  <Link
+                    to="/friends/$userId"
+                    params={{ userId: friend.user.id }}
+                    className="flex min-h-16 items-center gap-3 p-3 hover:bg-muted"
+                  >
+                    <Avatar name={friend.user.name} src={friend.user.avatarUrl} />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate font-medium">{friend.user.name}</span>
+                      {friend.user.isPlaceholder && (
+                        <span className="text-xs text-muted-foreground">Not joined yet</span>
                       )}
-                    </li>
-                  );
-                })}
-              </ul>
+                    </span>
+                    <BalanceText
+                      balances={friend.balances}
+                      kind="person"
+                      className="text-right text-sm"
+                    />
+                  </Link>
+                )}
+              />
             )}
           </section>
 
@@ -171,10 +177,97 @@ function HomePage() {
               <JoinWithLink />
             </div>
           </details>
+
+          {/* The floating "＋ Expense" button on phones, above the tab bar. */}
+          <Button
+            size="lg"
+            aria-label="Add expense"
+            className="fixed right-4 bottom-20 z-10 rounded-full shadow-lg md:hidden"
+            onClick={() => setPicking(true)}
+          >
+            <Plus aria-hidden />
+            Expense
+          </Button>
+          <ExpenseTargetPicker open={picking} onClose={() => setPicking(false)} home={data} />
         </>
       )}
 
       <AddFriendDialog open={addingFriend} onClose={() => setAddingFriend(false)} />
+    </div>
+  );
+}
+
+/** "You’re owed ₹4,250 · You owe ₹800", one line per currency (Blueprint 7.2 TotalsHeader). */
+function Totals({ totals }: { totals: HomeData['totals'] }) {
+  const format = useFormatMoney();
+  if (totals.length === 0) {
+    return <p className="text-sm text-muted-foreground">You’re all settled up</p>;
+  }
+  return (
+    <div className="flex flex-col text-sm">
+      {totals.map(({ currency, owed, owe }) => (
+        <p key={currency}>
+          {owed > 0 && (
+            <span className="text-emerald-700 dark:text-emerald-400">
+              You’re owed {format({ amount: owed, currency })}
+            </span>
+          )}
+          {owed > 0 && owe > 0 && <span className="text-muted-foreground"> · </span>}
+          {owe > 0 && (
+            <span className="text-destructive">You owe {format({ amount: owe, currency })}</span>
+          )}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Rows with a balance first; settled ones folded away behind a button, unless everything is
+ * settled (then there's nothing to put first).
+ */
+function SettledLast<T>({
+  items,
+  settled,
+  keyOf,
+  noun,
+  render,
+}: {
+  items: T[];
+  settled: (item: T) => boolean;
+  keyOf: (item: T) => string;
+  noun: [string, string];
+  render: (item: T) => ReactNode;
+}) {
+  const [showSettled, setShowSettled] = useState(false);
+  const open = items.filter((item) => !settled(item));
+  const done = items.filter(settled);
+  const fold = open.length > 0 && done.length > 0;
+  const shown = fold && !showSettled ? open : [...open, ...done];
+  return (
+    <div className="flex flex-col gap-2">
+      <ul className="flex flex-col divide-y rounded-xl border">
+        {shown.map((item) => (
+          <li key={keyOf(item)}>{render(item)}</li>
+        ))}
+      </ul>
+      {fold && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start text-muted-foreground"
+          aria-expanded={showSettled}
+          onClick={() => setShowSettled((v) => !v)}
+        >
+          <ChevronDown
+            aria-hidden
+            className={cn('transition-transform', showSettled && 'rotate-180')}
+          />
+          {showSettled
+            ? 'Hide settled'
+            : `${done.length} settled ${done.length === 1 ? noun[0] : noun[1]}`}
+        </Button>
+      )}
     </div>
   );
 }

@@ -10,7 +10,8 @@ import { Label } from '../../components/ui/label';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { EmojiPicker } from './emoji-picker';
-import { refreshMemberships, useUpdateGroup } from './queries';
+import { afterMembershipChange } from '../../lib/invalidation';
+import { useUpdateGroup } from './queries';
 
 /** Rename, change the emoji or currency, and (the owner) delete the group. */
 export function GroupSettingsDialog({
@@ -112,7 +113,7 @@ export function GroupSettingsDialog({
         onConfirm={async () => {
           await api.deleteGroup(group.id);
           queryClient.removeQueries({ queryKey: ['group', group.id] });
-          await refreshMemberships(queryClient);
+          await afterMembershipChange(queryClient, group.id);
           await navigate({ to: '/' });
         }}
       >

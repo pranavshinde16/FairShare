@@ -5,7 +5,7 @@ import { Dialog } from '../../components/ui/dialog';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { PersonPicker } from '../groups/person-picker';
-import { refreshMemberships } from '../groups/queries';
+import { afterMembershipChange } from '../../lib/invalidation';
 
 /**
  * Blueprint 6 "Adding friends": a name (and maybe an email), or someone I know. Opens the
@@ -16,10 +16,10 @@ export function AddFriendDialog({ open, onClose }: { open: boolean; onClose: () 
   const navigate = useNavigate();
   const add = useMutation({
     mutationFn: (friend: NewMember) => api.addFriend(friend),
-    onSuccess: async ({ groupId }) => {
-      await refreshMemberships(queryClient, groupId);
+    onSuccess: async ({ groupId, friend }) => {
+      await afterMembershipChange(queryClient, groupId);
       onClose();
-      await navigate({ to: '/groups/$groupId', params: { groupId }, search: { tab: 'members' } });
+      await navigate({ to: '/friends/$userId', params: { userId: friend.id } });
     },
   });
 

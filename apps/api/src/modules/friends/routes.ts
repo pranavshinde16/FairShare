@@ -10,6 +10,5 @@ export function friendsRoutes(friends: FriendsService) {
       const { response, created } = await friends.addFriend(c.var.user.id, c.req.valid('json'));
       return c.json(response, created ? 201 : 200);
     })
-    .get('/friends', async (c) => c.json(await friends.listFriends(c.var.user.id)))
     .get('/people', async (c) => c.json(await friends.listPeople(c.var.user.id)));
 }

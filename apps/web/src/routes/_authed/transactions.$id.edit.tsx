@@ -9,7 +9,8 @@ import {
   ExpenseForm,
   isEditableHere,
 } from '../../features/expenses/expense-form';
-import { afterTransactionChange, transactionQuery } from '../../features/expenses/queries';
+import { transactionQuery } from '../../features/expenses/queries';
+import { afterTransactionChange } from '../../lib/invalidation';
 import { groupQuery } from '../../features/groups/queries';
 import { currenciesQuery, meQuery } from '../../features/profile/queries';
 import { api } from '../../lib/api';

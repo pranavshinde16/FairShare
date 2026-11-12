@@ -9,9 +9,10 @@ import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { afterMembershipChange } from '../../lib/invalidation';
 import { InviteButton } from './invite-button';
 import { PersonPicker } from './person-picker';
-import { refreshMemberships, useAddMember } from './queries';
+import { useAddMember } from './queries';
 import { groupTitle } from './title';
 
 /** Blueprint 7.2 Members tab: who's in, who hasn't joined, invite, add, remove, leave. */
@@ -124,7 +125,7 @@ export function MembersTab({ group, meId }: { group: Group; meId: string }) {
         destructive
         onConfirm={async () => {
           await api.removeMember(group.id, removing!.user.id);
-          await refreshMemberships(queryClient, group.id);
+          await afterMembershipChange(queryClient, group.id);
         }}
       >
         They must be settled up first. Their past expenses stay, under their name.
@@ -138,7 +139,7 @@ export function MembersTab({ group, meId }: { group: Group; meId: string }) {
         onConfirm={async () => {
           await api.removeMember(group.id, 'me');
           queryClient.removeQueries({ queryKey: ['group', group.id] });
-          await refreshMemberships(queryClient);
+          await afterMembershipChange(queryClient, group.id);
           await navigate({ to: '/' });
         }}
       >

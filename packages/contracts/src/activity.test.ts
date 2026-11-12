@@ -54,13 +54,29 @@ describe('Balances', () => {
         owes: [{ from: ids.b, to: ids.a, amount: 95_000, currency: 'INR' }],
         owed: [],
       },
-      breakdown: [{ userId: ids.b, paid: inr(120_000), share: inr(215_000) }],
+      breakdown: [
+        {
+          userId: ids.b,
+          paid: inr(120_000),
+          share: inr(215_000),
+          sent: inr(0),
+          received: inr(0),
+        },
+      ],
     });
     expect(
       GroupBalances.safeParse({
         balances: [],
         me: { net: [], owes: [{ from: ids.b, to: ids.a, amount: 1 }], owed: [] },
         breakdown: [],
+      }).success,
+    ).toBe(false);
+    // Settlement money is reported apart from expenses, so paid − share alone isn't the net.
+    expect(
+      GroupBalances.safeParse({
+        balances: [],
+        me: { net: [], owes: [], owed: [] },
+        breakdown: [{ userId: ids.b, paid: inr(120_000), share: inr(215_000) }],
       }).success,
     ).toBe(false);
   });

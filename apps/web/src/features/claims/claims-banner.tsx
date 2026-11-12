@@ -3,7 +3,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
-import { claimsQuery, refreshMemberships } from '../groups/queries';
+import { afterMembershipChange } from '../../lib/invalidation';
+import { claimsQuery } from '../groups/queries';
 
 /**
  * Placeholders someone made with my email address (plan correction): "Asha added you to Goa Trip
@@ -16,7 +17,8 @@ export function ClaimsBanner() {
   const claim = useMutation({
     mutationFn: (placeholderId: string) => api.claim(placeholderId),
     onSuccess: async ({ groupIds }) => {
-      await refreshMemberships(queryClient);
+      // A claim moves the placeholder's part in every group it was in.
+      await afterMembershipChange(queryClient);
       const [first] = groupIds;
       if (first) await navigate({ to: '/groups/$groupId', params: { groupId: first } });
     },

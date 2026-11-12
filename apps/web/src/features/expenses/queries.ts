@@ -1,5 +1,5 @@
 import type { TransactionListQuery } from '@fairshare/contracts';
-import { infiniteQueryOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 
 export type ListFilters = { q?: string; includeDeleted?: boolean };
@@ -32,20 +32,3 @@ export const historyQuery = (id: string) =>
     queryKey: ['transaction', id, 'history'],
     queryFn: ({ signal }) => api.transactionHistory(id, signal),
   });
-
-/**
- * After any change to a transaction in a group (Blueprint 7.1): the group's lists and balances,
- * the groups list (my nets), friends, and the transaction itself.
- */
-export async function afterTransactionChange(
-  queryClient: QueryClient,
-  groupId: string,
-  transactionId?: string,
-) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['group', groupId] }),
-    queryClient.invalidateQueries({ queryKey: ['groups'] }),
-    queryClient.invalidateQueries({ queryKey: ['friends'] }),
-    transactionId && queryClient.invalidateQueries({ queryKey: ['transaction', transactionId] }),
-  ]);
-}

@@ -1,6 +1,7 @@
 import type { Profile, UpdateProfile } from '@fairshare/contracts';
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { afterProfileChange } from '../../lib/invalidation';
 
 export const meQuery = queryOptions({
   queryKey: ['me'],
@@ -18,6 +19,9 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (changes: UpdateProfile) => api.updateMe(changes),
-    onSuccess: (profile: Profile) => queryClient.setQueryData(meQuery.queryKey, profile),
+    onSuccess: async (profile: Profile) => {
+      queryClient.setQueryData(meQuery.queryKey, profile);
+      await afterProfileChange(queryClient);
+    },
   });
 }

@@ -57,7 +57,7 @@ test('creates a group with a placeholder, who joins through the invite and claim
   await expect(members.getByText('Not joined yet')).toHaveCount(0);
 });
 
-test('adds a friend by name and opens the friendship', async ({ page }) => {
+test('adds a friend by name and opens their page', async ({ page }) => {
   await page.goto('/');
   await signIn(page, newEmail('esha'));
 
@@ -66,7 +66,9 @@ test('adds a friend by name and opens the friendship', async ({ page }) => {
   await dialog.getByLabel('Name').fill('Chitra');
   await dialog.getByRole('button', { name: 'Add friend' }).click();
 
-  await expect(page.getByRole('heading', { name: 'You & Chitra' })).toBeVisible();
+  // The friend's page: our balance, and a link aimed at Chitra until she joins.
+  await expect(page.getByRole('heading', { name: 'Chitra', exact: true })).toBeVisible();
+  await expect(page.getByText('You’re settled up', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Invite Chitra' })).toBeVisible();
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'People' })).toBeVisible();

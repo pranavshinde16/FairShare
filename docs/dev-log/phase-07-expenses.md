@@ -1,8 +1,8 @@
 # Phase 7: Expense creation and editing
 
 - **Dates:** 2026-11-12 (code part)
-- **Status:** In progress. The code is done and verified locally (integration, end-to-end, Docker
-  image). It goes live with the next push; then check it on staging (see "Lined up next").
+- **Status:** Done. Committed as aa85f6d; CI, the deploy and the staging check (add, edit, delete
+  and undo an expense; its history; deleting a group from its settings) passed.
 - **Plan reference:** Implementation blueprint §4.4 (expense management), §4.5 (split engine),
   §4.9 (activity), §6.3 (transaction endpoints), §7.1 (cross-cutting patterns), §7.3 (Add Expense),
   §10.4 (lifecycle and concurrency tests), §10.5 (end-to-end), §11 Phase 7

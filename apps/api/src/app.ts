@@ -12,6 +12,8 @@ import type { AuthGateway } from './modules/auth/auth';
 import type { DomainUserResolver } from './modules/auth/domain-users';
 import { requireUser } from './modules/auth/require-user';
 import { signInOptionsRoutes } from './modules/auth/routes';
+import { balancesRoutes } from './modules/balances/routes';
+import type { BalancesService } from './modules/balances/service';
 import { claimsRoutes } from './modules/claims/routes';
 import type { ClaimsService } from './modules/claims/service';
 import { currenciesRoutes } from './modules/currencies/routes';
@@ -47,6 +49,7 @@ export type AppDeps = {
   friends: FriendsService;
   claims: ClaimsService;
   transactions: TransactionsService;
+  balances: BalancesService;
   /** The public invite preview: 30 a minute per client IP. */
   invitePreviewLimiter: RateLimiter;
   /** Proxy headers holding the client IP (CLIENT_IP_HEADERS). */
@@ -81,10 +84,11 @@ export function createApp(deps: AppDeps) {
   signedIn.use(requireUser(deps.auth, deps.domainUsers));
   signedIn.route('/', usersRoutes(deps.users));
   signedIn.route('/', currenciesRoutes(deps.currencies));
-  signedIn.route('/', groupsRoutes(deps.groups, deps.invites, deps.transactions));
+  signedIn.route('/', groupsRoutes(deps));
   signedIn.route('/', transactionRoutes(deps.transactions));
   signedIn.route('/', inviteAcceptRoutes(deps.invites));
   signedIn.route('/', friendsRoutes(deps.friends));
+  signedIn.route('/', balancesRoutes(deps.balances));
   signedIn.route('/', claimsRoutes(deps.claims));
   v1.route('/', signedIn);
   app.route('/api/v1', v1);

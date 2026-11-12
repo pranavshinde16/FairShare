@@ -5,10 +5,11 @@ import { useNavigate } from '@tanstack/react-router';
 import { useSyncExternalStore } from 'react';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { afterTransactionChange } from '../../lib/invalidation';
 import { toast } from '../../lib/toast';
 import { expenseDrafts } from './drafts';
 import { rememberDefaults, type ExpenseDraft } from './expense-form';
-import { afterTransactionChange, transactionsQuery } from './queries';
+import { transactionsQuery } from './queries';
 
 // IDs of expenses saved optimistically and not yet confirmed: the list shows them as "Saving…".
 const pending = new Set<string>();
@@ -88,8 +89,17 @@ export function useCreateExpense(group: Group, meId: string, minorUnits: number)
         durationMs: 12_000,
         action: {
           label: 'Open',
-          run: () =>
-            void navigate({ to: '/groups/$groupId/expenses/new', params: { groupId: group.id } }),
+          run: () => {
+            // A friendship's form opens over the friend's page.
+            const friend =
+              group.kind === 'direct' ? group.members.find((m) => m.user.id !== meId) : undefined;
+            void (friend
+              ? navigate({
+                  to: '/friends/$userId/expenses/new',
+                  params: { userId: friend.user.id },
+                })
+              : navigate({ to: '/groups/$groupId/expenses/new', params: { groupId: group.id } }));
+          },
         },
       });
     } finally {

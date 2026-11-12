@@ -2,6 +2,8 @@ import { AddMember, CreateGroup, CreateInvite, UpdateGroup, Uuid } from '@fairsh
 import { Hono } from 'hono';
 import type { AuthedEnv } from '../../http/context';
 import { validate } from '../../http/validate';
+import { groupBalancesRoutes } from '../balances/routes';
+import type { BalancesService } from '../balances/service';
 import type { InvitesService } from '../invites/service';
 import { groupTransactionsRoutes } from '../transactions/routes';
 import type { TransactionsService } from '../transactions/service';
@@ -9,11 +11,17 @@ import { requireMembership, type GroupEnv } from './membership';
 import { notFound, type GroupsService } from './service';
 
 /** Groups, their members and their invites. */
-export function groupsRoutes(
-  groups: GroupsService,
-  invites: InvitesService,
-  transactions: TransactionsService,
-) {
+export function groupsRoutes({
+  groups,
+  invites,
+  transactions,
+  balances,
+}: {
+  groups: GroupsService;
+  invites: InvitesService;
+  transactions: TransactionsService;
+  balances: BalancesService;
+}) {
   const scoped = new Hono<GroupEnv>()
     .use(requireMembership(groups))
     .get('/', async (c) => c.json(await groups.getGroup(c.var.membership.groupId, c.var.user.id)))
@@ -39,6 +47,7 @@ export function groupsRoutes(
       c.json(await invites.createInvite(c.var.user.id, c.var.membership, c.req.valid('json')), 201),
     )
     .route('/', groupTransactionsRoutes(transactions))
+    .route('/', groupBalancesRoutes(balances))
     .delete('/invites/:inviteId', async (c) => {
       const inviteId = Uuid.safeParse(c.req.param('inviteId'));
       if (!inviteId.success) throw notFound('No such invite in this group.');

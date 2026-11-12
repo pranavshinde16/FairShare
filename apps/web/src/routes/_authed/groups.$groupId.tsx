@@ -1,14 +1,18 @@
 import { ApiError } from '@fairshare/api-client';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router';
-import { Plus, Receipt, Scale, Settings } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Plus, Receipt, Settings } from 'lucide-react';
+import { useState } from 'react';
 import { z } from 'zod';
+import { BalanceText } from '../../components/common/balance-text';
 import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
+import { BalancesTab } from '../../features/balances/balances-tab';
+import { balancesQuery } from '../../features/balances/queries';
 import { ExpensesTab } from '../../features/expenses/expenses-tab';
+import { useNewExpenseShortcut } from '../../features/expenses/use-new-expense-shortcut';
 import { GroupSettingsDialog } from '../../features/groups/group-settings-dialog';
 import { InviteButton } from '../../features/groups/invite-button';
 import { MembersTab } from '../../features/groups/members-tab';
@@ -35,24 +39,14 @@ function GroupPage() {
   const { tab, created } = Route.useSearch();
   const me = useQuery(meQuery);
   const group = useQuery(groupQuery(groupId));
+  const balances = useQuery(balancesQuery(groupId));
   const currencies = useQuery(currenciesQuery);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const navigate = useNavigate();
   const addExpense = () =>
     void navigate({ to: '/groups/$groupId/expenses/new', params: { groupId } });
 
-  // Desktop shortcut (Blueprint 7.1): "n" opens a new expense, unless someone is typing.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (event.key !== 'n' || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (target.closest('input, textarea, select, [contenteditable], dialog')) return;
-      event.preventDefault();
-      addExpense();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  });
+  useNewExpenseShortcut(addExpense);
 
   if (group.error instanceof ApiError && group.error.status === 404) {
     return (
@@ -106,6 +100,19 @@ function GroupPage() {
         </div>
       )}
 
+      {/* My position stays in view above the tabs (Blueprint 7.2: pinned on phones). */}
+      {tab !== 'balances' && balances.data && (
+        <Link
+          to="/groups/$groupId"
+          params={{ groupId }}
+          search={{ tab: 'balances' }}
+          className="-my-2 flex min-h-11 items-center justify-between gap-3 rounded-xl border px-4 py-2 text-sm hover:bg-muted"
+        >
+          <BalanceText balances={balances.data.me.net} kind="group" className="font-medium" />
+          <span className="text-primary">Balances</span>
+        </Link>
+      )}
+
       <nav aria-label="Group sections" className="grid grid-cols-3 rounded-lg bg-muted p-1">
         {TABS.map((name) => (
           <Link
@@ -125,11 +132,7 @@ function GroupPage() {
       </nav>
 
       {tab === 'expenses' && <ExpensesTab group={data} meId={me.data.id} />}
-      {tab === 'balances' && (
-        <EmptyState icon={Scale} title="Nothing to settle">
-          Balances appear here once the group has expenses.
-        </EmptyState>
-      )}
+      {tab === 'balances' && <BalancesTab group={data} meId={me.data.id} />}
       {tab === 'members' && <MembersTab group={data} meId={me.data.id} />}
 
       {/* The floating "Add expense" button on phones, above the tab bar. */}

@@ -12,16 +12,13 @@ import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
 import { isEditableHere } from '../../features/expenses/expense-form';
 import { describeEntry, shortDate } from '../../features/expenses/history';
-import {
-  afterTransactionChange,
-  historyQuery,
-  transactionQuery,
-} from '../../features/expenses/queries';
+import { historyQuery, transactionQuery } from '../../features/expenses/queries';
 import { groupQuery } from '../../features/groups/queries';
 import { groupTitle } from '../../features/groups/title';
 import { currenciesQuery, meQuery } from '../../features/profile/queries';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { afterTransactionChange } from '../../lib/invalidation';
 import { toast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 
@@ -65,6 +62,11 @@ function TransactionPage() {
       : (group.data.members.find((m) => m.user.id === userId)?.user.name ?? 'Someone');
   const person = (userId: string) => group.data.members.find((m) => m.user.id === userId)?.user;
   const lastChange = data.updatedBy ?? data.createdBy;
+  // A friendship's expenses live on the friend's page.
+  const friend =
+    group.data.kind === 'direct'
+      ? group.data.members.find((m) => m.user.id !== meId)?.user
+      : undefined;
   const deleted = data.deletedAt !== null;
 
   async function restore() {
@@ -83,14 +85,24 @@ function TransactionPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        to="/groups/$groupId"
-        params={{ groupId: data.groupId }}
-        search={{ tab: 'expenses' }}
-        className="text-sm text-primary underline-offset-4 hover:underline"
-      >
-        ← {groupTitle(group.data, meId)}
-      </Link>
+      {friend ? (
+        <Link
+          to="/friends/$userId"
+          params={{ userId: friend.id }}
+          className="text-sm text-primary underline-offset-4 hover:underline"
+        >
+          ← {friend.name}
+        </Link>
+      ) : (
+        <Link
+          to="/groups/$groupId"
+          params={{ groupId: data.groupId }}
+          search={{ tab: 'expenses' }}
+          className="text-sm text-primary underline-offset-4 hover:underline"
+        >
+          ← {groupTitle(group.data, meId)}
+        </Link>
+      )}
 
       <header className="flex flex-col gap-1">
         <h1 className={cn('text-2xl font-semibold tracking-tight', deleted && 'line-through')}>

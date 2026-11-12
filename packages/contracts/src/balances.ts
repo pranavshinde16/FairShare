@@ -25,7 +25,12 @@ export const GroupBalances = z.object({
     owes: z.array(CurrencyTransfer),
     owed: z.array(CurrencyTransfer),
   }),
-  /** What each member paid and consumed, per currency. */
-  breakdown: z.array(z.object({ userId: Uuid, paid: Money, share: Money })),
+  /**
+   * Each member's net, explained, per currency: what they paid for expenses and their share of
+   * them, then the settlement money they sent and received. net = paid − share + sent − received.
+   */
+  breakdown: z.array(
+    z.object({ userId: Uuid, paid: Money, share: Money, sent: Money, received: Money }),
+  ),
 });
 export type GroupBalances = z.infer<typeof GroupBalances>;
