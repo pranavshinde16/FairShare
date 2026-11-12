@@ -5,13 +5,16 @@ Staging runs on **Railway** (the app), **Neon** (Postgres) and **Sentry** (error
 passes, runs the migrations first, and a GitHub workflow smoke-tests the live site after each
 deploy.
 
-What the repository already defines:
+What the repository defines:
 
-| File                                  | What it sets                                                                                                        |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `Dockerfile`                          | The image: web build + API bundle + migrations                                                                      |
-| `railway.json`                        | Build from the Dockerfile; pre-deploy `node dist/migrate.js`; health check `/api/health`; one replica, never sleeps |
-| `.github/workflows/staging-smoke.yml` | `scripts/smoke-test.sh` against `STAGING_URL` after each successful staging deploy                                  |
+| File                                  | What it sets                                                                       |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| `Dockerfile`                          | The image: web build + API bundle + migrations                                     |
+| `.github/workflows/staging-smoke.yml` | `scripts/smoke-test.sh` against `STAGING_URL` after each successful staging deploy |
+
+The Railway service settings live in the **Railway dashboard**, listed in
+[step 3](#3-railway-the-app). There is no `railway.json`: Railway's Config as Code is deprecated,
+new services can't opt into it, and existing files stop being read on 2026-12-01.
 
 Everything below is done in each service's dashboard. **Passwords, connection strings and DSNs go
 only into those dashboards, never into the repository or a chat.**
@@ -26,26 +29,51 @@ pushed to `main` first. The CI run on that push is what Railway waits for.
 
 ## 1. Neon (database)
 
-1. Create a project named `fairshare`: Postgres 17, region **AWS Asia Pacific (Singapore)**.
-2. Create a branch named `staging` from `main`. Use the `staging` branch for every step below.
+1. Create a project named `fairshare`: Postgres 17, region **AWS Asia Pacific (Singapore)**. Its
+   default branch is called `production`.
+2. Create a branch named `staging` from `production`. Use the `staging` branch for every step
+   below, including the connection strings: a string copied with the wrong branch selected
+   silently points staging at `production`.
 3. Make a password for the app's database user on your own machine:
 
    ```bash
    openssl rand -hex 24
    ```
 
-4. Open the **SQL Editor** on the `staging` branch and run the following, pasting that password:
+4. Open the **SQL Editor** on the `staging` branch, database `neondb`, and run the following,
+   pasting that password:
 
    ```sql
-   -- The group role the migrations grant permissions to (they skip it if it exists).
-   CREATE ROLE fairshare_app NOLOGIN;
-   -- The API's login. It gets only fairshare_app's permissions.
-   CREATE ROLE fairshare_api LOGIN PASSWORD 'paste-the-password-here' IN ROLE fairshare_app;
+   -- Safe to re-run. fairshare_app may already exist: migration 0003 creates it, and a branch
+   -- copies its parent's roles, so a branch made from a migrated parent has it already.
+   DO $$
+   BEGIN
+     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'fairshare_app') THEN
+       CREATE ROLE fairshare_app NOLOGIN;
+     END IF;
+     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'fairshare_api') THEN
+       CREATE ROLE fairshare_api LOGIN;
+     END IF;
+   END
+   $$;
+   -- The API's login. It gets only fairshare_app's permissions. Re-running sets a new password.
+   ALTER ROLE fairshare_api LOGIN PASSWORD 'paste-the-password-here';
+   GRANT fairshare_app TO fairshare_api;
    ```
 
    Create this role with SQL, **not** on the Roles page: roles created on the Roles page join
    `neon_superuser`, which overrides the grants (for example, the API's inability to delete
-   activity history).
+   activity history). Check it:
+
+   ```sql
+   SELECT rolname, rolcanlogin,
+          pg_has_role(rolname, 'fairshare_app', 'member') AS has_app_grants,
+          pg_has_role(rolname, 'neon_superuser', 'member') AS is_superuser_member
+   FROM pg_roles WHERE rolname = 'fairshare_api';
+   ```
+
+   Expect `rolcanlogin` and `has_app_grants` true, and `is_superuser_member` **false**. A second run
+   prints a NOTICE that `fairshare_api` is already a member of `fairshare_app`; that's expected.
 
 5. Copy two connection strings from **Connect** (branch `staging`, database `neondb`):
 
@@ -54,10 +82,22 @@ pushed to `main` first. The CI run on that push is what Railway waits for.
    | `MIGRATION_DATABASE_URL` | `neondb_owner`  | off (direct)        |
    | `DATABASE_URL`           | `fairshare_api` | on (`-pooler` host) |
 
+   Neon doesn't know a password set with SQL, so for `fairshare_api` put yours into the string.
+
    In both, replace the query string (`?sslmode=require&channel_binding=require`) with
    `?sslmode=verify-full`. The connection is still encrypted, and the server's certificate is fully
    checked; node-postgres warns about `sslmode=require`. Neon refuses unencrypted connections in
    any case.
+
+6. Optionally, test each string from your machine with `psql` 16 or later. psql needs
+   `&sslrootcert=system` added to verify Neon's certificate (node-postgres doesn't, so don't add it
+   in Railway). Reading the string with `read -s` keeps it out of your shell history:
+
+   ```bash
+   read -rs DB_URL   # paste the string, then Enter
+   psql "${DB_URL}&sslrootcert=system" -c 'SELECT current_user'
+   unset DB_URL
+   ```
 
 ## 2. Sentry (error tracking)
 
@@ -69,17 +109,43 @@ pushed to `main` first. The CI run on that push is what Railway waits for.
 ## 3. Railway (the app)
 
 1. **New project → Deploy from GitHub repo**, and give Railway's GitHub app access to the
-   `FairShare` repository only. Railway reads `railway.json`, so the build, pre-deploy step and
-   health check need no settings.
-2. Name the environment **`staging`**: rename the default `production` environment, or create
+   `FairShare` repository only.
+2. **One service, not two.** Railway sees the pnpm workspace and creates a service per app
+   (`@fairshare/api` and `@fairshare/web`), each with a `pnpm --filter` build command and watch
+   paths. FairShare is one service: the API serves the web build. **Delete the `@fairshare/web`
+   service**, and rename the other `fairshare` (**Settings → Service name**) before generating its
+   domain, since the generated domain is made from the service name.
+3. Rename the project `fairshare` (Railway gives it a random name). The project and environment
+   names show up on GitHub as the deployment environment, e.g. `fairshare / staging`.
+4. Name the environment **`staging`**: rename the default `production` environment, or create
    `staging` and delete the default. The post-deploy smoke test only runs for deployments whose
    environment name contains "staging".
-3. In the service's **Settings**:
-   - **Region:** Southeast Asia (Singapore).
-   - **Source:** branch `main`, and turn on **Wait for CI**, so a commit deploys only after the CI
-     workflow passes.
-   - **Networking → Generate Domain.** This is the staging URL until there's a custom domain.
-4. In **Variables** (the raw editor is quickest), set:
+5. In the service's **Settings**, set all of the following. The dashboard is the only place they
+   are recorded, so this table is the reference.
+
+   | Setting                             | Value                         | Why                                                                           |
+   | ----------------------------------- | ----------------------------- | ----------------------------------------------------------------------------- |
+   | Source: branch                      | `main`                        |                                                                               |
+   | Source: **Wait for CI**             | on                            | A commit deploys only after CI passes; see [below](#wait-for-ci)              |
+   | Root directory                      | empty                         | The Dockerfile builds from the repository root                                |
+   | Watch paths                         | empty                         | Any change can affect the image                                               |
+   | Builder                             | Dockerfile                    |                                                                               |
+   | Dockerfile path                     | `/Dockerfile`                 |                                                                               |
+   | Custom build command, start command | empty                         | The Dockerfile's `CMD` starts the server                                      |
+   | **Pre-deploy command**              | `node dist/migrate.js`        | Migrations and reference data, before the new version takes traffic           |
+   | **Healthcheck path**                | `/api/health`                 | A deploy whose database is unreachable fails instead of going live            |
+   | Healthcheck timeout                 | `120`                         | Seconds; boot takes a few                                                     |
+   | Region                              | Southeast Asia (Singapore)    | Next to the Neon database                                                     |
+   | Replicas                            | `1`                           | The planned rate limiter keeps its counts in memory                           |
+   | Serverless (sleep when idle)        | off                           | A sleeping service makes the first request slow                               |
+   | Restart policy                      | On failure, at most 5 retries | A crash loop stops instead of retrying forever                                |
+   | Draining time                       | `15` seconds                  | Longer than the server's own 10-second shutdown, so in-flight requests finish |
+
+   The pre-deploy command and the health check matter most. Without the health check, Railway
+   marks a deploy live even when every request fails with 503.
+
+6. **Networking → Generate Domain.** This is the staging URL until there's a custom domain.
+7. In **Variables** (the raw editor is quickest), set:
 
    ```text
    DATABASE_URL=<fairshare_api pooled connection string>
@@ -94,14 +160,41 @@ pushed to `main` first. The CI run on that push is what Railway waits for.
    Don't set `PORT`: Railway provides it. `VITE_*` values reach the web build automatically,
    because the Dockerfile declares them as build arguments.
 
-5. Deploy. In the deploy logs, the pre-deploy step should print `Migrations and reference data are
-up to date.`, then the server logs `FairShare API listening`, and the health check passes.
+8. Deploy. The deploy logs should show:
+   - from the pre-deploy step: `Migrations and reference data are up to date.`
+   - then from the server: `FairShare API listening`
+   - then the health check passing.
+
+   If the health check fails, the logs say why. Each failed check logs
+   `database health check failed` with the Postgres error code and message: for example `28P01`
+   (wrong password, or the role is missing on this branch) or `ENOTFOUND` (a mistyped host).
+
+### Wait for CI
+
+Railway holds a deploy until **every GitHub Actions run on that commit** has finished, and skips
+it if any run failed. That includes the "Staging smoke test" runs, which run on the commit
+they test. So once a smoke run fails on a commit, Railway skips every later deploy of that same
+commit with "CI check suite failed", including the redeploy after a variable change. Railway's
+dashboard may still report the variable change as applied. A new commit isn't affected: it has
+no failed runs yet.
+
+To get unstuck after fixing the cause (a variable, the database, `STAGING_URL`):
+
+- **Preferred:** GitHub → **Actions → "Staging smoke test"**, open the failed run, **Re-run all
+  jobs**. A re-run replaces the run's result, so once it passes, the commit is clear and
+  Railway's next deploy of it goes ahead. This only helps when staging is already serving the
+  fixed version, for example when the smoke test itself was misconfigured.
+- **Otherwise:** Railway → **Deployments → ⋮ → Deploy commit** deploys the commit by hand. Then
+  re-run the failed smoke run as above, so the next automatic redeploy isn't skipped.
 
 ## 4. GitHub (post-deploy smoke test)
 
-**Settings → Secrets and variables → Actions → Variables → New repository variable:**
+**Settings → Secrets and variables → Actions → Variables tab → New repository variable:**
 `STAGING_URL` = the Railway URL, e.g. `https://fairshare-staging.up.railway.app` (no trailing
 slash needed).
+
+It must be a **variable, not a secret**: the workflow reads `vars.STAGING_URL`, and a secret of the
+same name is invisible to it. The URL isn't secret anyway; it's public.
 
 ## 5. Cloudflare (once you have a domain)
 
@@ -116,14 +209,19 @@ slash needed).
 
 - Open the staging URL: the page should say **"Server and database are up"**.
 - `scripts/smoke-test.sh <staging-url>` from your machine should pass every check.
-- **GitHub → Actions → "Staging smoke test"** should have run green after the deploy. If it didn't
-  run, check the environment name under the repository's **Deployments**, and use **Run workflow**
-  to start it by hand.
+- **GitHub → Actions → "Staging smoke test"** should have run green after the deploy. If it
+  failed at "Check STAGING_URL is set", see step 4. If it didn't run, check the environment name
+  under the repository's **Deployments**, and use **Run workflow** to start it by hand.
 - **Browser Sentry:** in the staging page's developer console, run
   `setTimeout(() => { throw new Error('Sentry test') })`. The error appears in `fairshare-web`
   within a minute.
 
 ## Later: production
 
-Production will be a second Railway environment and a second Neon branch, deployed by Git tag.
-That is set up at launch (Phase 14).
+Production will be a second Railway environment deployed by Git tag, with its own Neon branch. That
+is set up at launch (Phase 14).
+
+The Neon `production` branch has already been migrated once, by an early staging deploy whose
+connection strings pointed at it. It has the schema, the reference data and the `fairshare_app`
+and `fairshare_readonly` roles, but no user data. Migrations are idempotent, so it can be used as
+is; decide at Phase 14 whether to start it fresh instead.

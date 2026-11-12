@@ -1,9 +1,8 @@
 # Phase 4: API skeleton and staging deploy
 
-- **Dates:** 2026-11-10 (code part)
-- **Status:** In progress. The code and the Railway configuration are done and verified; going
-  live needs the code on GitHub and the account setup in
-  [docs/deploy-staging.md](../deploy-staging.md) (see "Lined up next").
+- **Dates:** 2026-11-10 (code part), 2026-11-11 (staging live), 2026-11-12 (fixes from going live)
+- **Status:** Done (2026-11-12). Staging is live at https://fairshareapi-staging.up.railway.app,
+  deploys `main` after CI, and passes the smoke test from a developer machine and on GitHub.
 - **Plan reference:** Implementation blueprint §2 (backend, infrastructure), §3.3 (request flow),
   §6.1 (conventions, error format), §9.1 (security plan), §11 Phase 4
 
@@ -70,7 +69,8 @@ unknown routes now carries it too.
 
 ### Staging on Railway (host chosen 2026-11-10)
 
-- **`railway.json`** (validated against Railway's published schema):
+- **`railway.json`**, later deleted: Railway turned out not to read it (see "Going live on
+  staging"). The same values are now set in the dashboard and listed in the runbook:
   - build from the Dockerfile
   - pre-deploy `node dist/migrate.js` (5-minute limit)
   - health check `/api/health` (2 minutes)
@@ -99,6 +99,50 @@ unknown routes now carries it too.
 - `.env.example`, README (production build), ARCHITECTURE (new "API server" and "Deployment"
   sections, the invite-token plan correction, version decisions).
 
+## Going live on staging (2026-11-11)
+
+You did the account setup from the runbook. Staging came up healthy, but several things differed
+from the runbook. All of them are now fixed in the runbook, and items 5 and 6 also in the repo.
+
+1. **Neon's default branch is called `production`**, not `main`. `staging` was branched from it.
+2. **`fairshare_app` already existed on `staging`**: the first connection strings pointed at the
+   `production` branch, so the pre-deploy step migrated it (creating `fairshare_app` and
+   `fairshare_readonly`), and `staging` was then branched from it. The runbook's
+   `CREATE ROLE fairshare_app` failed there. The SQL is now safe to re-run: it creates each role
+   only when missing, then sets the password and grants membership.
+3. **Railway's monorepo detection** created two services, `@fairshare/api` and `@fairshare/web`,
+   with `pnpm --filter` build commands and watch paths. You deleted the web service and cleared
+   the root directory, build command, start command and watch paths, keeping the Dockerfile
+   builder.
+4. **Railway no longer reads `railway.json`.** Config as Code is deprecated: services that never
+   used it can't opt in, and existing files stop being read on 2026-12-01. The pre-deploy command
+   and health check path were set by hand in the dashboard. The runbook now lists every service
+   setting with its value, since the dashboard is the only record.
+5. **Wait for CI and the smoke test blocked each other.** Railway skips a deploy if any GitHub
+   Actions run on the commit failed, and the smoke workflow runs on the commit it tests. Two smoke
+   runs failed on d593b5e, so Railway skipped later deploys of that commit ("CI check suite
+   failed"). The workaround was Deployments → ⋮ → Deploy commit.
+
+   Both smoke runs had failed at "Check STAGING_URL is set", before the smoke script ran.
+   `STAGING_URL` was saved as a repository **secret**, and the workflow reads it as a
+   **variable**. The runbook now says which tab, and the workflow's error message names it too.
+   The first deploy also went live with its database unreachable, because the health check wasn't
+   configured yet (item 4). With the health check set, Railway fails such a deploy itself, so it
+   never reaches the smoke test.
+
+6. **`/api/health` answered 503 without saying why**, which made the database problem slow to
+   find. `pingDatabase` now logs `database health check failed` with the error's code and message
+   (for example `28P01` for a bad password), using the request's logger so the line carries the
+   request ID. Only those two fields are logged. A connection string in the message is cut out,
+   because some errors carry more: Node's `ERR_INVALID_URL` keeps the whole input URL, password
+   included.
+7. **Testing a `verify-full` string with psql** needs `&sslrootcert=system` added. That's for
+   psql only (16 or later); node-postgres verifies against Node's own CA list.
+
+The new runbook SQL was tested in a throwaway Postgres 17 container, with a `CREATEROLE` owner
+standing in for `neondb_owner`. It worked both with `fairshare_app` already created by
+migration 0003 and on an empty branch. A second run of each is a no-op apart from a NOTICE.
+
 ## Decisions and deviations
 
 - **Sentry 11's data collection is all off.** Sentry 11 removed `sendDefaultPii`; its replacement,
@@ -118,13 +162,27 @@ unknown routes now carries it too.
 - **Browser `VITE_*` values are build arguments, not the root `.env`.** See problem 4.
 - **Railway over Render**, chosen by you: it builds from the Dockerfile and runs a pre-deploy
   command, it can wait for CI before deploying, and the service doesn't sleep.
-- **No region in `railway.json`:** Railway's region IDs couldn't be confirmed from its schema, so
-  the region (Singapore, the closest to India that both Railway and Neon offer) is set in the
+- **Region:** Singapore, the closest to India that both Railway and Neon offer, set in the
   dashboard.
 - **The API's database user is created with SQL, not Neon's Roles page.** Roles created there join
   `neon_superuser`, which would override the grants from migration 0003.
 - **`sslmode=verify-full`** in the Neon URLs. This node-postgres treats `require` as an alias for
   it and warns about it.
+- **Railway settings stay in the dashboard, not in Railway's Infrastructure as Code.**
+  `railway.json` is dead (see "Going live on staging"), and Railway's replacement is a
+  `.railway/railway.ts` file applied with `railway config apply`, from your machine or from CI
+  with a project token. It can't express the Dockerfile builder or path, watch paths, draining
+  time, restart retries, sleep or Wait for CI, so the dashboard would still hold half the
+  settings. It also needs a Railway token with write access in a public repository's CI, and in
+  single-file mode a resource missing from the file is deleted. Revisit when production adds a
+  second environment (Phase 14). `railway.json` is deleted, as you decided.
+- **The smoke workflow keeps failing the commit's checks**, as you decided, so a failure still
+  sends GitHub's email. With the health check set, a deploy that can't reach its database fails
+  in Railway before the smoke test runs. If a failed smoke run blocks a redeploy, re-run it (the
+  runbook's "Wait for CI" section). `continue-on-error` would avoid the block but lose the email.
+- **Railway names:** the project is renamed `fairshare` (GitHub shows the environment as
+  `fairshare / staging`). The service and its domain keep the generated
+  `fairshareapi-staging.up.railway.app`, which the custom domain replaces later.
 - **Deferred to Phase 5:** the 64 KB body cap and the `Origin` check for non-GET requests (§9.1).
   Both guard mutation endpoints, and the first one (with Better Auth's trusted origins) arrives in
   Phase 5. JSON-only already holds: a non-JSON body is read as `{}` and fails validation.
@@ -156,13 +214,14 @@ unknown routes now carries it too.
   | contracts  | 275     |
   | api-client | 25      |
   | db         | 97      |
-  | api        | 44      |
-  | **Total**  | **688** |
+  | api        | 50      |
+  | **Total**  | **694** |
 
   The coverage gates are unchanged.
 
-- **API tests (44)** cover:
-  - health (200 and 503)
+- **API tests (50)** cover:
+  - health (200 and 503), and the logged reason for a 503: code and message only, with the
+    request ID, no connection string
   - request IDs (generated, kept, replaced)
   - the exact security headers on success and error responses
   - each row of the error mapping, and the 500 path (generic message, logged, reported once)
@@ -200,25 +259,36 @@ unknown routes now carries it too.
   - Pointed at a database that doesn't exist, the smoke test fails as it should: 503 and
     `db: down`, exit 1.
 - `pnpm dev` still works, with pretty-printed logs.
-- `railway.json` validates against Railway's JSON schema; a deliberately wrong config is rejected.
+- **Bug injection for the health logging: 3/3 caught** (connection string not scrubbed, no log
+  line, whole error object logged).
+- **Staging** (2026-11-12): `scripts/smoke-test.sh https://fairshareapi-staging.up.railway.app`
+  passes 8/8 from a developer machine, and the two re-run "Staging smoke test" runs on GitHub
+  pass 8/8. The browser Sentry test error arrived in `fairshare-web`. The service settings match
+  the runbook's table, and Wait for CI is on.
 
 ## Lined up next
 
-**To finish Phase 4:**
+**Phase 5: authentication and profile** (plan §11, about a week), only after your go-ahead:
 
-1. **Commit and push to GitHub** (only when you say so). Railway deploys from the repository, which
-   is still empty.
-2. **The account setup** in [docs/deploy-staging.md](../deploy-staging.md). You do it in the
-   dashboards; no secret goes into the repository or the chat:
-   - Neon: project, `staging` branch, the API's role
-   - Sentry: two projects
-   - Railway: project, region, Wait for CI, variables, domain
-   - GitHub: the `STAGING_URL` variable
-   - Cloudflare: once there is a domain
-3. **Check it:** the staging page reports "Server and database are up", and the "Staging smoke
-   test" workflow runs green after the deploy. Then Phase 4 is done.
+- Better Auth with email OTP and Google sign-in, the Drizzle adapter, cookie settings, trusted
+  origins and rate limits; an email sender (Resend or SES, Mailpit locally, a test outbox).
+- The `user.create.after` hook that creates the domain user; auth middleware that attaches it to
+  the request; `GET`/`PATCH /me`, and the anonymization function that `DELETE /me` will use in
+  Phase 13.
+- Web: the Better Auth client, `/sign-in` and `/sign-in/verify`, the signed-in route guard, and an
+  empty Home in the app layout (bottom tabs on mobile, sidebar on desktop) with a theme toggle.
+- From this phase's notes: the 64 KB body cap, the `Origin` check on non-GET requests, and an
+  `img-src` CSP entry for Google avatars.
+- New account setup for you: a Google OAuth client and an email-sending account, plus their
+  secrets in Railway.
+- Outcome: you can sign in on staging with email OTP or Google.
 
 **Noted for later phases:**
+
+- Phase 14: the Neon `production` branch already has the schema, the reference data and the
+  `fairshare_app`/`fairshare_readonly` roles from an early staging deploy (no user data). Decide
+  then whether to use it as is or start it fresh. Also decide then whether Railway's
+  Infrastructure as Code is worth adopting for two environments.
 
 - Phase 5: body-size cap (64 KB) and the `Origin` check on non-GET requests; Better Auth mounted at
   `/api/auth/*`; Google avatars will need an `img-src` entry in the CSP.

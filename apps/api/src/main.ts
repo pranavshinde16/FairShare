@@ -19,7 +19,7 @@ const logger = createLogger({ level: env.LOG_LEVEL, pretty: env.NODE_ENV === 'de
 const reportError = initSentry(env);
 const pool = createPool(env.DATABASE_URL, logger);
 const web = env.WEB_DIST_DIR ? loadWebAssets(resolve(env.WEB_DIST_DIR)) : null;
-const app = createApp({ pingDatabase: () => pingDatabase(pool), logger, reportError, web });
+const app = createApp({ pingDatabase: (log) => pingDatabase(pool, log), logger, reportError, web });
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, ({ port }) => {
   logger.info({ port, env: env.NODE_ENV, web: web?.root ?? null }, 'FairShare API listening');

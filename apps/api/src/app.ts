@@ -9,7 +9,8 @@ import { securityHeaders } from './http/security';
 import { REVALIDATE, wantsAppPage, webFiles, type WebAssets } from './http/web';
 
 export type AppDeps = {
-  pingDatabase: () => Promise<HealthResponse['db']>;
+  /** Gets the request's logger, so the reason for a "down" is logged with the request ID. */
+  pingDatabase: (log: Logger) => Promise<HealthResponse['db']>;
   logger: Logger;
   /** Where unexpected errors are reported (Sentry in production). */
   reportError: ErrorReporter;
@@ -27,7 +28,7 @@ export function createApp(deps: AppDeps) {
   app.use(securityHeaders());
 
   app.get('/api/health', async (c) => {
-    const db = await deps.pingDatabase();
+    const db = await deps.pingDatabase(c.get('log'));
     const body: HealthResponse = { ok: db === 'up', db };
     return c.json(body, db === 'up' ? 200 : 503);
   });

@@ -26,7 +26,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # A secret named STAGING_URL doesn't count: this reads the Variables tab.
       - name: Check STAGING_URL is set
-        run: test -n "$STAGING_URL" || { echo "Set the STAGING_URL repository variable."; exit 1; }
+        run: >-
+          test -n "$STAGING_URL" || {
+          echo "::error::Set STAGING_URL under Settings → Secrets and variables → Actions →
+          Variables (not Secrets).";
+          exit 1; }
 
       - run: scripts/smoke-test.sh "$STAGING_URL"

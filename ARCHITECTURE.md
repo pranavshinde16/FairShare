@@ -120,10 +120,15 @@ separate chunk, loaded only when configured.
 - **Pre-deploy step:** `node dist/migrate.js` applies migrations and reference data with the owner
   role, over `MIGRATION_DATABASE_URL` (falling back to `DATABASE_URL`). It is idempotent. The
   server itself connects as a login role that is a member of `fairshare_app`.
-- **Staging** runs on Railway (`railway.json`: Dockerfile build, pre-deploy migrations, health
-  check, one replica) with Neon Postgres in Singapore. Railway deploys `main` after CI passes, and
-  `.github/workflows/staging-smoke.yml` smoke-tests each successful deploy. Setup:
-  [docs/deploy-staging.md](docs/deploy-staging.md).
+- **Staging** runs on Railway with Neon Postgres in Singapore. Railway's service settings
+  (Dockerfile build, pre-deploy migrations, health check, one replica) live in its dashboard and
+  are listed in [docs/deploy-staging.md](docs/deploy-staging.md); Railway stopped reading
+  `railway.json` (Config as Code is deprecated). Railway deploys `main` after CI passes, and
+  `.github/workflows/staging-smoke.yml` smoke-tests each successful deploy. Because Railway's
+  "Wait for CI" counts every Actions run on a commit, a failed smoke run also blocks redeploys of
+  that commit until it is re-run (see the runbook).
+- **Health check:** `/api/health` answers 503 when `SELECT 1` fails, and logs the Postgres error
+  code and message (never the connection string) with the request ID.
 - **Configuration** is environment variables validated at boot (`apps/api/src/config/env.ts`); the
   server refuses to start on a bad value. Browser values (`VITE_*`) are build arguments, because
   Vite bakes them into the bundle. They are public: never a secret.

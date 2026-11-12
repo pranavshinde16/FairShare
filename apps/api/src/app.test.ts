@@ -20,6 +20,27 @@ describe('GET /api/health', () => {
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ ok: false, db: 'down' });
   });
+
+  it("gives the database check the request's logger, so the reason carries the request ID", async () => {
+    const { app, logs } = testApp({
+      pingDatabase: (log) => {
+        log.warn(
+          { dbError: { code: '28P01', message: 'auth failed' } },
+          'database health check failed',
+        );
+        return Promise.resolve('down');
+      },
+    });
+
+    const res = await app.request('/api/health');
+
+    expect(logs[0]).toMatchObject({
+      level: 40,
+      msg: 'database health check failed',
+      requestId: res.headers.get('X-Request-Id'),
+      dbError: { code: '28P01' },
+    });
+  });
 });
 
 describe('unknown routes', () => {
