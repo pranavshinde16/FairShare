@@ -14,6 +14,7 @@ export type IntegrationOptions = {
   google?: boolean;
   codeLimiter?: RateLimiter;
   invitePreviewLimiter?: RateLimiter;
+  clock?: () => Date;
   /** The app's origin. Over https, cookies get the __Secure- prefix and the Secure flag. */
   appUrl?: string;
 };
@@ -48,6 +49,7 @@ export async function integrationApp(options: IntegrationOptions = {}) {
     web: null,
     codeLimiter: options.codeLimiter,
     invitePreviewLimiter: options.invitePreviewLimiter,
+    clock: options.clock,
   });
 
   /** A request as the web app sends it: same origin, JSON body. */

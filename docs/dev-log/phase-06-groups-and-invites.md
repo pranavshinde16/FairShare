@@ -1,9 +1,10 @@
 # Phase 6: Groups, members, friends and invites
 
-- **Dates:** 2026-11-12 (code part)
-- **Status:** In progress. The code is done and verified locally (integration tests including the
-  authorization matrix, end-to-end tests, the Docker image). It goes live with the next push; then
-  check it on staging (see "Lined up next").
+- **Dates:** 2026-11-12 (code, fix, and live on staging the same day)
+- **Status:** Done, closed at your request on 2026-11-12. Commit 2825729 (the follow-up fix to
+  f099be3, which CI rejected and Railway therefore never deployed): CI green with all three jobs,
+  deployed to staging, smoke test green on GitHub and from here (13 checks). The manual claim
+  check on staging (a second account claiming a placeholder) wasn't reported back.
 - **Plan reference:** Implementation blueprint §4.2 (groups and members), §4.3 (friends), §4.9
   (activity), §5.2 (tables), §5.3 (claim/merge), §6.3 (endpoints), §7.2 (screens), §9.1
   (authorization), §11 Phase 6; seven plan corrections scheduled for Phase 6
@@ -235,18 +236,7 @@ member with an account leaves.
 
 ## Lined up next
 
-**To finish Phase 6:**
-
-1. **Commit and push** (nothing is committed). No new settings or migrations are needed.
-2. **Check on staging:**
-   - Create a group with a placeholder.
-   - Open the invite link in another browser (a private window) and claim the placeholder.
-   - Add a friend.
-
-   Resend's test sender delivers sign-in codes only to your own address, so sign the second
-   browser in with Google, using another Google account added as a test user.
-
-**Phase 7: expense creation and editing** (plan §11), after your go-ahead.
+**Phase 7: expense creation and editing** (plan §11), started 2026-11-12.
 
 **Noted for later phases:**
 

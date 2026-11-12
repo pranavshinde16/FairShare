@@ -177,6 +177,36 @@ describe('every endpoint method', () => {
     myRole: 'owner',
   };
   const TOKEN = 'A'.repeat(43);
+  const NEW_EXPENSE = {
+    id: ID,
+    description: 'Dinner',
+    amount: 1000,
+    currency: 'INR',
+    occurredOn: '2026-11-01',
+    payers: [{ userId: ID, amount: 1000 }],
+    split: { method: 'equal' as const, participants: [ID] },
+  };
+  const { id: _, ...EDIT } = NEW_EXPENSE;
+  const { split: _split, ...EXPENSE_FIELDS } = EDIT;
+  const EXPENSE = {
+    ...EXPENSE_FIELDS,
+    id: ID,
+    groupId: ID,
+    type: 'expense',
+    notes: null,
+    splitMethod: 'equal',
+    splitInput: NEW_EXPENSE.split,
+    shares: [{ userId: ID, amount: 1000 }],
+    paymentMethod: null,
+    paymentRef: null,
+    createdBy: USER,
+    updatedBy: null,
+    createdAt: '2026-11-01T08:00:00.000Z',
+    updatedAt: null,
+    deletedAt: null,
+    version: 3,
+    myNet: 0,
+  };
 
   type Case = [
     string,
@@ -185,6 +215,7 @@ describe('every endpoint method', () => {
     string,
     unknown?,
     unknown?,
+    string?,
   ];
   const CASES: Case[] = [
     [
@@ -271,12 +302,62 @@ describe('every endpoint method', () => {
       { userId: ID },
     ],
     ['people', (api) => api.people(), 'GET', '/api/v1/people', { items: [USER] }],
+    [
+      'transactions',
+      (api) => api.transactions(ID, { limit: 2, q: 'taxi' }),
+      'GET',
+      `/api/v1/groups/${ID}/transactions?limit=2&q=taxi`,
+      { items: [EXPENSE], nextCursor: null },
+    ],
+    [
+      'createExpense',
+      (api) => api.createExpense(ID, NEW_EXPENSE),
+      'POST',
+      `/api/v1/groups/${ID}/expenses`,
+      EXPENSE,
+      NEW_EXPENSE,
+    ],
+    ['transaction', (api) => api.transaction(ID), 'GET', `/api/v1/transactions/${ID}`, EXPENSE],
+    [
+      'updateExpense',
+      (api) => api.updateExpense(ID, 3, EDIT),
+      'PUT',
+      `/api/v1/transactions/${ID}`,
+      EXPENSE,
+      EDIT,
+      '"3"',
+    ],
+    [
+      'deleteTransaction',
+      (api) => api.deleteTransaction(ID, 3),
+      'DELETE',
+      `/api/v1/transactions/${ID}`,
+      { id: ID, version: 4, deletedAt: '2026-11-02T00:00:00.000Z' },
+      undefined,
+      '"3"',
+    ],
+    [
+      'restoreTransaction',
+      (api) => api.restoreTransaction(ID, 4),
+      'POST',
+      `/api/v1/transactions/${ID}/restore`,
+      EXPENSE,
+      undefined,
+      '"4"',
+    ],
+    [
+      'transactionHistory',
+      (api) => api.transactionHistory(ID),
+      'GET',
+      `/api/v1/transactions/${ID}/history`,
+      { items: [] },
+    ],
     ['claims', (api) => api.claims(), 'GET', '/api/v1/claims', { items: [] }],
     ['claim', (api) => api.claim(ID), 'POST', `/api/v1/claims/${ID}`, { groupIds: [ID] }],
     ['dismissClaim', (api) => api.dismissClaim(ID), 'DELETE', `/api/v1/claims/${ID}`],
   ];
 
-  for (const [name, call, method, path, response, body] of CASES) {
+  for (const [name, call, method, path, response, body, ifMatch] of CASES) {
     it(`${name}() → ${method} ${path}`, async () => {
       const fetch = vi
         .fn<typeof globalThis.fetch>()
@@ -289,6 +370,7 @@ describe('every endpoint method', () => {
       const [url, init] = fetch.mock.calls[0]!;
       expect([init?.method, url]).toEqual([method, path]);
       expect(init?.body === undefined ? undefined : JSON.parse(init.body as string)).toEqual(body);
+      expect((init?.headers as Record<string, string>)['If-Match']).toBe(ifMatch);
       expect(result).toEqual(response);
     });
   }

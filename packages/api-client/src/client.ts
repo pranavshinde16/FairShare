@@ -14,11 +14,18 @@ import {
   PeopleList,
   Profile,
   SignInOptions,
+  DeletedTransaction,
+  Transaction,
+  TransactionHistory,
+  TransactionPage,
   type AcceptInvite,
   type AddFriend,
   type AddMember,
   type CreateGroup,
+  type CreateExpense,
   type CreateInvite,
+  type TransactionListQuery,
+  type UpdateExpense,
   type UpdateGroup,
   type UpdateProfile,
 } from '@fairshare/contracts';
@@ -81,6 +88,36 @@ export function createApiClient(options: ApiClientOptions) {
     addFriend: (body: AddFriend) =>
       request(AddFriendResponse, '/api/v1/friends', { method: 'POST', body }),
     people: (signal?: AbortSignal) => request(PeopleList, '/api/v1/people', { signal }),
+
+    /** A page of a group's transactions, newest first; pass nextCursor back for the next one. */
+    transactions: (
+      groupId: string,
+      query: Partial<TransactionListQuery> = {},
+      signal?: AbortSignal,
+    ) => request(TransactionPage, `/api/v1/groups/${seg(groupId)}/transactions`, { query, signal }),
+    createExpense: (groupId: string, body: CreateExpense) =>
+      request(Transaction, `/api/v1/groups/${seg(groupId)}/expenses`, { method: 'POST', body }),
+    transaction: (id: string, signal?: AbortSignal) =>
+      request(Transaction, `/api/v1/transactions/${seg(id)}`, { signal }),
+    /** Replaces an expense; `version` is the one the edit started from (If-Match). */
+    updateExpense: (id: string, version: number, body: UpdateExpense) =>
+      request(Transaction, `/api/v1/transactions/${seg(id)}`, {
+        method: 'PUT',
+        body,
+        ifMatch: version,
+      }),
+    deleteTransaction: (id: string, version: number) =>
+      request(DeletedTransaction, `/api/v1/transactions/${seg(id)}`, {
+        method: 'DELETE',
+        ifMatch: version,
+      }),
+    restoreTransaction: (id: string, version: number) =>
+      request(Transaction, `/api/v1/transactions/${seg(id)}/restore`, {
+        method: 'POST',
+        ifMatch: version,
+      }),
+    transactionHistory: (id: string, signal?: AbortSignal) =>
+      request(TransactionHistory, `/api/v1/transactions/${seg(id)}/history`, { signal }),
 
     claims: (signal?: AbortSignal) => request(ClaimList, '/api/v1/claims', { signal }),
     claim: (placeholderId: string) =>

@@ -17,6 +17,7 @@ import { createCurrenciesService } from './modules/currencies/service';
 import { createFriendsService } from './modules/friends/service';
 import { createGroupsService } from './modules/groups/service';
 import { createInvitesService } from './modules/invites/service';
+import { createTransactionsService } from './modules/transactions/service';
 import { createUsersService } from './modules/users/service';
 
 export type ComposeOptions = {
@@ -34,6 +35,8 @@ export type ComposeOptions = {
   codeLimiter?: RateLimiter;
   /** Overrides the invite preview limit (30 a minute per IP), for tests. */
   invitePreviewLimiter?: RateLimiter;
+  /** "Now", for tests that need a fixed today. */
+  clock?: () => Date;
 };
 
 /** Sign-in codes per email address: enough for two resends, too few to flood an inbox. */
@@ -90,6 +93,7 @@ export function composeApp(options: ComposeOptions) {
     invites: createInvitesService(db, env.APP_URL),
     friends: createFriendsService(db),
     claims: createClaimsService(db),
+    transactions: createTransactionsService(db, options.clock),
     invitePreviewLimiter: options.invitePreviewLimiter ?? createRateLimiter(INVITE_PREVIEWS_PER_IP),
     clientIpHeaders: env.CLIENT_IP_HEADERS,
   });

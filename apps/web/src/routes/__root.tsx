@@ -2,11 +2,17 @@ import type { QueryClient } from '@tanstack/react-query';
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router';
 import { ErrorState } from '../components/common/error-state';
 import { Logo } from '../components/common/logo';
+import { Toaster } from '../components/ui/toaster';
 
 export type RouterContext = { queryClient: QueryClient };
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  component: Outlet,
+  component: () => (
+    <>
+      <Outlet />
+      <Toaster />
+    </>
+  ),
   notFoundComponent: NotFound,
   errorComponent: ({ error, reset }) => (
     <CenteredPage>

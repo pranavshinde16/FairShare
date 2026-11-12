@@ -19,6 +19,7 @@ export const ERROR_HTTP_STATUS = {
   MERGE_CONFLICT: 409,
   ALREADY_MEMBER: 409,
   CURRENCY_LOCKED: 409, // changing a group's currency after it has transactions
+  TRANSACTION_DELETED: 409, // editing a deleted transaction: restore it first
 
   INVITE_EXPIRED: 410,
 

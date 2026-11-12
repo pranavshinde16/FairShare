@@ -19,6 +19,9 @@ import { Route as SignInIndexRouteImport } from './routes/sign-in.index'
 import { Route as SignInVerifyRouteImport } from './routes/sign-in.verify'
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups.$groupId'
 import { Route as AuthedGroupsNewRouteImport } from './routes/_authed/groups.new'
+import { Route as AuthedTransactionsIdRouteImport } from './routes/_authed/transactions.$id'
+import { Route as AuthedTransactionsIdEditRouteImport } from './routes/_authed/transactions.$id.edit'
+import { Route as AuthedGroupsGroupIdExpensesNewRouteImport } from './routes/_authed/groups.$groupId.expenses.new'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -69,6 +72,23 @@ const AuthedGroupsNewRoute = AuthedGroupsNewRouteImport.update({
   path: '/groups/new',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedTransactionsIdRoute = AuthedTransactionsIdRouteImport.update({
+  id: '/transactions/$id',
+  path: '/transactions/$id',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedTransactionsIdEditRoute =
+  AuthedTransactionsIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AuthedTransactionsIdRoute,
+  } as any)
+const AuthedGroupsGroupIdExpensesNewRoute =
+  AuthedGroupsGroupIdExpensesNewRouteImport.update({
+    id: '/expenses/new',
+    path: '/expenses/new',
+    getParentRoute: () => AuthedGroupsGroupIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
@@ -78,8 +98,11 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/sign-in/verify': typeof SignInVerifyRoute
   '/sign-in/': typeof SignInIndexRoute
-  '/groups/$groupId': typeof AuthedGroupsGroupIdRoute
+  '/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/groups/new': typeof AuthedGroupsNewRoute
+  '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
+  '/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
 }
 export interface FileRoutesByTo {
   '/activity': typeof AuthedActivityRoute
@@ -88,8 +111,11 @@ export interface FileRoutesByTo {
   '/sign-in/verify': typeof SignInVerifyRoute
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInIndexRoute
-  '/groups/$groupId': typeof AuthedGroupsGroupIdRoute
+  '/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/groups/new': typeof AuthedGroupsNewRoute
+  '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
+  '/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -101,8 +127,11 @@ export interface FileRoutesById {
   '/sign-in/verify': typeof SignInVerifyRoute
   '/_authed/': typeof AuthedIndexRoute
   '/sign-in/': typeof SignInIndexRoute
-  '/_authed/groups/$groupId': typeof AuthedGroupsGroupIdRoute
+  '/_authed/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/_authed/groups/new': typeof AuthedGroupsNewRoute
+  '/_authed/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/_authed/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
+  '/_authed/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -116,6 +145,9 @@ export interface FileRouteTypes {
     | '/sign-in/'
     | '/groups/$groupId'
     | '/groups/new'
+    | '/transactions/$id'
+    | '/transactions/$id/edit'
+    | '/groups/$groupId/expenses/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/activity'
@@ -126,6 +158,9 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/groups/$groupId'
     | '/groups/new'
+    | '/transactions/$id'
+    | '/transactions/$id/edit'
+    | '/groups/$groupId/expenses/new'
   id:
     | '__root__'
     | '/_authed'
@@ -138,6 +173,9 @@ export interface FileRouteTypes {
     | '/sign-in/'
     | '/_authed/groups/$groupId'
     | '/_authed/groups/new'
+    | '/_authed/transactions/$id'
+    | '/_authed/transactions/$id/edit'
+    | '/_authed/groups/$groupId/expenses/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -218,23 +256,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedGroupsNewRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/transactions/$id': {
+      id: '/_authed/transactions/$id'
+      path: '/transactions/$id'
+      fullPath: '/transactions/$id'
+      preLoaderRoute: typeof AuthedTransactionsIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/transactions/$id/edit': {
+      id: '/_authed/transactions/$id/edit'
+      path: '/edit'
+      fullPath: '/transactions/$id/edit'
+      preLoaderRoute: typeof AuthedTransactionsIdEditRouteImport
+      parentRoute: typeof AuthedTransactionsIdRoute
+    }
+    '/_authed/groups/$groupId/expenses/new': {
+      id: '/_authed/groups/$groupId/expenses/new'
+      path: '/expenses/new'
+      fullPath: '/groups/$groupId/expenses/new'
+      preLoaderRoute: typeof AuthedGroupsGroupIdExpensesNewRouteImport
+      parentRoute: typeof AuthedGroupsGroupIdRoute
+    }
   }
 }
+
+interface AuthedGroupsGroupIdRouteChildren {
+  AuthedGroupsGroupIdExpensesNewRoute: typeof AuthedGroupsGroupIdExpensesNewRoute
+}
+
+const AuthedGroupsGroupIdRouteChildren: AuthedGroupsGroupIdRouteChildren = {
+  AuthedGroupsGroupIdExpensesNewRoute: AuthedGroupsGroupIdExpensesNewRoute,
+}
+
+const AuthedGroupsGroupIdRouteWithChildren =
+  AuthedGroupsGroupIdRoute._addFileChildren(AuthedGroupsGroupIdRouteChildren)
+
+interface AuthedTransactionsIdRouteChildren {
+  AuthedTransactionsIdEditRoute: typeof AuthedTransactionsIdEditRoute
+}
+
+const AuthedTransactionsIdRouteChildren: AuthedTransactionsIdRouteChildren = {
+  AuthedTransactionsIdEditRoute: AuthedTransactionsIdEditRoute,
+}
+
+const AuthedTransactionsIdRouteWithChildren =
+  AuthedTransactionsIdRoute._addFileChildren(AuthedTransactionsIdRouteChildren)
 
 interface AuthedRouteChildren {
   AuthedActivityRoute: typeof AuthedActivityRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
-  AuthedGroupsGroupIdRoute: typeof AuthedGroupsGroupIdRoute
+  AuthedGroupsGroupIdRoute: typeof AuthedGroupsGroupIdRouteWithChildren
   AuthedGroupsNewRoute: typeof AuthedGroupsNewRoute
+  AuthedTransactionsIdRoute: typeof AuthedTransactionsIdRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedActivityRoute: AuthedActivityRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
-  AuthedGroupsGroupIdRoute: AuthedGroupsGroupIdRoute,
+  AuthedGroupsGroupIdRoute: AuthedGroupsGroupIdRouteWithChildren,
   AuthedGroupsNewRoute: AuthedGroupsNewRoute,
+  AuthedTransactionsIdRoute: AuthedTransactionsIdRouteWithChildren,
 }
 
 const AuthedRouteWithChildren =

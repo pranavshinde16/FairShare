@@ -88,3 +88,24 @@ test('a member leaves a group after confirming', async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: 'Start a group' })).toBeVisible();
 });
+
+test('the owner deletes a settled group from its settings', async ({ page }) => {
+  await page.goto('/groups/new');
+  await signIn(page, newEmail('gita'));
+  await page.getByLabel('Group name').fill('Old trip');
+  await page.getByRole('button', { name: 'Create group' }).click();
+  await expect(page.getByRole('heading', { name: 'Old trip' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Group settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Group settings' })
+    .getByRole('button', { name: 'Delete group' })
+    .click();
+  // The settings dialog gives way to the confirmation, which must stay open.
+  const confirm = page.getByRole('dialog', { name: 'Delete Old trip?' });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole('button', { name: 'Delete group' }).click();
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Start a group' })).toBeVisible();
+});

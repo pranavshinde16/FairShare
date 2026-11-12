@@ -12,4 +12,5 @@ comes next.
 | 3     | [Database](phase-03-database.md)                                       | Done        |
 | 4     | [API skeleton and staging deploy](phase-04-api-skeleton.md)            | Done        |
 | 5     | [Authentication and profile](phase-05-auth-and-profile.md)             | Done        |
-| 6     | [Groups, members, friends and invites](phase-06-groups-and-invites.md) | In progress |
+| 6     | [Groups, members, friends and invites](phase-06-groups-and-invites.md) | Done        |
+| 7     | [Expense creation and editing](phase-07-expenses.md)                   | In progress |

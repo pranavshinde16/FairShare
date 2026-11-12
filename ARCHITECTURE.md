@@ -193,6 +193,40 @@ separate chunk, loaded only when configured.
   I have a non-zero balance with.
 - Every write records its activity entry in the same transaction (`recordActivity`).
 
+## Expenses
+
+- **Routes:** `POST /groups/:id/expenses` and `GET /groups/:id/transactions` sit behind
+  `requireMembership`. `/transactions/:id` (get, `PUT`, `DELETE`, `POST …/restore`, `GET …/history`)
+  loads the transaction and checks the caller is an active member of its group, or answers 404.
+- **Creating** (`modules/transactions/service.ts`): the client makes the ID (UUIDv7) and core's
+  `computeShares` seeded with it, so the browser's preview is exactly what is saved. The server
+  checks the group's currency (`CURRENCY_MISMATCH`), the date (up to a year ahead), that everyone
+  named is a member (`NOT_A_MEMBER`) and still active (`MEMBER_INACTIVE`), then core's sums and
+  invariants, and inserts the transaction, its lines and `transaction.created` in one database
+  transaction. The same ID again: the same body from the same person returns the stored expense
+  (200); anything else is `ID_CONFLICT` (C6).
+- **Editing** replaces the whole expense (C9) with `If-Match: "<version>"`: no header is 428
+  `IF_MATCH_REQUIRED`, a stale one 409 `VERSION_CONFLICT` with `details.currentVersion`, a deleted
+  expense 409 `TRANSACTION_DELETED`. The row is locked `FOR NO KEY UPDATE`; the payer and share rows
+  are replaced; the version goes up; `transaction.updated` records before and after snapshots. An
+  unchanged body changes nothing.
+- **Delete and restore** take `If-Match` too. Delete is soft (the ledger view drops it at once);
+  restore needs everyone in it to still be an active member.
+- **The group row is share-locked** while an expense is written. Membership changes hold
+  `NO KEY UPDATE` on it, so an expense naming someone and that person's removal can't both succeed:
+  either the removal sees the new balance, or the expense sees a former member.
+- **The list** is keyset-paginated: `ORDER BY occurred_on DESC, id DESC`, with an opaque base64url
+  cursor of the last `(occurred_on, id)`, which stays correct while expenses are added. Filters:
+  search (`ILIKE` on the `tx_search` trigram expression, `%` and `_` matched literally), person,
+  type, date range, deleted ones.
+- **History** reads the activity log for the transaction; a claimed placeholder shows as whoever
+  claimed it (`users.merged_into`). The web app turns snapshot pairs into sentences with core's
+  `diffSnapshots`.
+- **Web:** the Add Expense form is a modal route (`/groups/:id/expenses/new`, Back closes it) for an
+  equal split with one payer in Phase 7. Saving is optimistic: the expense appears at once with an
+  "Added · Undo" toast; on failure the list rolls back and the form reopens with the same ID.
+  Editing (`/transactions/:id/edit`) sends `If-Match` and offers a reload on a conflict.
+
 ## Deployment
 
 - **One image** (`Dockerfile`): build web and API, then `pnpm deploy --prod` the API. tsup bundles

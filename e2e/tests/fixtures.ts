@@ -42,7 +42,10 @@ export async function signIn(page: Page, email: string) {
  * count each test separately, and a list of console errors the test asserts is empty.
  */
 export async function guard(page: Page): Promise<string[]> {
-  await page.setExtraHTTPHeaders({ 'X-Real-IP': `198.51.100.${randomInt(1, 255)}` });
+  // Random over 16 million addresses: with only 254, two of ~30 tests often shared an IP, and
+  // with it Better Auth's limit of 3 sign-in attempts a minute.
+  const octet = () => randomInt(0, 256);
+  await page.setExtraHTTPHeaders({ 'X-Real-IP': `10.${octet()}.${octet()}.${octet()}` });
   const errors: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error' && !message.text().startsWith('Failed to load resource')) {

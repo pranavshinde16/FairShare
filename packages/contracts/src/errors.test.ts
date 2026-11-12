@@ -45,6 +45,7 @@ describe('error codes', () => {
       BALANCE_NOT_ZERO: 409,
       MERGE_CONFLICT: 409,
       ALREADY_MEMBER: 409,
+      TRANSACTION_DELETED: 409,
       INVITE_EXPIRED: 410,
       PAYLOAD_TOO_LARGE: 413,
       MEMBER_INACTIVE: 422,

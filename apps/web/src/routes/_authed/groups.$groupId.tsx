@@ -1,13 +1,14 @@
 import { ApiError } from '@fairshare/api-client';
 import { useQuery } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { Receipt, Scale, Settings } from 'lucide-react';
-import { useState } from 'react';
+import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router';
+import { Plus, Receipt, Scale, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
+import { ExpensesTab } from '../../features/expenses/expenses-tab';
 import { GroupSettingsDialog } from '../../features/groups/group-settings-dialog';
 import { InviteButton } from '../../features/groups/invite-button';
 import { MembersTab } from '../../features/groups/members-tab';
@@ -36,6 +37,22 @@ function GroupPage() {
   const group = useQuery(groupQuery(groupId));
   const currencies = useQuery(currenciesQuery);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const navigate = useNavigate();
+  const addExpense = () =>
+    void navigate({ to: '/groups/$groupId/expenses/new', params: { groupId } });
+
+  // Desktop shortcut (Blueprint 7.1): "n" opens a new expense, unless someone is typing.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (event.key !== 'n' || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (target.closest('input, textarea, select, [contenteditable], dialog')) return;
+      event.preventDefault();
+      addExpense();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   if (group.error instanceof ApiError && group.error.status === 404) {
     return (
@@ -66,6 +83,10 @@ function GroupPage() {
             {data.kind === 'direct' ? 'Friendship' : `${activeCount} people`} · {data.currency}
           </p>
         </div>
+        <Button className="hidden md:inline-flex" onClick={addExpense}>
+          <Plus aria-hidden />
+          Add expense
+        </Button>
         {data.kind === 'group' && (
           <Button
             variant="ghost"
@@ -103,17 +124,25 @@ function GroupPage() {
         ))}
       </nav>
 
-      {tab === 'expenses' && (
-        <EmptyState icon={Receipt} title="No expenses yet">
-          Adding expenses is coming soon. Everyone here can already be invited.
-        </EmptyState>
-      )}
+      {tab === 'expenses' && <ExpensesTab group={data} meId={me.data.id} />}
       {tab === 'balances' && (
         <EmptyState icon={Scale} title="Nothing to settle">
           Balances appear here once the group has expenses.
         </EmptyState>
       )}
       {tab === 'members' && <MembersTab group={data} meId={me.data.id} />}
+
+      {/* The floating "Add expense" button on phones, above the tab bar. */}
+      <Button
+        size="lg"
+        aria-label="Add expense"
+        className="fixed right-4 bottom-20 z-10 rounded-full shadow-lg md:hidden"
+        onClick={addExpense}
+      >
+        <Plus aria-hidden />
+        Expense
+      </Button>
+      <Outlet />
 
       {data.kind === 'group' && currencies.data && settingsOpen && (
         <GroupSettingsDialog
