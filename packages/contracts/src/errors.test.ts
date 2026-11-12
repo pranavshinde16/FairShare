@@ -39,6 +39,7 @@ describe('error codes', () => {
       UNAUTHENTICATED: 401,
       NOT_FOUND: 404,
       ORIGIN_NOT_ALLOWED: 403,
+      NOT_PERMITTED: 403,
       VERSION_CONFLICT: 409,
       ID_CONFLICT: 409,
       BALANCE_NOT_ZERO: 409,

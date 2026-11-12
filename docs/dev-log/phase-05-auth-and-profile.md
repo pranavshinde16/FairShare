@@ -1,9 +1,9 @@
 # Phase 5: Authentication and profile
 
-- **Dates:** 2026-11-12 (code part)
-- **Status:** In progress. The code is done and verified locally (unit, integration and end-to-end
-  tests, the Docker image). Going live on staging needs the Resend and Google accounts and new
-  Railway variables (see "Lined up next").
+- **Dates:** 2026-11-12 (code, and live on staging the same day)
+- **Status:** Done. Commit 8cd6544: CI green (including the new end-to-end job), deployed to
+  staging, smoke test green (12 checks). On staging you signed in with an email code and with
+  Google, and profile edits survived a reload.
 - **Plan reference:** Implementation blueprint §4.1 (authentication), §6.1 and §6.3 (conventions,
   `/me`), §7.1 and §7.2 (layout, sign-in and settings screens), §9.1 (security), §10.5
   (end-to-end tests), §11 Phase 5; plan correction "The domain-user hook runs outside the auth
@@ -265,22 +265,7 @@ How a first sign-in by email goes:
 
 ## Lined up next
 
-**To finish Phase 5:**
-
-1. ~~Commit Phase 4~~: done (a2e6c7a), green in CI and on staging.
-2. ~~Accounts~~: done. Resend has an account and API key; Google has an OAuth client, with you as
-   a test user ([docs/deploy-staging.md](../deploy-staging.md) steps 3 and 4).
-3. ~~Railway variables~~: done (`APP_URL`, `AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`,
-   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`).
-4. **Your local `.env`:** add `AUTH_SECRET` (`openssl rand -base64 32`) and
-   `MAILPIT_URL=http://localhost:8025`. Without them `pnpm dev` refuses to start and says which is
-   missing.
-5. **Commit Phase 5 and push,** then watch:
-   - CI's three jobs, including the new end-to-end one
-   - Railway's deploy
-   - the staging smoke test, which now has 12 checks
-6. **Check on staging** (step 8): sign in with an email code, then with Google; edit the profile.
-   Then Phase 5 is done.
+**Phase 6: groups, members, friends and invites** (plan §11), started 2026-11-12.
 
 **Noted for later phases:**
 

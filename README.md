@@ -3,9 +3,9 @@
 Split shared expenses with friends, roommates and trip groups. No daily limits, no ads, no paywalled
 basics.
 
-> Status: early development. Phases 0–4 (foundation, core domain logic, API contracts, database,
-> API skeleton with a live staging deploy) are complete; Phase 5 (sign-in and profile) is in
-> progress. See the [development log](docs/dev-log/README.md).
+> Status: early development. Phases 0–5 (foundation, core domain logic, API contracts, database,
+> API skeleton with a live staging deploy, sign-in and profile) are complete; Phase 6 (groups,
+> members, friends and invites) is in progress. See the [development log](docs/dev-log/README.md).
 
 ## Requirements
 

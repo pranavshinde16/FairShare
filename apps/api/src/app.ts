@@ -12,10 +12,19 @@ import type { AuthGateway } from './modules/auth/auth';
 import type { DomainUserResolver } from './modules/auth/domain-users';
 import { requireUser } from './modules/auth/require-user';
 import { signInOptionsRoutes } from './modules/auth/routes';
+import { claimsRoutes } from './modules/claims/routes';
+import type { ClaimsService } from './modules/claims/service';
 import { currenciesRoutes } from './modules/currencies/routes';
 import type { CurrenciesService } from './modules/currencies/service';
+import { friendsRoutes } from './modules/friends/routes';
+import type { FriendsService } from './modules/friends/service';
+import { groupsRoutes } from './modules/groups/routes';
+import type { GroupsService } from './modules/groups/service';
+import { inviteAcceptRoutes, invitePreviewRoutes } from './modules/invites/routes';
+import type { InvitesService } from './modules/invites/service';
 import { usersRoutes } from './modules/users/routes';
 import type { UsersService } from './modules/users/service';
+import type { RateLimiter } from './lib/rate-limit';
 
 export type AppDeps = {
   /** Gets the request's logger, so the reason for a "down" is logged with the request ID. */
@@ -31,6 +40,14 @@ export type AppDeps = {
   domainUsers: DomainUserResolver;
   users: UsersService;
   currencies: CurrenciesService;
+  groups: GroupsService;
+  invites: InvitesService;
+  friends: FriendsService;
+  claims: ClaimsService;
+  /** The public invite preview: 30 a minute per client IP. */
+  invitePreviewLimiter: RateLimiter;
+  /** Proxy headers holding the client IP (CLIENT_IP_HEADERS). */
+  clientIpHeaders: string[];
 };
 
 /** Builds the HTTP app from its dependencies, so tests can pass in fakes. */
@@ -56,10 +73,15 @@ export function createApp(deps: AppDeps) {
   v1.use(protectMutations(deps.appOrigin));
   // Public routes first: they answer before requireUser, which applies to everything after it.
   v1.route('/', signInOptionsRoutes(deps.auth));
+  v1.route('/', invitePreviewRoutes(deps.invites, deps.invitePreviewLimiter, deps.clientIpHeaders));
   const signedIn = new Hono<AuthedEnv>();
   signedIn.use(requireUser(deps.auth, deps.domainUsers));
   signedIn.route('/', usersRoutes(deps.users));
   signedIn.route('/', currenciesRoutes(deps.currencies));
+  signedIn.route('/', groupsRoutes(deps.groups, deps.invites));
+  signedIn.route('/', inviteAcceptRoutes(deps.invites));
+  signedIn.route('/', friendsRoutes(deps.friends));
+  signedIn.route('/', claimsRoutes(deps.claims));
   v1.route('/', signedIn);
   app.route('/api/v1', v1);
 

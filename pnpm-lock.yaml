@@ -246,6 +246,9 @@ importers:
       '@fairshare/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@fairshare/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@hookform/resolvers':
         specifier: 'catalog:'
         version: 7.0.6(@standard-schema/spec@1.1.0)(react-hook-form@7.92.0(@types/react@19.3.0)(react@19.3.1))(zod@4.6.7)
@@ -331,6 +334,9 @@ importers:
       '@fairshare/config':
         specifier: workspace:*
         version: link:../packages/config
+      '@fairshare/contracts':
+        specifier: workspace:*
+        version: link:../packages/contracts
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.65.0

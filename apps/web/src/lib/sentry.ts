@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react';
+import { redactDeep } from './redact';
 
 /**
  * Starts browser error tracking. main.tsx loads this module only when the build was given
@@ -6,6 +7,7 @@ import * as Sentry from '@sentry/react';
  * wiring: React 19 passes them to window.reportError, which Sentry's global handler captures.
  *
  * Sentry 11 collects request and user data by default; all of it is off, as on the server.
+ * Invite tokens are cut out of everything sent: page URLs, breadcrumbs, messages.
  */
 export function initSentry(dsn: string) {
   Sentry.init({
@@ -19,5 +21,7 @@ export function initSentry(dsn: string) {
       urlQueryParams: false,
       stackFrameVariables: false,
     },
+    beforeSend: (event) => redactDeep(event),
+    beforeBreadcrumb: (breadcrumb) => redactDeep(breadcrumb),
   });
 }

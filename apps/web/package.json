@@ -15,6 +15,7 @@
   "dependencies": {
     "@fairshare/api-client": "workspace:*",
     "@fairshare/contracts": "workspace:*",
+    "@fairshare/core": "workspace:*",
     "@hookform/resolvers": "catalog:",
     "@sentry/react": "catalog:",
     "@tanstack/react-query": "catalog:",

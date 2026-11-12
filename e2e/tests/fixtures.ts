@@ -37,20 +37,29 @@ export async function signIn(page: Page, email: string) {
   await page.getByLabel('Sign-in code').fill(await readCode(email));
 }
 
+/**
+ * Guards a page: a distinct client IP (as Railway's proxy would send) so Better Auth's per-IP limits
+ * count each test separately, and a list of console errors the test asserts is empty.
+ */
+export async function guard(page: Page): Promise<string[]> {
+  await page.setExtraHTTPHeaders({ 'X-Real-IP': `198.51.100.${randomInt(1, 255)}` });
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !message.text().startsWith('Failed to load resource')) {
+      errors.push(message.text());
+    }
+  });
+  page.on('pageerror', (error) => errors.push(error.message));
+  return errors;
+}
+
 export const test = base.extend({
   page: async ({ page }, use) => {
     // A distinct client IP per test, as Railway's proxy would send, so Better Auth's per-IP
     // limits (3 codes a minute) count each test separately.
-    await page.setExtraHTTPHeaders({ 'X-Real-IP': `198.51.100.${randomInt(1, 255)}` });
     // Any console error fails the test: a CSP violation, a crash, a React warning. The browser's
     // own note for an expected 4xx answer (a wrong code) is not an app error.
-    const errors: string[] = [];
-    page.on('console', (message) => {
-      if (message.type() === 'error' && !message.text().startsWith('Failed to load resource')) {
-        errors.push(message.text());
-      }
-    });
-    page.on('pageerror', (error) => errors.push(error.message));
+    const errors = await guard(page);
     await use(page);
     expect(errors, 'console errors').toEqual([]);
   },

@@ -51,6 +51,8 @@ check 'an unknown API path answers 404' 404 "$(status -H 'Accept: text/html' "$B
 check 'the sign-in options answer' 200 "$(status "$BASE_URL/api/v1/sign-in-options")"
 check 'Better Auth answers (no session)' null "$(curl -s "$BASE_URL/api/auth/get-session")"
 check 'the API needs a session' 401 "$(status "$BASE_URL/api/v1/me")"
+check 'an unknown invite link answers 404' 404 \
+  "$(status "$BASE_URL/api/v1/invites/smoke-test-not-a-real-token-0000000000000")"
 check 'a write from another site is refused' 403 "$(status -X PATCH -H 'Origin: https://smoke-test.invalid' \
   -H 'Content-Type: application/json' -d '{}' "$BASE_URL/api/v1/me")"
 

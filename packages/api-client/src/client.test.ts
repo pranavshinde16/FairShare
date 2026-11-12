@@ -109,3 +109,187 @@ describe('profile and reference endpoints', () => {
     });
   });
 });
+
+describe('group, invite, friend and claim endpoints', () => {
+  const ok = (body: unknown = null, status = 200) =>
+    body === null ? new Response(null, { status: 204 }) : json(status, body);
+
+  it('send each request to its path and method', async () => {
+    const group = {
+      kind: 'group',
+      id: '01900000-0000-7000-8000-000000000100',
+      name: 'Goa',
+      emoji: null,
+      currency: 'INR',
+      createdAt: '2026-11-01T08:00:00.000Z',
+      members: [],
+      myRole: 'owner',
+    };
+    const fetch = vi.fn<typeof globalThis.fetch>().mockImplementation((url) => {
+      const path = url as string;
+      if (path.endsWith('/members/me') || path.includes('/invites/inv') || path.endsWith('/g1')) {
+        return Promise.resolve(ok());
+      }
+      if (path.endsWith('/accept')) return Promise.resolve(ok({ groupId: group.id }));
+      return Promise.resolve(ok(group, 201));
+    });
+    const api = createApiClient({ baseUrl: '', fetch });
+
+    await api.createGroup({ id: group.id, name: 'Goa', currency: 'INR' });
+    await api.removeMember('g1', 'me');
+    await api.revokeInvite('g1', 'inv');
+    await api.acceptInvite('tok/../x', { claimPlaceholderId: group.id });
+    await api.deleteGroup('g1');
+
+    expect(fetch.mock.calls.map(([url, init]) => [init?.method, url])).toEqual([
+      ['POST', '/api/v1/groups'],
+      ['DELETE', '/api/v1/groups/g1/members/me'],
+      ['DELETE', '/api/v1/groups/g1/invites/inv'],
+      ['POST', '/api/v1/invites/tok%2F..%2Fx/accept'],
+      ['DELETE', '/api/v1/groups/g1'],
+    ]);
+  });
+
+  it('validate list responses against their contracts', async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(json(200, { items: [] }))
+      .mockResolvedValueOnce(json(200, { items: [{ id: 'not-a-uuid' }] }));
+    const api = createApiClient({ baseUrl: '', fetch });
+
+    await expect(api.friends()).resolves.toEqual({ items: [] });
+    await expect(api.people()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+});
+
+describe('every endpoint method', () => {
+  const ID = '01900000-0000-7000-8000-000000000100';
+  const USER = { id: ID, name: 'Asha', avatarUrl: null, isPlaceholder: false };
+  const MEMBER = { user: USER, role: 'owner', joinedAt: '2026-11-01T08:00:00.000Z', leftAt: null };
+  const GROUP = {
+    kind: 'group',
+    id: ID,
+    name: 'Goa',
+    emoji: null,
+    currency: 'INR',
+    createdAt: '2026-11-01T08:00:00.000Z',
+    members: [MEMBER],
+    myRole: 'owner',
+  };
+  const TOKEN = 'A'.repeat(43);
+
+  type Case = [
+    string,
+    (api: ReturnType<typeof createApiClient>) => Promise<unknown>,
+    string,
+    string,
+    unknown?,
+    unknown?,
+  ];
+  const CASES: Case[] = [
+    [
+      'groups',
+      (api) => api.groups(),
+      'GET',
+      '/api/v1/groups',
+      { items: [{ ...GROUP, myNet: [] }] },
+    ],
+    ['group', (api) => api.group(ID), 'GET', `/api/v1/groups/${ID}`, GROUP],
+    [
+      'createGroup',
+      (api) => api.createGroup({ id: ID, name: 'Goa', currency: 'INR' }),
+      'POST',
+      '/api/v1/groups',
+      GROUP,
+      { id: ID, name: 'Goa', currency: 'INR' },
+    ],
+    [
+      'updateGroup',
+      (api) => api.updateGroup(ID, { name: 'Goa 2' }),
+      'PATCH',
+      `/api/v1/groups/${ID}`,
+      GROUP,
+      { name: 'Goa 2' },
+    ],
+    ['deleteGroup', (api) => api.deleteGroup(ID), 'DELETE', `/api/v1/groups/${ID}`],
+    [
+      'addMember',
+      (api) => api.addMember(ID, { name: 'Bilal' }),
+      'POST',
+      `/api/v1/groups/${ID}/members`,
+      MEMBER,
+      { name: 'Bilal' },
+    ],
+    [
+      'removeMember',
+      (api) => api.removeMember(ID, ID),
+      'DELETE',
+      `/api/v1/groups/${ID}/members/${ID}`,
+    ],
+    [
+      'createInvite',
+      (api) => api.createInvite(ID),
+      'POST',
+      `/api/v1/groups/${ID}/invites`,
+      { id: ID, url: `https://app/invite/${TOKEN}`, expiresAt: '2026-12-01T00:00:00.000Z' },
+      {},
+    ],
+    [
+      'revokeInvite',
+      (api) => api.revokeInvite(ID, ID),
+      'DELETE',
+      `/api/v1/groups/${ID}/invites/${ID}`,
+    ],
+    [
+      'invitePreview',
+      (api) => api.invitePreview(TOKEN),
+      'GET',
+      `/api/v1/invites/${TOKEN}`,
+      {
+        group: { name: 'Goa', emoji: null, memberCount: 2 },
+        invitedBy: { name: 'Asha' },
+        placeholders: [],
+        targetPlaceholderId: null,
+        expired: false,
+      },
+    ],
+    [
+      'acceptInvite',
+      (api) => api.acceptInvite(TOKEN),
+      'POST',
+      `/api/v1/invites/${TOKEN}/accept`,
+      { groupId: ID },
+      {},
+    ],
+    ['friends', (api) => api.friends(), 'GET', '/api/v1/friends', { items: [] }],
+    [
+      'addFriend',
+      (api) => api.addFriend({ userId: ID }),
+      'POST',
+      '/api/v1/friends',
+      { groupId: ID, friend: USER },
+      { userId: ID },
+    ],
+    ['people', (api) => api.people(), 'GET', '/api/v1/people', { items: [USER] }],
+    ['claims', (api) => api.claims(), 'GET', '/api/v1/claims', { items: [] }],
+    ['claim', (api) => api.claim(ID), 'POST', `/api/v1/claims/${ID}`, { groupIds: [ID] }],
+    ['dismissClaim', (api) => api.dismissClaim(ID), 'DELETE', `/api/v1/claims/${ID}`],
+  ];
+
+  for (const [name, call, method, path, response, body] of CASES) {
+    it(`${name}() → ${method} ${path}`, async () => {
+      const fetch = vi
+        .fn<typeof globalThis.fetch>()
+        .mockResolvedValue(
+          response === undefined ? new Response(null, { status: 204 }) : json(200, response),
+        );
+
+      const result = await call(createApiClient({ baseUrl: '', fetch }));
+
+      const [url, init] = fetch.mock.calls[0]!;
+      expect([init?.method, url]).toEqual([method, path]);
+      expect(init?.body === undefined ? undefined : JSON.parse(init.body as string)).toEqual(body);
+      expect(result).toEqual(response);
+    });
+  }
+});

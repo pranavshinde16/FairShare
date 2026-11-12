@@ -11,6 +11,7 @@ export const ERROR_HTTP_STATUS = {
   NOT_FOUND: 404, // also for non-members, so IDs can't be probed
 
   ORIGIN_NOT_ALLOWED: 403, // a state-changing request that didn't come from the app's own pages
+  NOT_PERMITTED: 403, // a member doing what only the owner (or an invite's creator) may do
 
   VERSION_CONFLICT: 409, // details: { currentVersion }
   ID_CONFLICT: 409,

@@ -12,7 +12,11 @@ import { createRateLimiter, type RateLimiter } from './lib/rate-limit';
 import { createAuth } from './modules/auth/auth';
 import { createDomainUserResolver } from './modules/auth/domain-users';
 import { createSignInCodeSender } from './modules/auth/sign-in-email';
+import { createClaimsService } from './modules/claims/service';
 import { createCurrenciesService } from './modules/currencies/service';
+import { createFriendsService } from './modules/friends/service';
+import { createGroupsService } from './modules/groups/service';
+import { createInvitesService } from './modules/invites/service';
 import { createUsersService } from './modules/users/service';
 
 export type ComposeOptions = {
@@ -28,10 +32,15 @@ export type ComposeOptions = {
   web: AppDeps['web'];
   /** Overrides the sign-in code limit (3 codes per email per 10 minutes), for tests. */
   codeLimiter?: RateLimiter;
+  /** Overrides the invite preview limit (30 a minute per IP), for tests. */
+  invitePreviewLimiter?: RateLimiter;
 };
 
 /** Sign-in codes per email address: enough for two resends, too few to flood an inbox. */
 export const CODES_PER_EMAIL = { max: 3, windowMs: 10 * 60 * 1000 };
+
+/** Public invite previews per client IP (Blueprint 9.1). */
+export const INVITE_PREVIEWS_PER_IP = { max: 30, windowMs: 60 * 1000 };
 
 export function composeApp(options: ComposeOptions) {
   const { env, db, logger, reportError } = options;
@@ -77,5 +86,11 @@ export function composeApp(options: ComposeOptions) {
     domainUsers,
     users,
     currencies: createCurrenciesService(db),
+    groups: createGroupsService(db),
+    invites: createInvitesService(db, env.APP_URL),
+    friends: createFriendsService(db),
+    claims: createClaimsService(db),
+    invitePreviewLimiter: options.invitePreviewLimiter ?? createRateLimiter(INVITE_PREVIEWS_PER_IP),
+    clientIpHeaders: env.CLIENT_IP_HEADERS,
   });
 }

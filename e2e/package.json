@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@fairshare/config": "workspace:*",
+    "@fairshare/contracts": "workspace:*",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, type LinkProps } from '@tanstack/react-router';
-import { Activity, House, type LucideIcon } from 'lucide-react';
+import { Activity, House, Plus, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { friendsQuery, groupsQuery } from '../../features/groups/queries';
 import { meQuery } from '../../features/profile/queries';
 import { Avatar } from '../common/avatar';
 import { Logo } from '../common/logo';
@@ -31,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function Sidebar() {
   return (
-    <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r bg-card p-4 md:flex">
+    <aside className="sticky top-0 hidden h-dvh flex-col gap-6 overflow-y-auto border-r bg-card p-4 md:flex">
       <Link to="/" className="px-2 pt-1" aria-label="FairShare home">
         <Logo />
       </Link>
@@ -49,8 +50,8 @@ function Sidebar() {
           </Link>
         ))}
       </nav>
-      <SidebarSection title="Groups">No groups yet.</SidebarSection>
-      <SidebarSection title="People">No friends yet.</SidebarSection>
+      <SidebarGroups />
+      <SidebarPeople />
       <div className="mt-auto">
         <AccountLink />
       </div>
@@ -58,14 +59,92 @@ function Sidebar() {
   );
 }
 
+const sidebarLink =
+  'flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground';
+
 function SidebarSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section aria-label={title} className="flex flex-col gap-2 px-3">
-      <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+    <section aria-label={title} className="flex min-h-0 flex-col gap-1">
+      <h2 className="px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
         {title}
       </h2>
-      <p className="text-sm text-muted-foreground">{children}</p>
+      {children}
     </section>
+  );
+}
+
+function SidebarGroups() {
+  const groups = useQuery(groupsQuery);
+  return (
+    <SidebarSection title="Groups">
+      {groups.data?.items.length === 0 && (
+        <p className="px-3 text-sm text-muted-foreground">No groups yet.</p>
+      )}
+      <ul className="flex flex-col">
+        {groups.data?.items.map((group) => (
+          <li key={group.id}>
+            <Link
+              to="/groups/$groupId"
+              params={{ groupId: group.id }}
+              className={sidebarLink}
+              activeProps={{ className: 'bg-accent text-accent-foreground' }}
+            >
+              <span aria-hidden className="w-5 text-center">
+                {group.emoji ?? '•'}
+              </span>
+              <span className="truncate">{group.name}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <Link to="/groups/new" className={sidebarLink}>
+        <Plus aria-hidden className="size-4" />
+        New group
+      </Link>
+    </SidebarSection>
+  );
+}
+
+function SidebarPeople() {
+  const friends = useQuery(friendsQuery);
+  return (
+    <SidebarSection title="People">
+      {friends.data?.items.length === 0 && (
+        <p className="px-3 text-sm text-muted-foreground">No friends yet.</p>
+      )}
+      <ul className="flex flex-col">
+        {friends.data?.items.map((friend) => (
+          <li key={friend.user.id}>
+            {friend.directGroupId ? (
+              <Link
+                to="/groups/$groupId"
+                params={{ groupId: friend.directGroupId }}
+                className={sidebarLink}
+                activeProps={{ className: 'bg-accent text-accent-foreground' }}
+              >
+                <Avatar
+                  name={friend.user.name}
+                  src={friend.user.avatarUrl}
+                  size="sm"
+                  className="size-6 text-[10px]"
+                />
+                <span className="truncate">{friend.user.name}</span>
+              </Link>
+            ) : (
+              <span className={sidebarLink}>
+                <Avatar
+                  name={friend.user.name}
+                  src={friend.user.avatarUrl}
+                  size="sm"
+                  className="size-6 text-[10px]"
+                />
+                <span className="truncate">{friend.user.name}</span>
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </SidebarSection>
   );
 }
 

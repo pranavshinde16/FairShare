@@ -1,8 +1,25 @@
 import {
+  AcceptInviteResponse,
+  AddFriendResponse,
+  ClaimList,
+  ClaimResponse,
   CurrencyList,
+  FriendList,
+  Group,
+  GroupList,
   HealthResponse,
+  InviteCreated,
+  InvitePreview,
+  Member,
+  PeopleList,
   Profile,
   SignInOptions,
+  type AcceptInvite,
+  type AddFriend,
+  type AddMember,
+  type CreateGroup,
+  type CreateInvite,
+  type UpdateGroup,
   type UpdateProfile,
 } from '@fairshare/contracts';
 import { createTransport, type TransportOptions } from './transport';
@@ -14,7 +31,7 @@ export type ApiClientOptions = TransportOptions;
  * codes, Google, sign-out) goes through Better Auth's own client at /api/auth/*, not this one.
  */
 export function createApiClient(options: ApiClientOptions) {
-  const { request } = createTransport(options);
+  const { request, requestNoContent } = createTransport(options);
 
   return {
     health: (signal?: AbortSignal) => request(HealthResponse, '/api/health', { signal }),
@@ -27,7 +44,53 @@ export function createApiClient(options: ApiClientOptions) {
 
     me: (signal?: AbortSignal) => request(Profile, '/api/v1/me', { signal }),
     updateMe: (body: UpdateProfile) => request(Profile, '/api/v1/me', { method: 'PATCH', body }),
+
+    groups: (signal?: AbortSignal) => request(GroupList, '/api/v1/groups', { signal }),
+    group: (groupId: string, signal?: AbortSignal) =>
+      request(Group, `/api/v1/groups/${seg(groupId)}`, { signal }),
+    createGroup: (body: CreateGroup) => request(Group, '/api/v1/groups', { method: 'POST', body }),
+    updateGroup: (groupId: string, body: UpdateGroup) =>
+      request(Group, `/api/v1/groups/${seg(groupId)}`, { method: 'PATCH', body }),
+    deleteGroup: (groupId: string) =>
+      requestNoContent(`/api/v1/groups/${seg(groupId)}`, { method: 'DELETE' }),
+
+    addMember: (groupId: string, body: AddMember) =>
+      request(Member, `/api/v1/groups/${seg(groupId)}/members`, { method: 'POST', body }),
+    /** Removes someone (the owner does this), or with userId "me", leaves the group. */
+    removeMember: (groupId: string, userId: string) =>
+      requestNoContent(`/api/v1/groups/${seg(groupId)}/members/${seg(userId)}`, {
+        method: 'DELETE',
+      }),
+
+    createInvite: (groupId: string, body: CreateInvite = {}) =>
+      request(InviteCreated, `/api/v1/groups/${seg(groupId)}/invites`, { method: 'POST', body }),
+    revokeInvite: (groupId: string, inviteId: string) =>
+      requestNoContent(`/api/v1/groups/${seg(groupId)}/invites/${seg(inviteId)}`, {
+        method: 'DELETE',
+      }),
+    /** Public: what an invite link leads to. */
+    invitePreview: (token: string, signal?: AbortSignal) =>
+      request(InvitePreview, `/api/v1/invites/${seg(token)}`, { signal }),
+    acceptInvite: (token: string, body: AcceptInvite = {}) =>
+      request(AcceptInviteResponse, `/api/v1/invites/${seg(token)}/accept`, {
+        method: 'POST',
+        body,
+      }),
+
+    friends: (signal?: AbortSignal) => request(FriendList, '/api/v1/friends', { signal }),
+    addFriend: (body: AddFriend) =>
+      request(AddFriendResponse, '/api/v1/friends', { method: 'POST', body }),
+    people: (signal?: AbortSignal) => request(PeopleList, '/api/v1/people', { signal }),
+
+    claims: (signal?: AbortSignal) => request(ClaimList, '/api/v1/claims', { signal }),
+    claim: (placeholderId: string) =>
+      request(ClaimResponse, `/api/v1/claims/${seg(placeholderId)}`, { method: 'POST' }),
+    dismissClaim: (placeholderId: string) =>
+      requestNoContent(`/api/v1/claims/${seg(placeholderId)}`, { method: 'DELETE' }),
   };
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+/** A path segment, encoded so an ID can't change the path. */
+const seg = (value: string) => encodeURIComponent(value);

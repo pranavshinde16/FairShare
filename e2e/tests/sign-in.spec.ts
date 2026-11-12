@@ -1,6 +1,8 @@
 import { expect, newEmail, readCode, signIn, test } from './fixtures';
 
-test('signs up with an email code and lands on an empty Home', async ({ page }) => {
+test('signs up with an email code and lands on an empty Home with the starter cards', async ({
+  page,
+}) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/sign-in\?returnTo=%2F$/);
 
@@ -8,7 +10,8 @@ test('signs up with an email code and lands on an empty Home', async ({ page }) 
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: 'Hi, Asha' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'No groups yet' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start a group' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Add a friend' })).toBeVisible();
 });
 
 test('comes back to the page that asked for sign-in, keeps profile edits, signs out', async ({

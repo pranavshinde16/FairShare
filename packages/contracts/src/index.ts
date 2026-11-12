@@ -17,6 +17,8 @@ export * from './users';
 export * from './groups';
 export * from './invites';
 export * from './friends';
+export * from './people';
+export * from './claims';
 export * from './home';
 export * from './split';
 export * from './transactions';

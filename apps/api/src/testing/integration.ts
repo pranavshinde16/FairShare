@@ -13,6 +13,7 @@ export type IntegrationOptions = {
   /** Configure Google sign-in (with fake credentials; nothing calls Google). */
   google?: boolean;
   codeLimiter?: RateLimiter;
+  invitePreviewLimiter?: RateLimiter;
   /** The app's origin. Over https, cookies get the __Secure- prefix and the Secure flag. */
   appUrl?: string;
 };
@@ -46,6 +47,7 @@ export async function integrationApp(options: IntegrationOptions = {}) {
     emailSender: outbox.sender,
     web: null,
     codeLimiter: options.codeLimiter,
+    invitePreviewLimiter: options.invitePreviewLimiter,
   });
 
   /** A request as the web app sends it: same origin, JSON body. */
@@ -93,6 +95,28 @@ export async function integrationApp(options: IntegrationOptions = {}) {
     return { cookie: sessionCookie(res) };
   }
 
+  /** Signs a new person in and returns their session cookie and domain user ID. */
+  async function person(email: string) {
+    const { cookie } = await signIn(email);
+    const me = (await (await request('/api/v1/me', { cookie })).json()) as { id: string };
+    return { cookie, id: me.id, email };
+  }
+
+  /**
+   * Sends a request as `who` and returns the status and the JSON body (null for 204). Tests parse
+   * the body with its contract schema, which also checks the response's shape.
+   */
+  async function call(
+    who: { cookie: string } | null,
+    method: NonNullable<RequestInit['method']>,
+    path: string,
+    body?: unknown,
+  ) {
+    const res = await request(path, { method, cookie: who?.cookie, body });
+    const text = await res.text();
+    return { status: res.status, body: (text ? JSON.parse(text) : null) as unknown };
+  }
+
   return {
     app,
     db: database.db,
@@ -105,6 +129,8 @@ export async function integrationApp(options: IntegrationOptions = {}) {
     sendCode,
     submitCode,
     signIn,
+    person,
+    call,
     drop: database.drop,
   };
 }

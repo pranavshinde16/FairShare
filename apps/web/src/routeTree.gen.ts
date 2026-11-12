@@ -14,8 +14,11 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedActivityRouteImport } from './routes/_authed/activity'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as SignInIndexRouteImport } from './routes/sign-in.index'
 import { Route as SignInVerifyRouteImport } from './routes/sign-in.verify'
+import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups.$groupId'
+import { Route as AuthedGroupsNewRouteImport } from './routes/_authed/groups.new'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -41,6 +44,11 @@ const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthedRoute,
 } as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInIndexRoute = SignInIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -51,21 +59,37 @@ const SignInVerifyRoute = SignInVerifyRouteImport.update({
   path: '/verify',
   getParentRoute: () => SignInRoute,
 } as any)
+const AuthedGroupsGroupIdRoute = AuthedGroupsGroupIdRouteImport.update({
+  id: '/groups/$groupId',
+  path: '/groups/$groupId',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedGroupsNewRoute = AuthedGroupsNewRouteImport.update({
+  id: '/groups/new',
+  path: '/groups/new',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInRouteWithChildren
   '/activity': typeof AuthedActivityRoute
   '/settings': typeof AuthedSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/sign-in/verify': typeof SignInVerifyRoute
   '/sign-in/': typeof SignInIndexRoute
+  '/groups/$groupId': typeof AuthedGroupsGroupIdRoute
+  '/groups/new': typeof AuthedGroupsNewRoute
 }
 export interface FileRoutesByTo {
   '/activity': typeof AuthedActivityRoute
   '/settings': typeof AuthedSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/sign-in/verify': typeof SignInVerifyRoute
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInIndexRoute
+  '/groups/$groupId': typeof AuthedGroupsGroupIdRoute
+  '/groups/new': typeof AuthedGroupsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -73,9 +97,12 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRouteWithChildren
   '/_authed/activity': typeof AuthedActivityRoute
   '/_authed/settings': typeof AuthedSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/sign-in/verify': typeof SignInVerifyRoute
   '/_authed/': typeof AuthedIndexRoute
   '/sign-in/': typeof SignInIndexRoute
+  '/_authed/groups/$groupId': typeof AuthedGroupsGroupIdRoute
+  '/_authed/groups/new': typeof AuthedGroupsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -84,24 +111,39 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/activity'
     | '/settings'
+    | '/invite/$token'
     | '/sign-in/verify'
     | '/sign-in/'
+    | '/groups/$groupId'
+    | '/groups/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/activity' | '/settings' | '/sign-in/verify' | '/' | '/sign-in'
+  to:
+    | '/activity'
+    | '/settings'
+    | '/invite/$token'
+    | '/sign-in/verify'
+    | '/'
+    | '/sign-in'
+    | '/groups/$groupId'
+    | '/groups/new'
   id:
     | '__root__'
     | '/_authed'
     | '/sign-in'
     | '/_authed/activity'
     | '/_authed/settings'
+    | '/invite/$token'
     | '/sign-in/verify'
     | '/_authed/'
     | '/sign-in/'
+    | '/_authed/groups/$groupId'
+    | '/_authed/groups/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   SignInRoute: typeof SignInRouteWithChildren
+  InviteTokenRoute: typeof InviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +183,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in/': {
       id: '/sign-in/'
       path: '/'
@@ -155,6 +204,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInVerifyRouteImport
       parentRoute: typeof SignInRoute
     }
+    '/_authed/groups/$groupId': {
+      id: '/_authed/groups/$groupId'
+      path: '/groups/$groupId'
+      fullPath: '/groups/$groupId'
+      preLoaderRoute: typeof AuthedGroupsGroupIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/groups/new': {
+      id: '/_authed/groups/new'
+      path: '/groups/new'
+      fullPath: '/groups/new'
+      preLoaderRoute: typeof AuthedGroupsNewRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
@@ -162,12 +225,16 @@ interface AuthedRouteChildren {
   AuthedActivityRoute: typeof AuthedActivityRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedGroupsGroupIdRoute: typeof AuthedGroupsGroupIdRoute
+  AuthedGroupsNewRoute: typeof AuthedGroupsNewRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedActivityRoute: AuthedActivityRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedGroupsGroupIdRoute: AuthedGroupsGroupIdRoute,
+  AuthedGroupsNewRoute: AuthedGroupsNewRoute,
 }
 
 const AuthedRouteWithChildren =
@@ -189,6 +256,7 @@ const SignInRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   SignInRoute: SignInRouteWithChildren,
+  InviteTokenRoute: InviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
