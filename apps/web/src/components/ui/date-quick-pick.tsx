@@ -10,12 +10,14 @@ const chip = (selected: boolean) =>
       : 'border bg-card font-semibold text-foreground hover:bg-muted',
   );
 
-/** "2026-11-03" → "3 Nov" in the browser's language. */
-function short(isoDate: string): string {
+/** "2026-11-03" → "3 Nov" (or "3 Nov 2026" `withYear`) in the browser's language. */
+export function shortDate(isoDate: string, withYear = false): string {
   const [y, m, d] = isoDate.split('-').map(Number);
-  return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(
-    new Date(y!, m! - 1, d),
-  );
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear && { year: 'numeric' }),
+  }).format(new Date(y!, m! - 1, d));
 }
 
 /**
@@ -66,7 +68,7 @@ export function DateQuickPick({
         </button>
       ))}
       <label className={cn(chip(custom), 'cursor-pointer')}>
-        <span aria-hidden>{custom ? short(value) : 'Pick a date'}</span>
+        <span aria-hidden>{custom ? shortDate(value, true) : 'Pick a date'}</span>
         <CalendarDays aria-hidden />
         <input
           type="date"

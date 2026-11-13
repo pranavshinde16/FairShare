@@ -1,7 +1,7 @@
 import { ApiError } from '@fairshare/api-client';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router';
-import { ArrowLeftRight, ChevronRight, Receipt, Settings, X } from 'lucide-react';
+import { ArrowLeftRight, ChevronRight, Link2, ReceiptText, Settings, X } from 'lucide-react';
 import { useState } from 'react';
 import { z } from 'zod';
 import type { Group, GroupBalances } from '@fairshare/contracts';
@@ -74,7 +74,7 @@ function GroupPage() {
     return (
       <PageLayout>
         {back}
-        <EmptyState icon={Receipt} title="Group not found">
+        <EmptyState icon={ReceiptText} title="Group not found">
           <p>This group doesn’t exist, or you’re not a member of it.</p>
           <Button asChild variant="secondary" className="mt-4">
             <Link to="/">Go to Groups</Link>
@@ -120,15 +120,28 @@ function GroupPage() {
   return (
     <div
       className={cn(
-        'mx-auto flex w-full flex-col gap-3.5',
+        'mx-auto flex w-full flex-col gap-3.5 lg:mx-0',
         rail
           ? 'max-w-[1120px] lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-x-7 lg:gap-y-[18px]'
-          : 'max-w-[760px] lg:gap-[18px]',
+          : tab === 'balances'
+            ? 'max-w-[1120px] lg:gap-[18px]'
+            : 'max-w-[760px] lg:gap-[18px]',
       )}
     >
       <header className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 lg:col-start-1 lg:flex lg:gap-3.5">
         {back}
         <div className="col-start-2 row-start-1 flex items-center gap-2 lg:order-last">
+          {data.kind === 'group' && (
+            <Button
+              variant="plain"
+              size="icon"
+              className="rounded-full lg:border lg:bg-card"
+              aria-label="Group settings"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings aria-hidden className="size-5" strokeWidth={1.9} />
+            </Button>
+          )}
           <Button asChild variant="secondary" className="hidden lg:inline-flex">
             <Link
               to="/groups/$groupId/settle"
@@ -140,17 +153,11 @@ function GroupPage() {
               Record a payment
             </Link>
           </Button>
-          {data.kind === 'group' && (
-            <Button
-              variant="plain"
-              size="icon"
-              className="rounded-full"
-              aria-label="Group settings"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings aria-hidden className="size-5" strokeWidth={1.9} />
-            </Button>
-          )}
+          {/* Desktop: the group's own Add expense beside Record a payment (d-group-*). */}
+          <Button className="hidden lg:inline-flex" onClick={addExpense}>
+            <ReceiptText aria-hidden strokeWidth={1.9} />
+            Add expense
+          </Button>
         </div>
         <div className="col-span-2 flex min-w-0 items-center gap-3.5 lg:flex-1">
           <GroupTile
@@ -229,7 +236,16 @@ function GroupPage() {
               aria-labelledby="invite-link-heading"
               className="hidden flex-col gap-3 rounded-xl border bg-card p-5 shadow-card lg:flex"
             >
-              <h2 id="invite-link-heading" className="text-base font-extrabold">
+              <h2
+                id="invite-link-heading"
+                className="flex items-center gap-2.5 text-base font-extrabold"
+              >
+                <span
+                  aria-hidden
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-accent text-primary"
+                >
+                  <Link2 className="size-[18px]" strokeWidth={1.9} />
+                </span>
                 Invite with a link
               </h2>
               <p className="text-sm leading-5 text-muted-foreground">
@@ -241,13 +257,21 @@ function GroupPage() {
                 groupId={data.id}
                 groupName={title}
                 label="Create invite link"
+                icon={Link2}
+                className="self-start"
               />
             </section>
           )}
         </div>
       )}
 
-      <nav aria-label="Group sections" className={cn(segmentTrack, 'lg:col-start-1')}>
+      <nav
+        aria-label="Group sections"
+        className={cn(
+          segmentTrack,
+          'lg:col-start-1 lg:w-[300px] lg:self-start lg:justify-self-start',
+        )}
+      >
         {TABS.map((name) => (
           <Link
             key={name}
@@ -319,7 +343,7 @@ function BalanceCard({
       params={{ groupId: group.id }}
       search={{ tab: 'balances' }}
       className={cn(
-        'flex items-center gap-3 rounded-xl border bg-card px-4 py-3.5 shadow-card outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-focus-ring',
+        'flex items-center gap-3 rounded-xl border bg-card px-4 py-3.5 shadow-card outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-focus-ring lg:flex-col lg:items-stretch lg:p-4',
         className,
       )}
     >
@@ -334,11 +358,13 @@ function BalanceCard({
             <span
               key={money.currency}
               className={cn(
-                'text-xl leading-[26px] font-extrabold tabular-nums',
+                'text-xl leading-[26px] font-extrabold tabular-nums lg:text-2xl lg:leading-[30px] lg:tracking-[-0.02em]',
                 money.amount > 0 ? 'text-owed' : 'text-owe',
               )}
             >
-              {money.amount > 0 ? 'You’re owed' : 'You owe'} {format(money)}
+              {/* Desktop's narrow rail: the words over the amount. */}
+              <span className="lg:block">{money.amount > 0 ? 'You’re owed' : 'You owe'}</span>{' '}
+              {format(money)}
             </span>
           ))
         )}
@@ -354,9 +380,12 @@ function BalanceCard({
           </span>
         )}
       </span>
-      <span className="flex items-center gap-0.5 text-sm font-bold text-primary">
+      <span className="flex items-center gap-0.5 text-sm font-bold text-primary lg:hidden">
         Balances
         <ChevronRight aria-hidden className="size-[18px]" strokeWidth={1.9} />
+      </span>
+      <span className="hidden h-11 items-center self-start rounded-lg bg-accent px-4 text-sm font-bold text-accent-foreground lg:inline-flex">
+        View balances
       </span>
     </Link>
   );

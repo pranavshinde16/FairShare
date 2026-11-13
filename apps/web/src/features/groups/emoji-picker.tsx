@@ -31,7 +31,7 @@ export function EmojiPicker({
   return (
     <fieldset>
       <legend className="mb-1.5 text-[13px] font-bold">Emoji</legend>
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-2 lg:grid-cols-[repeat(7,44px)]">
         {options.map((emoji) => (
           <label
             key={emoji ?? 'none'}

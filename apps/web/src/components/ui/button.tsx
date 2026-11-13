@@ -19,7 +19,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        secondary: 'border bg-card text-foreground shadow-card hover:bg-muted',
+        secondary: 'border bg-card text-foreground hover:bg-muted',
         tint: 'bg-accent text-accent-foreground hover:bg-accent/80',
         soft: 'bg-muted text-foreground hover:bg-muted/70',
         ghost: 'text-primary hover:bg-accent/60',
@@ -32,7 +32,7 @@ export const buttonVariants = cva(
         default: 'h-11 px-4',
         sm: 'h-11 rounded-md px-3 text-sm',
         md: 'h-12 px-5',
-        lg: 'h-[52px] px-6 text-base',
+        lg: 'h-[52px] px-6',
         icon: 'size-11 rounded-md',
       },
     },

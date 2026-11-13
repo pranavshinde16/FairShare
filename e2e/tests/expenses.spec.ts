@@ -27,7 +27,8 @@ const api = (page: Page) => ({
 });
 
 async function addExpense(page: Page, amount: string, description: string) {
-  await page.getByRole('button', { name: 'Add expense' }).click();
+  // The top bar's (desktop) or the floating button (phones); the group header has one too.
+  await page.getByRole('button', { name: 'Add expense' }).first().click();
   const dialog = page.getByRole('dialog', { name: 'Add expense' });
   await dialog.getByLabel('Amount').fill(amount);
   await dialog.getByLabel('Description').fill(description);
@@ -43,9 +44,12 @@ test('adds, opens, edits, deletes and restores an expense', async ({ page }) => 
   await page.goto(`/groups/${group.id}`);
 
   const dialog = await addExpense(page, '1200', 'Dinner');
-  await expect(dialog.getByRole('region', { name: 'Each person’s share' })).toContainText(
-    '₹600.00 / person',
-  );
+  // Phones: the per-person card; desktop: the split editor beside the form.
+  await expect(
+    test.info().project.name === 'mobile'
+      ? dialog.getByRole('region', { name: 'Each person’s share' })
+      : dialog.getByText(/^₹600\.00 each · \d+ people$/),
+  ).toContainText('₹600.00');
   await dialog.getByRole('button', { name: 'Save' }).click();
 
   await expect(dialog).toBeHidden();
@@ -67,7 +71,9 @@ test('adds, opens, edits, deletes and restores an expense', async ({ page }) => 
   await expect(page.locator('header').getByText('₹1,500.00', { exact: true })).toBeVisible();
   // The history lists each change on its own line (DESIGN_SPEC §6.3).
   await expect(page.getByText('Asha changed it')).toBeVisible();
-  await expect(page.getByText('Amount ₹1,200.00 → ₹1,500.00')).toBeVisible();
+  await expect(
+    page.getByText('Amount ₹1,200.00 → ₹1,500.00').filter({ visible: true }),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: 'Delete' }).click();
   await page

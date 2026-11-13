@@ -8,6 +8,7 @@ import { Dialog } from '../../components/ui/dialog';
 import { CapsLabel, ListCard } from '../../components/ui/list-card';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { plural } from '../../lib/money';
 import { afterMembershipChange } from '../../lib/invalidation';
 
 /**
@@ -88,8 +89,17 @@ export function ExpenseTargetPicker({
                     seed={group.id}
                     size={40}
                   />
-                  <span className="min-w-0 flex-1 text-base leading-[21px] font-bold break-words">
-                    {group.name}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-base leading-[21px] font-bold break-words">
+                      {group.name}
+                    </span>
+                    <span className="text-[13px] leading-[18px] text-muted-foreground">
+                      {plural(
+                        group.members.filter((m) => m.leftAt === null).length,
+                        'person',
+                        'people',
+                      )}
+                    </span>
                   </span>
                   {chevron}
                 </button>

@@ -117,10 +117,10 @@ export function Dialog({
         if (event.target === ref.current) onClose();
       }}
       className={cn(
-        'm-0 w-full max-w-none bg-card p-0 text-foreground shadow-pop backdrop:bg-overlay lg:m-auto lg:rounded-2xl lg:border',
+        'group/dialog m-0 w-full max-w-none p-0 text-foreground shadow-pop backdrop:bg-overlay lg:m-auto lg:rounded-2xl lg:border lg:bg-card',
         full
-          ? 'h-dvh max-h-none rounded-none lg:h-auto lg:max-h-[90dvh]'
-          : 'mt-auto max-h-[90dvh] rounded-t-2xl lg:max-h-[85dvh]',
+          ? 'h-dvh max-h-none rounded-none bg-background lg:h-auto lg:max-h-[90dvh]'
+          : 'mt-auto max-h-[90dvh] rounded-t-2xl bg-card lg:max-h-[85dvh]',
         WIDTHS[width ?? (full ? 'lg' : 'md')],
       )}
     >
@@ -132,7 +132,7 @@ export function Dialog({
           )}
         >
           {full ? (
-            <header className="flex min-h-[60px] shrink-0 items-center gap-1 border-b px-2 py-1.5 lg:items-start lg:gap-2 lg:border-0 lg:px-6 lg:pt-6 lg:pb-2">
+            <header className="flex min-h-[60px] shrink-0 items-center gap-1 border-b px-2 py-1.5 max-lg:group-has-[[data-hide-header]]/dialog:hidden lg:items-start lg:gap-2 lg:border-0 lg:px-6 lg:pt-6 lg:pb-2">
               {close}
               <div className="min-w-0 flex-1 text-center lg:text-left">
                 <h2

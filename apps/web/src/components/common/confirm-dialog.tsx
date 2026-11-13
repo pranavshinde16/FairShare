@@ -1,4 +1,4 @@
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { errorMessage } from '../../lib/errors';
 import { Button } from '../ui/button';
@@ -17,6 +17,7 @@ export function ConfirmDialog({
   children,
   confirmLabel,
   destructive = false,
+  icon: Icon,
   notice,
   confirmDisabled = false,
   onConfirm,
@@ -27,6 +28,8 @@ export function ConfirmDialog({
   children: ReactNode;
   confirmLabel: string;
   destructive?: boolean;
+  /** Beside the action's label (Delete has a bin). */
+  icon?: LucideIcon;
   /** Why the action is blocked, shown above the buttons ("… owes ₹11,200.00 …"). */
   notice?: ReactNode;
   confirmDisabled?: boolean;
@@ -69,6 +72,7 @@ export function ConfirmDialog({
           disabled={confirmDisabled}
           onClick={() => void confirm()}
         >
+          {Icon && !busy && <Icon aria-hidden strokeWidth={1.9} />}
           {confirmLabel}
         </Button>
         <Button size="lg" variant="secondary" onClick={onClose}>

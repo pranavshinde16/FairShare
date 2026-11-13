@@ -2,6 +2,7 @@ import type { Currency, Group } from '@fairshare/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { ChevronDown, Trash2 } from 'lucide-react';
+import { currencyName } from './create-group-form';
 import { useState } from 'react';
 import { ConfirmDialog } from '../../components/common/confirm-dialog';
 import { Button } from '../../components/ui/button';
@@ -80,7 +81,7 @@ export function GroupSettingsDialog({
               >
                 {currencies.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.code}
+                    {c.code} · {currencyName(c.code)}
                   </option>
                 ))}
               </select>
@@ -119,6 +120,7 @@ export function GroupSettingsDialog({
         title={`Delete ${group.name}?`}
         confirmLabel="Delete group"
         destructive
+        icon={Trash2}
         onConfirm={async () => {
           await api.deleteGroup(group.id);
           queryClient.removeQueries({ queryKey: ['group', group.id] });

@@ -160,9 +160,13 @@ test('adds an expense with a friend from their page', async ({ page }) => {
   await form.getByLabel('Amount').fill('300');
   await form.getByLabel('Description').fill('Movie');
   // A friendship takes my default currency, which follows the browser's locale (USD here).
-  await expect(form.getByRole('region', { name: 'Each person’s share' })).toContainText(
-    '$150.00 / person',
-  );
+  // Phones: the per-person card ("$150.00 / person"); desktop: the split editor beside the form.
+  await expect(
+    form
+      .getByText(/^\$150\.00( \/ person)?$/)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
   await form.getByRole('button', { name: 'Save' }).click();
 
   // Back on Hari's page, with the expense and the new balance.

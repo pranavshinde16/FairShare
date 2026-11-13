@@ -89,7 +89,7 @@ export function CodeStep({ pending, returnTo }: { pending: PendingSignIn; return
 
   return (
     <form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-2.5"
       onSubmit={(event) => {
         event.preventDefault();
         void submit(code);
@@ -110,7 +110,7 @@ export function CodeStep({ pending, returnTo }: { pending: PendingSignIn; return
           }}
         />
       </div>
-      <div id="code-status" aria-live="polite" className="min-h-5 text-sm">
+      <div id="code-status" aria-live="polite" className="text-sm leading-5">
         {problem && <p className="font-semibold text-destructive">{problem.message}</p>}
         {notice && !problem && <p className="text-muted-foreground">{notice}</p>}
       </div>

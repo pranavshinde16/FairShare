@@ -1,5 +1,4 @@
 import type { Group, UpdateSettlement } from '@fairshare/contracts';
-import { toDecimalString } from '@fairshare/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Skeleton } from '../../components/common/skeleton';
@@ -7,7 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
-import { formatAmount } from '../../lib/money';
+import { formatAmount, formatAmountInput } from '../../lib/money';
 import { uuidv7 } from '../../lib/ids';
 import { afterTransactionChange } from '../../lib/invalidation';
 import { toast } from '../../lib/toast';
@@ -222,7 +221,7 @@ export function NewSettlementDialog({
       initial={{
         fromUserId: pair.from,
         toUserId: pair.to,
-        amountText: amount === null ? '' : toDecimalString(amount, currency.minorUnits),
+        amountText: amount === null ? '' : formatAmountInput(amount, currency.minorUnits),
         occurredOn: localDate(),
         method: defaultMethod(data.currency),
         reference: '',

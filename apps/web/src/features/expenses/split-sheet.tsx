@@ -1,6 +1,6 @@
 import type { Group } from '@fairshare/contracts';
 import type { SplitMethod } from '@fairshare/core';
-import { CircleCheck, Minus, Plus, TriangleAlert } from 'lucide-react';
+import { Check, Minus, Plus, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { Button } from '../../components/ui/button';
@@ -465,11 +465,11 @@ function LeftBar({
   const show = (value: number) => (left.unit === 'money' ? money(value) : `${percentText(value)}%`);
   const text =
     left.amount === 0
-      ? `All ${label}`
+      ? `All ${label}${left.unit === 'money' ? '' : ' · 100%'}`
       : left.amount > 0
         ? `${show(left.amount)} left to assign`
         : `${show(-left.amount)} too much`;
-  const Icon = left.amount === 0 ? CircleCheck : TriangleAlert;
+  const Icon = left.amount === 0 ? Check : TriangleAlert;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span
@@ -526,7 +526,14 @@ function RoundingNote({
   if (!shares || shares.length < 2) return null;
   const low = Math.min(...shares.map((s) => s.amount));
   const extra = shares.filter((s) => s.amount > low).length;
-  if (extra === 0) return null;
+  if (extra === 0) {
+    return (
+      <p className="text-[13px] leading-5 text-muted-foreground">
+        <b className="font-extrabold text-foreground tabular-nums">{money(low)}</b> each ·{' '}
+        {plural(shares.length, 'person', 'people')}
+      </p>
+    );
+  }
   // Largest remainder rounding: everyone gets `low` or one minor unit more.
   return (
     <p className="text-[13px] leading-5 text-muted-foreground">
@@ -547,9 +554,15 @@ function SharesNote({
 }) {
   if (shares === 0) return null;
   return (
-    <p className="text-[13px] leading-5 font-semibold text-muted-foreground tabular-nums">
+    <p className="text-[13px] leading-5 text-muted-foreground tabular-nums">
       {plural(shares, 'share', 'shares')}
-      {amount !== null && <> · {money(Math.floor(amount / shares))} per share</>}
+      {amount !== null && (
+        <>
+          {' · '}
+          <b className="font-extrabold text-foreground">{money(Math.floor(amount / shares))}</b> per
+          share
+        </>
+      )}
     </p>
   );
 }

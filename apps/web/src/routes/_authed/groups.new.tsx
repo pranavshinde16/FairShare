@@ -17,9 +17,9 @@ function NewGroupPage() {
   const error = me.error ?? currencies.error;
 
   return (
-    <PageLayout>
+    <PageLayout className="lg:max-w-[1040px]">
       {/* Phones: a create flow's header, ✕ left and the title centred (DESIGN_SPEC §2). */}
-      <header className="-mx-2 flex items-center gap-1 lg:mx-0">
+      <header className="-mx-4 -mt-3 flex min-h-[60px] items-center gap-1 border-b px-2 py-1.5 lg:mx-0 lg:mt-0 lg:min-h-0 lg:border-0 lg:p-0">
         <Link
           to="/"
           aria-label="Close"

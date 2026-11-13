@@ -1,10 +1,10 @@
 import type { Group, Transaction, UpdateExpense } from '@fairshare/contracts';
-import { ArrowLeft, ChevronDown, NotebookPen, Sparkles } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronDown, NotepadText, Sparkles } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { GroupTile } from '../../components/common/tiles';
 import { Button } from '../../components/ui/button';
-import { DateQuickPick } from '../../components/ui/date-quick-pick';
+import { DateQuickPick, shortDate } from '../../components/ui/date-quick-pick';
 import { Label } from '../../components/ui/label';
 import { formatAmount, formatAmountInput, formatWholeAmount, plural } from '../../lib/money';
 import { readStored, writeStored } from '../../lib/storage';
@@ -114,7 +114,20 @@ export function ExpenseForm({
   const read = (text: string, from: ExpenseDraft) =>
     applyEntry(text, from, { group, meId, minorUnits, today: localDate() });
   const [opening] = useState(() => (entry?.text ? read(entry.text, initial) : null));
-  const [draft, setDraft] = useState(opening?.draft ?? initial);
+  const [draft, setDraft] = useState(() => {
+    const start = opening?.draft ?? initial;
+    // An expense being edited shows its amount as it's written everywhere else: "4,800.00".
+    const plain = /^\d+(\.\d+)?$/.test(start.amountText);
+    return plain
+      ? {
+          ...start,
+          amountText: formatAmountInput(
+            Math.round(Number(start.amountText) * 10 ** minorUnits),
+            minorUnits,
+          ),
+        }
+      : start;
+  });
   const [entryText, setEntryText] = useState(entry?.text ?? '');
   const [pending, setPending] = useState<Pending[]>(opening?.pending ?? []);
   const [filled, setFilled] = useState<Filled[]>(opening?.filled ?? []);
@@ -124,8 +137,18 @@ export function ExpenseForm({
     initial.payers.mode === 'multiple' || initial.split.method !== 'equal',
   );
   const [notesOpen, setNotesOpen] = useState(initial.notes !== '');
+  // Phones keep the date in the bottom bar ("Today, 13 Nov") and open the quick-pick from there.
+  const [dateOpen, setDateOpen] = useState(false);
   const saveRef = useRef<HTMLButtonElement>(null);
   const headerSaveRef = useRef<HTMLButtonElement>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const sentenceRef = useRef<HTMLButtonElement>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
+  const closeSplit = () => {
+    setSplitOpen(false);
+    requestAnimationFrame(() => sentenceRef.current?.focus());
+  };
   /** A change by hand: what the sentence filled stops being highlighted once it's edited. */
   const set = (changes: Partial<ExpenseDraft>) => {
     setDraft((d) => ({ ...d, ...changes }));
@@ -187,6 +210,7 @@ export function ExpenseForm({
       ? 'you'
       : (group.members.find((m) => m.user.id === userId)?.user.name ?? 'someone');
   const future = draft.occurredOn > localDate();
+  const showDate = dateOpen;
 
   function submit() {
     // Ctrl/⌘+Enter reaches here without the (disabled) Save button.
@@ -213,12 +237,16 @@ export function ExpenseForm({
       <Button
         ref={headerSaveRef}
         type="submit"
+        aria-label={submitLabel}
         variant="ghost"
         disabled={!body}
         loading={busy}
-        className="absolute top-2 right-2 z-10 px-3 text-base font-extrabold lg:hidden"
+        className={cn(
+          'absolute top-2 right-2 z-10 px-3 text-base font-extrabold lg:hidden',
+          splitOpen && 'hidden',
+        )}
       >
-        {submitLabel}
+        Save
       </Button>
 
       {/* ---- The expense (phones: hidden while the split editor is open) */}
@@ -358,13 +386,23 @@ export function ExpenseForm({
           </div>
         </div>
 
-        <div className={cn('flex flex-col items-center gap-1 rounded-md', highlight('split'))}>
+        <div
+          className={cn(
+            'flex flex-col items-center gap-1 rounded-md lg:hidden',
+            highlight('split'),
+          )}
+        >
           <button
             type="button"
             aria-expanded={splitOpen}
             aria-controls="split-panel"
-            onClick={() => setSplitOpen(true)}
-            className="rounded-md px-1 text-center text-base leading-[44px] outline-none focus-visible:ring-3 focus-visible:ring-focus-ring lg:cursor-default"
+            ref={sentenceRef}
+            onClick={() => {
+              setSplitOpen(true);
+              // The sentence is hidden behind the editor now: start from its Back button.
+              requestAnimationFrame(() => backRef.current?.focus());
+            }}
+            className="rounded-md px-1 text-center text-base leading-[44px] outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
           >
             <Sentence draft={draft} nameOf={nameOf} />
           </button>
@@ -386,6 +424,7 @@ export function ExpenseForm({
         </div>
 
         <PeopleCard
+          className="lg:hidden"
           group={group}
           meId={meId}
           draft={draft}
@@ -396,7 +435,10 @@ export function ExpenseForm({
           minorUnits={minorUnits}
         />
 
-        <fieldset className="flex flex-col gap-1.5">
+        <fieldset
+          id="expense-date"
+          className={cn('flex-col gap-1.5', showDate ? 'flex' : 'hidden lg:flex')}
+        >
           <legend className="mb-1.5 text-[13px] font-bold">Date</legend>
           <DateQuickPick
             value={draft.occurredOn}
@@ -412,48 +454,42 @@ export function ExpenseForm({
           )}
         </fieldset>
 
-        {notesOpen ? (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="expense-notes">Notes</Label>
-            <textarea
-              id="expense-notes"
-              rows={3}
-              maxLength={1000}
-              value={draft.notes}
-              onChange={(event) => set({ notes: event.target.value })}
-              className="rounded-lg border bg-card px-3.5 py-2.5 text-base outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-focus-ring sm:text-sm"
-            />
-          </div>
-        ) : (
-          <Button
-            type="button"
-            variant="soft"
-            size="sm"
-            className="self-start"
-            onClick={() => setNotesOpen(true)}
-          >
-            <NotebookPen aria-hidden strokeWidth={1.9} />
-            Add notes
-          </Button>
-        )}
+        {/* Notes: always there on desktop; on phones, opened from the bottom bar. */}
+        <div className={cn('flex-col gap-1.5', notesOpen ? 'flex' : 'hidden lg:flex')}>
+          <Label htmlFor="expense-notes">Notes</Label>
+          <textarea
+            ref={notesRef}
+            id="expense-notes"
+            rows={3}
+            maxLength={1000}
+            placeholder="Add notes"
+            value={draft.notes}
+            onChange={(event) => set({ notes: event.target.value })}
+            className="rounded-lg border bg-card px-3.5 py-2.5 text-base outline-none placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-focus-ring sm:text-sm"
+          />
+        </div>
       </div>
 
       {/* ---- Paid by & split (phones: its own view, opened from the sentence; desktop: the right
           half, always shown) */}
       <div
+        ref={splitRef}
+        // Phones: the editor takes the whole screen, its own header in place of the dialog's.
+        data-hide-header={splitOpen || undefined}
         className={cn(
           'flex flex-col gap-3.5 lg:rounded-xl lg:border lg:bg-muted/40 lg:p-4',
           !splitOpen && 'hidden lg:flex',
         )}
       >
-        <div className="-mx-4 -mt-4 flex items-center gap-1 border-b px-2 py-1.5 lg:hidden">
+        <div className="-mx-4 -mt-4 flex min-h-[60px] items-center gap-1 border-b px-2 py-1.5 lg:hidden">
           <Button
             type="button"
             variant="plain"
             size="icon"
             className="rounded-full"
+            ref={backRef}
             aria-label="Back to expense"
-            onClick={() => setSplitOpen(false)}
+            onClick={closeSplit}
           >
             <ArrowLeft aria-hidden className="size-5" strokeWidth={1.9} />
           </Button>
@@ -469,21 +505,11 @@ export function ExpenseForm({
             type="button"
             variant="ghost"
             className="px-3 text-base font-extrabold"
-            onClick={() => setSplitOpen(false)}
+            onClick={closeSplit}
           >
             Done
           </Button>
         </div>
-        {/* Phones: what the editor adds up to, as you change it. */}
-        <button
-          type="button"
-          aria-expanded={splitOpen}
-          aria-controls="split-panel"
-          onClick={() => setSplitOpen(false)}
-          className="self-center rounded-md px-1 text-center text-base leading-[44px] outline-none focus-visible:ring-3 focus-visible:ring-focus-ring lg:hidden"
-        >
-          <Sentence draft={draft} nameOf={nameOf} />
-        </button>
         <SplitSheet
           group={group}
           meId={meId}
@@ -497,7 +523,13 @@ export function ExpenseForm({
       </div>
 
       {/* ---- The one message (form order), and desktop's Cancel / Save */}
-      <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-card pt-2 lg:col-span-2 lg:flex-row lg:items-center lg:gap-3 lg:border-t lg:pt-4">
+      <div
+        className={cn(
+          'sticky bottom-0 -mx-4 -mb-4 mt-auto flex flex-col gap-2 border-t bg-card px-3 pt-2.5 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:col-span-2 lg:mx-0 lg:mb-0 lg:flex-row lg:items-center lg:gap-3 lg:px-0 lg:pt-4 lg:pb-0',
+          // Phones: nothing to show while the split editor has the screen.
+          splitOpen && !shown && 'max-lg:hidden',
+        )}
+      >
         {shown && (
           <p
             role={error ? 'alert' : undefined}
@@ -511,6 +543,45 @@ export function ExpenseForm({
             {shown}
           </p>
         )}
+        {/* Phones: the date and notes (m-add-expense's bottom bar), unless the split view is open. */}
+        <div className={cn('flex gap-2 lg:hidden', splitOpen && 'hidden')}>
+          <Button
+            type="button"
+            variant="soft"
+            size="sm"
+            className={cn('font-semibold', highlight('date'))}
+            aria-expanded={showDate}
+            aria-controls="expense-date"
+            onClick={() => setDateOpen((o) => !o)}
+          >
+            <CalendarDays aria-hidden strokeWidth={1.9} />
+            <span className="sr-only">Date: </span>
+            {dateLabel(draft.occurredOn)}
+          </Button>
+          {!notesOpen && (
+            <Button
+              type="button"
+              variant="soft"
+              size="sm"
+              className="font-semibold"
+              onClick={() => {
+                setNotesOpen(true);
+                requestAnimationFrame(() => notesRef.current?.focus());
+              }}
+            >
+              <NotepadText aria-hidden strokeWidth={1.9} />
+              Add notes
+            </Button>
+          )}
+        </div>
+        {/* Desktop: the editor is the right half; this sums it up and takes you there. */}
+        <button
+          type="button"
+          onClick={() => splitRef.current?.querySelector<HTMLElement>('input, button')?.focus()}
+          className="hidden rounded-md text-left text-sm leading-5 text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-focus-ring lg:block"
+        >
+          <Sentence draft={draft} nameOf={nameOf} plain />
+        </button>
         <div className="hidden gap-2.5 lg:ml-auto lg:flex">
           {onCancel && (
             <Button type="button" variant="secondary" size="md" onClick={onCancel}>
@@ -527,7 +598,23 @@ export function ExpenseForm({
 }
 
 /** "Paid by you and split equally" (DESIGN_SPEC §5 m-add-expense), the editor's way in. */
-function Sentence({ draft, nameOf }: { draft: ExpenseDraft; nameOf: (userId: string) => string }) {
+/** The bottom bar's date: "Today, 13 Nov", "Yesterday, 12 Nov" or "8 Nov 2026". */
+function dateLabel(date: string): string {
+  if (date === localDate()) return `Today, ${shortDate(date)}`;
+  if (date === localDate(-1)) return `Yesterday, ${shortDate(date)}`;
+  return shortDate(date, true);
+}
+
+function Sentence({
+  draft,
+  nameOf,
+  plain = false,
+}: {
+  draft: ExpenseDraft;
+  nameOf: (userId: string) => string;
+  /** Desktop's footer: bold words instead of pills. */
+  plain?: boolean;
+}) {
   const { payers, split } = draft;
   const paidBy =
     payers.mode === 'single'
@@ -539,6 +626,14 @@ function Sentence({ draft, nameOf }: { draft: ExpenseDraft; nameOf: (userId: str
     percent: 'by percentages',
     shares: 'by shares',
   }[split.method];
+  if (plain) {
+    return (
+      <>
+        Paid by <b className="font-bold text-foreground">{paidBy}</b> and split{' '}
+        <b className="font-bold text-foreground">{how}</b>
+      </>
+    );
+  }
   const pill =
     'mx-0.5 inline-flex h-9 items-center gap-1 rounded-full bg-accent px-3.5 align-middle text-[15px] font-bold text-accent-foreground';
   return (
@@ -571,7 +666,9 @@ function PeopleCard({
   money,
   currency,
   minorUnits,
+  className,
 }: {
+  className?: string;
   group: Group;
   meId: string;
   draft: ExpenseDraft;
@@ -603,7 +700,7 @@ function PeopleCard({
   return (
     <section
       aria-label="Each person’s share"
-      className="rounded-xl border bg-card p-3.5 shadow-card"
+      className={cn('rounded-xl border bg-card p-3.5 shadow-card', className)}
     >
       <p className="mb-3 flex justify-between gap-2 text-[13px] text-muted-foreground">
         <span>

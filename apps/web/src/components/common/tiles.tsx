@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Receipt } from 'lucide-react';
+import { ArrowLeftRight, ReceiptText } from 'lucide-react';
 import { TILE_CLASSES, tileTone } from '../../lib/tile';
 import { cn } from '../../lib/utils';
 
@@ -50,7 +50,7 @@ export function GroupTile({
 
 /** The 36px tile in front of a history row: a receipt for an expense, two arrows for a payment. */
 export function IconTile({ kind, className }: { kind: 'expense' | 'payment'; className?: string }) {
-  const Icon = kind === 'payment' ? ArrowLeftRight : Receipt;
+  const Icon = kind === 'payment' ? ArrowLeftRight : ReceiptText;
   return (
     <span
       aria-hidden

@@ -1,7 +1,7 @@
 import type { Friend, Home as HomeData, Money } from '@fairshare/contracts';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ChevronRight, Link2, Plus, UserPlus, Users } from 'lucide-react';
+import { ChevronRight, Link2, UserPlus, Users } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { ErrorState } from '../../components/common/error-state';
@@ -58,11 +58,11 @@ function HomePage() {
             aria-label="Start a new group"
             className={cn(titleActionClass, 'lg:hidden')}
           >
-            <Plus aria-hidden className="size-5" strokeWidth={1.9} />
+            <UserPlus aria-hidden className="size-5" strokeWidth={1.9} />
           </Link>
           <Button asChild variant="secondary" className="hidden lg:inline-flex">
             <Link to="/groups/new">
-              <Plus aria-hidden strokeWidth={1.9} />
+              <UserPlus aria-hidden strokeWidth={1.9} />
               New group
             </Link>
           </Button>
@@ -88,9 +88,19 @@ function HomePage() {
   }
 
   return (
-    <PageLayout rail={data && !empty ? <RecentActivity /> : undefined}>
+    <PageLayout
+      rail={
+        data && !empty ? (
+          <>
+            {/* Desktop: the claims sit at the top of the rail (d-home). */}
+            <ClaimsBanner compact />
+            <RecentActivity />
+          </>
+        ) : undefined
+      }
+    >
       {title}
-      <ClaimsBanner />
+      <ClaimsBanner className={data && !empty ? 'lg:hidden' : undefined} />
 
       {!data ? (
         <HomeSkeleton />
@@ -106,7 +116,7 @@ function HomePage() {
             to="/groups/new"
             className="flex h-12 items-center justify-center gap-2 rounded-lg border border-dashed text-sm font-bold text-primary outline-none hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-focus-ring focus-visible:outline-1 focus-visible:outline-primary lg:hidden"
           >
-            <Plus aria-hidden className="size-[18px]" strokeWidth={1.9} />
+            <UserPlus aria-hidden className="size-[18px]" strokeWidth={1.9} />
             Start a new group
           </Link>
           <Button variant="ghost" className="self-start" onClick={() => setJoining(true)}>

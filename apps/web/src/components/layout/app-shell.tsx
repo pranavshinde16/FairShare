@@ -6,7 +6,7 @@ import {
   Bell,
   House,
   Plus,
-  Receipt,
+  ReceiptText,
   UserRound,
   Users,
   type LucideIcon,
@@ -40,6 +40,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const action = useAddExpenseAction();
   const [picking, setPicking] = useState(false);
   const [addingFriend, setAddingFriend] = useState(false);
+  // Create flows are full-screen on phones (DESIGN_SPEC §2): no tab bar under New group.
+  const createFlow = useRouterState({ select: (s) => s.location.pathname === '/groups/new' });
   // The page's own "Add expense" (its group's form), else "Who is it with?".
   // Without the page's own action, the picker needs Home's groups and people first.
   const ready = Boolean(action?.run) || home.data !== undefined;
@@ -65,7 +67,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SidebarGroups home={home.data} />
           <SidebarFriends home={home.data} onAdd={() => setAddingFriend(true)} />
         </aside>
-        <main className="min-w-0 flex-1 px-4 pt-3 pb-[calc(10rem+env(safe-area-inset-bottom))] lg:px-8 lg:pt-7 lg:pb-14">
+        <main
+          className={cn(
+            'min-w-0 flex-1 px-4 pt-3 lg:px-8 lg:pt-7 lg:pb-14',
+            createFlow ? 'pb-0' : 'pb-[calc(10rem+env(safe-area-inset-bottom))]',
+          )}
+        >
           {children}
         </main>
       </div>
@@ -80,12 +87,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           {action.busy ? (
             <Spinner className="size-5" />
           ) : (
-            <Receipt aria-hidden className="size-5" strokeWidth={1.9} />
+            <ReceiptText aria-hidden className="size-5" strokeWidth={1.9} />
           )}
           Add expense
         </button>
       )}
-      <TabBar />
+      {!createFlow && <TabBar />}
       {home.data && (
         <ExpenseTargetPicker open={picking} onClose={() => setPicking(false)} home={home.data} />
       )}
@@ -125,7 +132,7 @@ function TopBar({
         onClick={onAddExpense}
         className={cn(buttonVariants({ size: 'default' }), 'rounded-md px-[18px]')}
       >
-        {busy ? <Spinner /> : <Receipt aria-hidden strokeWidth={1.9} />}
+        {busy ? <Spinner /> : <ReceiptText aria-hidden strokeWidth={1.9} />}
         Add expense
       </button>
       <Link

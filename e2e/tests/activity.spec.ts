@@ -172,7 +172,9 @@ test('shows others’ changes in Activity, with an unread badge that clears on v
   await rows.nth(0).getByRole('link').click();
   await expect(page.getByRole('heading', { name: 'Dinner' })).toBeVisible();
   await expect(page.getByText('Bilal changed it')).toBeVisible();
-  await expect(page.getByText('Amount ₹1,200.00 → ₹1,500.00')).toBeVisible();
+  await expect(
+    page.getByText('Amount ₹1,200.00 → ₹1,500.00').filter({ visible: true }),
+  ).toBeVisible();
 
   // Back on Activity, what was opened (and everything else seen) is no longer new.
   await page.goBack();

@@ -20,7 +20,7 @@ export function PageLayout({
   return (
     <div
       className={cn(
-        'mx-auto flex w-full flex-col lg:flex-row lg:items-start lg:gap-7',
+        'mx-auto flex w-full flex-col lg:mx-0 lg:flex-row lg:items-start lg:gap-7',
         rail ? 'max-w-[1120px]' : 'max-w-[760px]',
         className,
       )}
@@ -41,7 +41,7 @@ export function PageLayout({
  */
 export function PageTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <header className="flex items-center gap-2 pt-2 pb-1 lg:pt-0">
+    <header className="flex items-center gap-2 pt-0.5 pb-1 lg:pt-0">
       <h1 className="min-w-0 flex-1 text-[30px] leading-9 font-extrabold tracking-[-0.03em]">
         {children}
       </h1>

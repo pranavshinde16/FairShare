@@ -44,7 +44,13 @@ export function ActivityRow({
             forMe ? 'font-semibold' : 'font-medium',
           )}
         >
-          {emphasize(line.text, entry.actor.id === meId ? null : entry.actor.name)}
+          {emphasize(
+            line.text,
+            entry.actor.id === meId || entry.actor.isDeleted ? null : entry.actor.name,
+            entry.target && entry.target.id !== meId && !entry.target.isDeleted
+              ? entry.target.name
+              : null,
+          )}
         </span>
         {line.detail && (
           <span className="mt-0.5 line-clamp-2 text-sm leading-5 text-muted-foreground">
@@ -114,14 +120,20 @@ export function ActivityRow({
  * The sentence with its people and items in bold (DESIGN_SPEC §4): the actor when it isn't me
  * ("Rahul Mehta added …"), and anything in quotes ("‘Parasailing’"). The text itself is unchanged.
  */
-export function emphasize(text: string, actor: string | null): ReactNode {
+export function emphasize(
+  text: string,
+  actor: string | null,
+  target: string | null = null,
+): ReactNode {
   const parts: ReactNode[] = [];
   let rest = text;
   if (actor && rest.startsWith(actor)) {
     parts.push(<b key="actor">{actor}</b>);
     rest = rest.slice(actor.length);
   }
-  const quoted = /‘[^’]*’/g;
+  // The person it's about ("You added Karan Shah as a friend"), then any quoted titles.
+  const names = target ? `|${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}` : '';
+  const quoted = new RegExp(`‘[^’]*’${names}`, 'g');
   let last = 0;
   for (const match of rest.matchAll(quoted)) {
     parts.push(rest.slice(last, match.index));

@@ -1,4 +1,4 @@
-import { Share2 } from 'lucide-react';
+import { Share2, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Button, type ButtonProps } from '../../components/ui/button';
 import { api } from '../../lib/api';
@@ -21,8 +21,11 @@ export function InviteButton({
   groupName,
   placeholder,
   label,
+  icon: Icon = Share2,
   ...buttonProps
 }: {
+  /** Share by default; the rail's "Create invite link" shows a link. */
+  icon?: LucideIcon;
   groupId: string;
   groupName: string;
   placeholder?: { id: string; name: string };
@@ -53,7 +56,7 @@ export function InviteButton({
   return (
     <span className="inline-flex flex-col items-start gap-1">
       <Button {...buttonProps} loading={busy} onClick={() => void invite()}>
-        {!busy && <Share2 aria-hidden strokeWidth={1.9} />}
+        {!busy && <Icon aria-hidden strokeWidth={1.9} />}
         {label ?? (placeholder ? `Invite ${placeholder.name}` : 'Invite')}
       </Button>
       <span aria-live="polite" className="text-[13px] leading-5 text-muted-foreground">

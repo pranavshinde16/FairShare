@@ -1,7 +1,7 @@
 import type { Group, Transaction } from '@fairshare/contracts';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Receipt, RotateCcw, SearchX } from 'lucide-react';
+import { ReceiptText, RotateCcw, SearchX } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
@@ -84,7 +84,7 @@ export function ExpensesTab({
             </Button>
           </EmptyState>
         ) : (
-          <EmptyState icon={Receipt} title="No expenses yet">
+          <EmptyState icon={ReceiptText} title="No expenses yet">
             Add the first one with “Add expense”.
           </EmptyState>
         )

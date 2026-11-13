@@ -15,7 +15,8 @@ import { useCreateGroup } from './queries';
 
 type Chip = { key: string; member: NewMember; name: string };
 
-const currencyName = (() => {
+/** "Indian Rupee" for INR, in the browser's language: currency pickers show "INR · Indian Rupee". */
+export const currencyName = (() => {
   const names = new Intl.DisplayNames(undefined, { type: 'currency' });
   return (code: string) => names.of(code) ?? code;
 })();
@@ -67,60 +68,66 @@ export function CreateGroupForm({ me, currencies }: { me: Profile; currencies: C
   return (
     <form
       noValidate
-      className="flex flex-col gap-[18px]"
+      className="flex flex-col gap-[18px] lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-5"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="group-name">Group name</Label>
-        <Input
-          id="group-name"
-          value={name}
-          autoFocus
-          placeholder="e.g. Goa Trip"
-          aria-invalid={nameError ? true : undefined}
-          aria-describedby={nameError ? 'group-name-error' : undefined}
-          onChange={(event) => setName(event.target.value)}
-        />
-        {nameError && (
-          <p id="group-name-error" className="text-[13px] leading-[18px] text-destructive">
-            {nameError}
-          </p>
-        )}
-      </div>
-
-      <EmojiPicker value={emoji} onChange={setEmoji} />
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="group-currency">Currency</Label>
-        <div className="relative">
-          <select
-            id="group-currency"
-            value={currency}
-            onChange={(event) => setCurrency(event.target.value)}
-            className={select}
-          >
-            {currencies.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} · {currencyName(c.code)}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 right-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
-            strokeWidth={1.9}
+      {/* Desktop (d-new-group): the group in one card, its people in another. */}
+      <div className="flex flex-col gap-[18px] lg:rounded-xl lg:border lg:bg-card lg:p-5 lg:shadow-card">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="group-name">Group name</Label>
+          <Input
+            id="group-name"
+            value={name}
+            autoFocus
+            placeholder="e.g. Goa Trip"
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? 'group-name-error' : undefined}
+            onChange={(event) => setName(event.target.value)}
           />
+          {nameError && (
+            <p id="group-name-error" className="text-[13px] leading-[18px] text-destructive">
+              {nameError}
+            </p>
+          )}
+        </div>
+
+        <EmojiPicker value={emoji} onChange={setEmoji} />
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="group-currency">Currency</Label>
+          <div className="relative">
+            <select
+              id="group-currency"
+              value={currency}
+              onChange={(event) => setCurrency(event.target.value)}
+              className={select}
+            >
+              {currencies.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} · {currencyName(c.code)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 right-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
+              strokeWidth={1.9}
+            />
+          </div>
         </div>
       </div>
 
-      <div aria-hidden className="h-px bg-border" />
+      <div aria-hidden className="h-px bg-border lg:hidden" />
 
-      <section aria-labelledby="people-heading" className="flex flex-col gap-3">
+      <section
+        aria-labelledby="people-heading"
+        className="flex flex-col gap-3 lg:rounded-xl lg:border lg:bg-card lg:p-5 lg:shadow-card"
+      >
         <div>
-          <h2 id="people-heading" className="text-[13px] font-bold">
+          <h2 id="people-heading" className="text-[13px] font-bold lg:text-base">
             People
           </h2>
           <p className="text-[13px] leading-5 text-muted-foreground">You’re added as the owner.</p>
@@ -162,7 +169,7 @@ export function CreateGroupForm({ me, currencies }: { me: Profile; currencies: C
       </section>
 
       {/* The bottom bar: full width on phones (m-new-group), Cancel and Create on desktop. */}
-      <div className="sticky bottom-[calc(78px+env(safe-area-inset-bottom))] -mx-4 flex flex-col gap-2 border-t bg-background px-4 pt-3 pb-4 lg:static lg:mx-0 lg:flex-row lg:items-center lg:border-0 lg:bg-transparent lg:px-0 lg:pt-1">
+      <div className="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-2 border-t bg-background px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:static lg:col-span-2 lg:pb-0 lg:mx-0 lg:flex-row lg:items-center lg:border-0 lg:bg-transparent lg:px-0 lg:pt-1">
         {create.error && (
           <p
             role="alert"

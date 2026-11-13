@@ -39,7 +39,7 @@ function InvitePage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center gap-7 px-6 py-10">
+    <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center gap-7 px-6 py-10 lg:px-0">
       <Logo size="lg" />
       {body}
     </main>

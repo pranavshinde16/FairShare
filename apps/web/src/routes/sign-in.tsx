@@ -33,7 +33,7 @@ function SignInLayout() {
     <div className="flex min-h-dvh flex-col bg-background lg:flex-row">
       <section
         aria-label="About FairShare"
-        className="hidden flex-col justify-between gap-8 bg-primary px-14 py-12 text-primary-foreground lg:flex lg:w-[44%] lg:max-w-[640px]"
+        className="hidden flex-col justify-between gap-8 bg-primary px-14 py-12 text-primary-foreground lg:flex lg:w-[420px] lg:shrink-0"
       >
         <span className="inline-flex items-center gap-2.5 text-[22px] font-extrabold tracking-[-0.02em]">
           <span

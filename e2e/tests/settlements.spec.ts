@@ -187,7 +187,7 @@ test('asks before an overpayment, and settling up reaches zero everywhere', asyn
   await edit.getByRole('button', { name: 'Bank' }).click();
   await edit.getByRole('button', { name: 'Save changes' }).click();
   await expect(edit).toBeHidden();
-  await expect(page.getByText(/^Method .+ → Bank$/)).toBeVisible();
+  await expect(page.getByText(/^Method .+ → Bank$/).filter({ visible: true })).toBeVisible();
 });
 
 test('settles up with a friend from their page, past what they owe', async ({ page }) => {

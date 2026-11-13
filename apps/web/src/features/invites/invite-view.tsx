@@ -71,17 +71,17 @@ export function InviteView({
         {!direct && (
           <span className="mt-4 flex items-center gap-3.5">
             <GroupTile emoji={preview.group.emoji} name={groupName} seed={groupName} size={64} />
-            <span className="text-[28px] leading-[34px] font-extrabold tracking-[-0.02em] break-words">
-              {groupName}
+            <span className="flex min-w-0 flex-col">
+              <span className="text-[28px] leading-[34px] font-extrabold tracking-[-0.02em] break-words">
+                {groupName}
+              </span>
+              <span className="mt-0.5 text-[15px] leading-[22px] font-normal text-muted-foreground">
+                {plural(preview.group.memberCount, 'person', 'people')} so far
+              </span>
             </span>
           </span>
         )}
       </h1>
-      {!direct && (
-        <p className="mt-0.5 pl-[78px] text-[15px] leading-[22px] text-muted-foreground">
-          {plural(preview.group.memberCount, 'person', 'people')} so far
-        </p>
-      )}
       <div aria-hidden className="my-5 h-px bg-border" />
 
       {!signedIn ? (

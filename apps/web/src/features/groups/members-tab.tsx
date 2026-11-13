@@ -111,7 +111,7 @@ export function MembersTab({ group, meId }: { group: Group; meId: string }) {
                       size="icon"
                       variant="plain"
                       aria-label={`Remove ${member.user.name}`}
-                      className="rounded-full text-muted-foreground lg:w-auto lg:rounded-md lg:px-3 lg:text-foreground"
+                      className="rounded-full text-muted-foreground lg:h-9 lg:w-auto lg:rounded-md lg:border lg:bg-card lg:px-3 lg:text-[13px] lg:text-foreground"
                       onClick={() => setRemoving(member)}
                     >
                       <UserX aria-hidden strokeWidth={1.9} />
@@ -176,6 +176,7 @@ export function MembersTab({ group, meId }: { group: Group; meId: string }) {
         title={`Remove ${removing?.user.name ?? ''}?`}
         confirmLabel="Remove"
         destructive
+        icon={UserX}
         notice={removeNotice}
         // Blocked while they're owed or owe (§6.2), and until their balance has loaded.
         confirmDisabled={removeNotice !== null || !balances.data}
@@ -192,6 +193,7 @@ export function MembersTab({ group, meId }: { group: Group; meId: string }) {
         title={`Leave ${title}?`}
         confirmLabel="Leave"
         destructive
+        icon={LogOut}
         onConfirm={async () => {
           await api.removeMember(group.id, 'me');
           queryClient.removeQueries({ queryKey: ['group', group.id] });
@@ -236,6 +238,7 @@ function AddPersonDialog({
       <PersonPicker
         exclude={exclude}
         submitLabel="Add"
+        list
         busy={add.isPending}
         onPick={(member) => add.mutate(member, { onSuccess: onClose })}
       />

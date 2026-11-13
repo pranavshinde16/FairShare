@@ -1,7 +1,15 @@
 import type { Group, GroupBalances, Money } from '@fairshare/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeftRight, ArrowRight, ChevronDown, CircleCheck, Info } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  CircleCheck,
+  Info,
+} from 'lucide-react';
+import { useId, useState } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { ErrorState } from '../../components/common/error-state';
 import { MoneyLabel } from '../../components/common/money-label';
@@ -39,7 +47,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
 
   return (
     <div className="flex flex-col gap-[18px]">
-      <PositionCard net={data.me.net} groupId={group.id} />
+      <PositionCard net={data.me.net} groupId={group.id} className="lg:w-[calc(50%-14px)]" />
 
       {data.balances.map((entry) => {
         const mine = (t: { from: string; to: string }) => t.from === meId || t.to === meId;
@@ -50,110 +58,112 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
         const breakdown = data.breakdown.filter((b) => b.paid.currency === entry.currency);
         const inCurrency = several ? ` (${entry.currency})` : '';
         return (
-          <div key={entry.currency} className="flex flex-col gap-[18px]">
-            <section
-              aria-labelledby={`payments-${entry.currency}`}
-              className="flex flex-col gap-2.5"
-            >
-              <h2
-                id={`payments-${entry.currency}`}
-                className="text-lg leading-6 font-extrabold lg:text-base"
+          // Desktop (d-group-balances): suggested payments on the left, everyone's on the right.
+          <div
+            key={entry.currency}
+            className="flex flex-col gap-[18px] lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-7"
+          >
+            <div className="flex flex-col gap-[18px]">
+              <section
+                aria-labelledby={`payments-${entry.currency}`}
+                className="flex flex-col gap-2.5"
               >
-                Suggested payments{inCurrency}
-              </h2>
-              {transfers.length === 0 ? (
-                <p className="flex items-center gap-2.5 rounded-xl border bg-card px-4 py-3.5 text-[15px] font-semibold shadow-card">
-                  <CircleCheck aria-hidden className="size-5 text-owed" strokeWidth={1.9} />
-                  {everyoneSettled ? 'All settled up' : `All settled up in ${entry.currency}`}
-                </p>
-              ) : (
-                <ListCard inset="none">
-                  {transfers.map((t) => {
-                    const from = person(t.from);
-                    const to = person(t.to);
-                    const words =
-                      t.from === meId
-                        ? `You pay ${nameOf(t.to)}`
-                        : t.to === meId
-                          ? `${nameOf(t.from)} pays you`
-                          : `${nameOf(t.from)} pays ${nameOf(t.to)}`;
-                    const amount = format({ amount: t.amount, currency: entry.currency });
-                    return (
-                      <li
-                        key={`${t.from} ${t.to}`}
-                        className="flex min-h-16 items-center gap-3 px-3.5 py-3"
-                      >
-                        <span aria-hidden className="flex shrink-0 items-center gap-1">
-                          <Avatar
-                            name={from?.name ?? '?'}
-                            src={from?.avatarUrl}
-                            seed={t.from}
-                            deleted={from?.isDeleted}
-                            size={32}
-                          />
-                          <ArrowRight className="size-4 text-muted-foreground" strokeWidth={1.9} />
-                          <Avatar
-                            name={to?.name ?? '?'}
-                            src={to?.avatarUrl}
-                            seed={t.to}
-                            deleted={to?.isDeleted}
-                            size={32}
-                          />
-                        </span>
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="text-[15px] leading-5 font-semibold break-words">
-                            {words}
-                          </span>
-                          <span className="text-[15px] leading-5 font-extrabold tabular-nums">
-                            {amount}
-                          </span>
-                        </span>
-                        {/* Anyone can record any payment (Blueprint 4.8); mine stand out. */}
-                        {entry.currency === group.currency && (
-                          <Button
-                            asChild
-                            size="sm"
-                            variant={mine(t) ? 'default' : 'secondary'}
-                            aria-label={`Settle: ${words} ${amount}`}
-                          >
-                            <Link
-                              to="/groups/$groupId/settle"
-                              params={{ groupId: group.id }}
-                              search={{ tab: 'balances', from: t.from, to: t.to }}
-                              onClick={() => markModal(`/groups/${group.id}/settle`)}
-                            >
-                              Settle
-                            </Link>
-                          </Button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ListCard>
-              )}
-              <div className="flex gap-2.5 rounded-lg bg-muted px-3.5 py-3 text-sm leading-5 text-muted-foreground">
-                <Info aria-hidden className="mt-px size-[18px] shrink-0" strokeWidth={1.9} />
-                <p>
-                  <b className="font-bold text-foreground">How payments are suggested.</b> Payments
-                  are simplified so the group settles with as few transfers as possible. Your total
-                  is what matters; who pays whom may change as expenses are added.
-                </p>
-              </div>
-            </section>
-
-            {entry.currency === group.currency && (
-              <Button asChild variant="secondary" className="self-start">
-                <Link
-                  to="/groups/$groupId/settle"
-                  params={{ groupId: group.id }}
-                  search={{ tab: 'balances' }}
-                  onClick={() => markModal(`/groups/${group.id}/settle`)}
+                <h2
+                  id={`payments-${entry.currency}`}
+                  className="text-lg leading-6 font-extrabold lg:text-base"
                 >
-                  <ArrowLeftRight aria-hidden strokeWidth={1.9} />
-                  Record a payment
-                </Link>
-              </Button>
-            )}
+                  Suggested payments{inCurrency}
+                </h2>
+                {transfers.length === 0 ? (
+                  <p className="flex items-center gap-2.5 rounded-xl border bg-card px-4 py-3.5 text-[15px] font-semibold shadow-card">
+                    <CircleCheck aria-hidden className="size-5 text-owed" strokeWidth={1.9} />
+                    {everyoneSettled ? 'All settled up' : `All settled up in ${entry.currency}`}
+                  </p>
+                ) : (
+                  <ListCard inset="none">
+                    {transfers.map((t) => {
+                      const from = person(t.from);
+                      const to = person(t.to);
+                      const words =
+                        t.from === meId
+                          ? `You pay ${nameOf(t.to)}`
+                          : t.to === meId
+                            ? `${nameOf(t.from)} pays you`
+                            : `${nameOf(t.from)} pays ${nameOf(t.to)}`;
+                      const amount = format({ amount: t.amount, currency: entry.currency });
+                      return (
+                        <li
+                          key={`${t.from} ${t.to}`}
+                          className="flex min-h-16 items-center gap-3 px-3.5 py-3"
+                        >
+                          <span aria-hidden className="flex shrink-0 items-center gap-1">
+                            <Avatar
+                              name={from?.name ?? '?'}
+                              src={from?.avatarUrl}
+                              seed={t.from}
+                              deleted={from?.isDeleted}
+                              size={32}
+                            />
+                            <ArrowRight
+                              className="size-4 text-muted-foreground"
+                              strokeWidth={1.9}
+                            />
+                            <Avatar
+                              name={to?.name ?? '?'}
+                              src={to?.avatarUrl}
+                              seed={t.to}
+                              deleted={to?.isDeleted}
+                              size={32}
+                            />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="text-[15px] leading-5 font-semibold break-words">
+                              {words}
+                            </span>
+                            <span className="text-[15px] leading-5 font-extrabold tabular-nums">
+                              {amount}
+                            </span>
+                          </span>
+                          {/* Anyone can record any payment (Blueprint 4.8); mine stand out. */}
+                          {entry.currency === group.currency && (
+                            <Button
+                              asChild
+                              size="sm"
+                              variant={mine(t) ? 'default' : 'secondary'}
+                              aria-label={`Settle: ${words} ${amount}`}
+                            >
+                              <Link
+                                to="/groups/$groupId/settle"
+                                params={{ groupId: group.id }}
+                                search={{ tab: 'balances', from: t.from, to: t.to }}
+                                onClick={() => markModal(`/groups/${group.id}/settle`)}
+                              >
+                                Settle
+                              </Link>
+                            </Button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ListCard>
+                )}
+                <HowSuggested defaultOpen={transfers.length > 0} />
+              </section>
+
+              {entry.currency === group.currency && (
+                <Button asChild variant="secondary" className="self-start">
+                  <Link
+                    to="/groups/$groupId/settle"
+                    params={{ groupId: group.id }}
+                    search={{ tab: 'balances' }}
+                    onClick={() => markModal(`/groups/${group.id}/settle`)}
+                  >
+                    <ArrowLeftRight aria-hidden strokeWidth={1.9} />
+                    Record a payment
+                  </Link>
+                </Button>
+              )}
+            </div>
 
             <section aria-labelledby={`all-${entry.currency}`} className="flex flex-col gap-2.5">
               <h2
@@ -211,30 +221,86 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
   );
 }
 
+/**
+ * "How payments are suggested": expanded beside suggested payments (DESIGN_SPEC §5), folded away
+ * when everyone's settled.
+ */
+function HowSuggested({ defaultOpen }: { defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = useId();
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((o) => !o)}
+        className="-ml-1 flex min-h-11 items-center gap-2 self-start rounded-md px-1 text-[15px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
+      >
+        <Info aria-hidden className="size-[18px] shrink-0" strokeWidth={1.9} />
+        How payments are suggested
+        <ChevronUp
+          aria-hidden
+          className={cn('size-4 transition-transform', !open && 'rotate-180')}
+          strokeWidth={1.9}
+        />
+      </button>
+      <p
+        id={id}
+        hidden={!open}
+        className="pl-[26px] text-[15px] leading-[22px] text-muted-foreground"
+      >
+        Payments are simplified so the group settles with as few transfers as possible. Your total
+        is what matters; who pays whom may change as expenses are added.
+      </p>
+    </div>
+  );
+}
+
 /** "Your balance", lighting up briefly when it changes (after a payment, say). */
-function PositionCard({ net, groupId }: { net: Money[]; groupId: string }) {
+function PositionCard({
+  net,
+  groupId,
+  className,
+}: {
+  net: Money[];
+  groupId: string;
+  className?: string;
+}) {
   const flash = useFlash(JSON.stringify(net), groupId);
   return (
     <section
       key={flash.key}
       aria-labelledby="position-heading"
-      className={cn('rounded-xl border bg-card px-4 py-3.5 shadow-card', flash.className)}
+      className={cn(
+        'rounded-xl border bg-card px-4 py-3.5 shadow-card',
+        flash.className,
+        className,
+      )}
     >
       <h2 id="position-heading" className="text-[13px] text-muted-foreground">
         Your balance
       </h2>
-      <Position net={net} />
+      <Position net={net} large />
     </section>
   );
 }
 
 /** My net in words and colour, one line per currency. */
-export function Position({ net, className }: { net: Money[]; className?: string }) {
+export function Position({
+  net,
+  className,
+  large = false,
+}: {
+  net: Money[];
+  className?: string;
+  /** The Balances tab's own card: 28/34, like a page's big number. */
+  large?: boolean;
+}) {
   const format = useFormatMoney();
+  const size = large ? 'text-[28px] leading-[34px] tracking-[-0.02em]' : 'text-xl leading-[26px]';
   if (net.length === 0) {
-    return (
-      <p className={cn('text-xl leading-[26px] font-extrabold', className)}>You’re settled up</p>
-    );
+    return <p className={cn(size, 'font-extrabold', className)}>You’re settled up</p>;
   }
   return (
     <div className={cn('flex flex-col', className)}>
@@ -242,7 +308,8 @@ export function Position({ net, className }: { net: Money[]; className?: string 
         <p
           key={money.currency}
           className={cn(
-            'text-xl leading-[26px] font-extrabold tabular-nums',
+            size,
+            'font-extrabold tabular-nums',
             money.amount > 0 ? 'text-owed' : 'text-owe',
           )}
         >

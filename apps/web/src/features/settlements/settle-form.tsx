@@ -1,6 +1,6 @@
 import type { Group, PaymentMethod, UpdateSettlement } from '@fairshare/contracts';
-import { MAX_AMOUNT_MINOR, toDecimalString, tryParseMoney } from '@fairshare/core';
-import { ArrowDownUp, ChevronDown, NotebookPen } from 'lucide-react';
+import { MAX_AMOUNT_MINOR, tryParseMoney } from '@fairshare/core';
+import { ArrowUpDown, ChevronDown, NotepadText } from 'lucide-react';
 import { Avatar } from '../../components/common/avatar';
 import { useRef, useState } from 'react';
 import { AmountInput } from '../../components/ui/amount-input';
@@ -41,7 +41,7 @@ export function draftFromSettlement(
   return {
     fromUserId: tx.payers[0].userId,
     toUserId: tx.shares[0].userId,
-    amountText: toDecimalString(tx.amount, minorUnits),
+    amountText: formatAmountInput(tx.amount, minorUnits),
     occurredOn: tx.occurredOn,
     method: tx.paymentMethod,
     reference: tx.paymentRef ?? '',
@@ -194,7 +194,7 @@ export function SettleForm({
           className="mt-5 size-12 shadow-none"
           onClick={() => set({ fromUserId: draft.toUserId, toUserId: draft.fromUserId })}
         >
-          <ArrowDownUp aria-hidden strokeWidth={1.9} />
+          <ArrowUpDown aria-hidden strokeWidth={1.9} />
         </Button>
       </div>
 
@@ -219,7 +219,7 @@ export function SettleForm({
               type="button"
               variant="link"
               className="h-auto p-0"
-              onClick={() => set({ amountText: toDecimalString(suggestion, minorUnits) })}
+              onClick={() => set({ amountText: formatAmountInput(suggestion, minorUnits) })}
             >
               Use the suggested {format(suggestion)}
             </Button>
@@ -286,7 +286,7 @@ export function SettleForm({
           className="self-start px-1"
           onClick={() => setNoteOpen(true)}
         >
-          <NotebookPen aria-hidden strokeWidth={1.9} />
+          <NotepadText aria-hidden strokeWidth={1.9} />
           Add a note
         </Button>
       )}

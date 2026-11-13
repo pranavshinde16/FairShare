@@ -1,7 +1,7 @@
 import type { Friend } from '@fairshare/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { Plus, UserPlus, UserRound } from 'lucide-react';
+import { UserPlus, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { BalanceText } from '../../components/common/balance-text';
@@ -45,7 +45,7 @@ function FriendsPage() {
             className={titleActionClass}
             onClick={() => setAdding(true)}
           >
-            <Plus aria-hidden className="size-5" strokeWidth={1.9} />
+            <UserPlus aria-hidden className="size-5" strokeWidth={1.9} />
           </button>
         }
       >
