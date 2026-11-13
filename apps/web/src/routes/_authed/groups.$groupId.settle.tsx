@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 import { NewSettlementDialog } from '../../features/settlements/settle-dialog';
+import { useCloseModal } from '../../lib/modal-route';
 
 const SettleSearch = z.object({
   /** A suggested payment to pre-fill: who pays and who is paid. */
@@ -18,14 +19,14 @@ function SettleInGroup() {
   const { groupId } = Route.useParams();
   const { tab, from, to } = Route.useSearch();
   const navigate = useNavigate();
-  return (
-    <NewSettlementDialog
-      groupId={groupId}
-      from={from}
-      to={to}
-      onClose={() =>
-        void navigate({ to: '/groups/$groupId', params: { groupId }, search: { tab } })
-      }
-    />
+  const close = useCloseModal(
+    () =>
+      void navigate({
+        to: '/groups/$groupId',
+        params: { groupId },
+        search: { tab },
+        replace: true,
+      }),
   );
+  return <NewSettlementDialog groupId={groupId} from={from} to={to} onClose={close} />;
 }

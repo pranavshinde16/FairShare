@@ -23,26 +23,42 @@ export function describeEntry(entry: ActivityEntry, name: Names, money: Money): 
     case 'transaction.restored':
       return `${actor} restored it`;
     case 'transaction.updated': {
-      const before = TransactionSnapshot.safeParse(entry.before);
-      const after = TransactionSnapshot.safeParse(entry.after);
-      if (!before.success || !after.success) return `${actor} edited it`;
-      const changed: string[] = [];
-      const did: string[] = [];
-      for (const change of diffSnapshots(before.data, after.data)) {
-        const words = describeChange(change, settlement, name, money);
-        changed.push(...words.changed);
-        did.push(...words.did);
-      }
-      // "changed a, b and c", then what was added or removed: "… and removed the notes".
-      const parts = [...changed.map((part, i) => (i === 0 ? `changed ${part}` : part)), ...did];
-      return parts.length ? `${actor} ${joinAnd(parts)}` : `${actor} edited it`;
+      const changes = describeChanges(entry.before, entry.after, name, money);
+      return changes ? `${actor} ${changes}` : `${actor} edited it`;
     }
     default:
       return `${actor}: ${entry.verb}`;
   }
 }
 
-const isSettlement = (snapshot: unknown) =>
+/**
+ * What an edit changed, without who did it: "changed the amount ₹1,200.00 → ₹1,500.00 and removed
+ * the notes". Null when a snapshot can't be read or nothing shows.
+ */
+export function describeChanges(
+  rawBefore: unknown,
+  rawAfter: unknown,
+  name: Names,
+  money: Money,
+): string | null {
+  const before = TransactionSnapshot.safeParse(rawBefore);
+  const after = TransactionSnapshot.safeParse(rawAfter);
+  if (!before.success || !after.success) return null;
+  const settlement = isSettlement(rawBefore) || isSettlement(rawAfter);
+  const changed: string[] = [];
+  const did: string[] = [];
+  for (const change of diffSnapshots(before.data, after.data)) {
+    const words = describeChange(change, settlement, name, money);
+    changed.push(...words.changed);
+    did.push(...words.did);
+  }
+  // "changed a, b and c", then what was added or removed: "… and removed the notes".
+  const parts = [...changed.map((part, i) => (i === 0 ? `changed ${part}` : part)), ...did];
+  return parts.length ? joinAnd(parts) : null;
+}
+
+/** Whether a snapshot is a payment's (only those record a method). */
+export const isSettlement = (snapshot: unknown) =>
   typeof snapshot === 'object' && snapshot !== null && 'paymentMethod' in snapshot;
 
 /** What "changed …" covers, and what reads as its own verb ("added", "removed"). */

@@ -1,30 +1,39 @@
 import type { Group, Transaction } from '@fairshare/contracts';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeftRight, Receipt, Search } from 'lucide-react';
+import { ArrowLeftRight, Receipt, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { api } from '../../lib/api';
+import { errorMessage } from '../../lib/errors';
+import { afterTransactionChange } from '../../lib/invalidation';
 import { useFormatMoney } from '../../lib/money';
+import { toast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 import { methodLabel, paymentSentence } from '../settlements/payment';
+import { isFiltering, type HistoryFilters } from './filters';
+import { HistoryFiltersBar } from './history-filters';
 import { transactionsQuery } from './queries';
 import { useIsPending } from './use-create-expense';
 
-/** Blueprint 7.2 Expenses tab: newest first, grouped by month, a page at a time as you scroll. */
-export function ExpensesTab({ group, meId }: { group: Group; meId: string }) {
-  const [search, setSearch] = useState('');
-  const [q, setQ] = useState('');
-  const [includeDeleted, setIncludeDeleted] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setQ(search.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const filters = { ...(q.length >= 2 && { q }), ...(includeDeleted && { includeDeleted }) };
+/**
+ * Blueprint 7.2 Expenses tab: newest first, grouped by month, a page at a time as you scroll, with
+ * search and filter chips. The caller keeps the filters (the group page in its URL).
+ */
+export function ExpensesTab({
+  group,
+  meId,
+  filters,
+  onFiltersChange,
+}: {
+  group: Group;
+  meId: string;
+  filters: HistoryFilters;
+  onFiltersChange: (filters: HistoryFilters) => void;
+}) {
   const list = useInfiniteQuery(transactionsQuery(group.id, filters));
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -40,7 +49,7 @@ export function ExpensesTab({ group, meId }: { group: Group; meId: string }) {
   }, [list]);
 
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
-  const filtering = Boolean(filters.q) || includeDeleted;
+  const filtering = isFiltering(filters);
   const nameOf = (userId: string) =>
     userId === meId
       ? 'You'
@@ -48,31 +57,7 @@ export function ExpensesTab({ group, meId }: { group: Group; meId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            type="search"
-            aria-label="Search expenses"
-            placeholder="Search"
-            className="pl-9"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
-        <label className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={includeDeleted}
-            onChange={(event) => setIncludeDeleted(event.target.checked)}
-            className="size-4 accent-[var(--primary)]"
-          />
-          Show deleted
-        </label>
-      </div>
+      <HistoryFiltersBar group={group} meId={meId} filters={filters} onChange={onFiltersChange} />
 
       {list.error ? (
         <ErrorState error={list.error} onRetry={() => void list.refetch()} />
@@ -84,7 +69,12 @@ export function ExpensesTab({ group, meId }: { group: Group; meId: string }) {
         </div>
       ) : items.length === 0 ? (
         filtering ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Nothing matches.</p>
+          <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
+            <p>Nothing matches.</p>
+            <Button variant="outline" size="sm" onClick={() => onFiltersChange({})}>
+              Clear filters
+            </Button>
+          </div>
         ) : (
           <EmptyState icon={Receipt} title="No expenses yet">
             Add the first one with “Add expense”.
@@ -133,6 +123,20 @@ function Row({
 }) {
   const format = useFormatMoney();
   const pending = useIsPending(tx.id);
+  const queryClient = useQueryClient();
+  const [restoring, setRestoring] = useState(false);
+  async function restore() {
+    setRestoring(true);
+    try {
+      await api.restoreTransaction(tx.id, tx.version);
+      await afterTransactionChange(queryClient, tx.groupId, tx.id);
+      toast(tx.type === 'settlement' ? 'Restored the payment' : `Restored ‘${tx.description}’`);
+    } catch (error) {
+      toast(errorMessage(error), { tone: 'error' });
+    } finally {
+      setRestoring(false);
+    }
+  }
   const money = (amount: number) => format({ amount, currency: tx.currency });
   const [y, m, d] = tx.occurredOn.split('-').map(Number);
   const date = new Date(y!, m! - 1, d);
@@ -193,16 +197,40 @@ function Row({
           {tx.deletedAt && ' · deleted'}
         </span>
       </span>
-      <span className={cn('text-right text-sm', effect.className)}>{effect.text}</span>
+      {/* A deleted one doesn't count, so it has no effect to show. */}
+      {!tx.deletedAt && (
+        <span className={cn('text-right text-sm', effect.className)}>{effect.text}</span>
+      )}
     </>
   );
   const className = cn('flex min-h-16 items-center gap-3 p-3', pending && 'opacity-60');
-  return pending ? (
-    <div className={className}>{content}</div>
-  ) : (
-    <Link to="/transactions/$id" params={{ id: tx.id }} className={cn(className, 'hover:bg-muted')}>
+  if (pending) return <div className={className}>{content}</div>;
+  const link = (
+    <Link
+      to="/transactions/$id"
+      params={{ id: tx.id }}
+      className={cn(className, 'min-w-0 flex-1 hover:bg-muted')}
+    >
       {content}
     </Link>
+  );
+  if (!tx.deletedAt) return link;
+  // "Show deleted" lists deleted ones with a way back (Blueprint 11, Phase 10).
+  return (
+    <div className="flex items-center">
+      {link}
+      <Button
+        variant="outline"
+        size="sm"
+        className="mr-3"
+        loading={restoring}
+        aria-label={`Restore ${tx.type === 'settlement' ? title : `‘${title}’`}`}
+        onClick={() => void restore()}
+      >
+        {!restoring && <RotateCcw aria-hidden />}
+        Restore
+      </Button>
+    </div>
   );
 }
 

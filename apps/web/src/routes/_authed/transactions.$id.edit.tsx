@@ -20,6 +20,7 @@ import { draftFromSettlement } from '../../features/settlements/settle-form';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { afterTransactionChange } from '../../lib/invalidation';
+import { useCloseModal } from '../../lib/modal-route';
 import { toast } from '../../lib/toast';
 
 /**
@@ -46,7 +47,9 @@ function EditTransaction() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
-  const close = () => void navigate({ to: '/transactions/$id', params: { id } });
+  const close = useCloseModal(
+    () => void navigate({ to: '/transactions/$id', params: { id }, replace: true }),
+  );
 
   const data = tx.data;
   const currency = currencies.data?.items.find((c) => c.code === data?.currency);

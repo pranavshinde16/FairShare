@@ -1,8 +1,7 @@
 # Phase 9: Settlements
 
 - **Dates:** 2026-11-12 (code part)
-- **Status:** In progress. The code is done and verified locally (integration, end-to-end, Docker
-  image). It goes live with the next push; then check it on staging (see "Lined up next").
+- **Status:** Done. Committed as b86da4b and marked done on your go-ahead.
 - **Plan reference:** Implementation blueprint §4.8 (settlements), §5.5 (worked settlement), §5.6
   (editing after a settlement), §4.9 (activity snapshots), §6.3 (settlement and transaction
   endpoints), §7.2 ("Settle payment" modal, Balances tab, friend detail), §10.3–10.5 (settlement

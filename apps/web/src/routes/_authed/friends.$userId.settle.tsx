@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { friendQuery } from '../../features/balances/queries';
 import { meQuery } from '../../features/profile/queries';
 import { NewSettlementDialog } from '../../features/settlements/settle-dialog';
+import { useCloseModal } from '../../lib/modal-route';
 
 const SettleSearch = z.object({
   /** The group to settle in: friends settle one group at a time (C5). */
@@ -26,7 +27,9 @@ function SettleWithFriend() {
   const navigate = useNavigate();
   const friend = useQuery(friendQuery(userId));
   const me = useQuery(meQuery);
-  const close = () => void navigate({ to: '/friends/$userId', params: { userId } });
+  const close = useCloseModal(
+    () => void navigate({ to: '/friends/$userId', params: { userId }, replace: true }),
+  );
 
   const entry = friend.data?.breakdown.find((b) => b.groupId === groupId);
   // A link to a group we don't share (or none at all) goes back to the friend page.

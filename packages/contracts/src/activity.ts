@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { page } from './pagination';
+import { page, PageQuery } from './pagination';
 import { Amount, CurrencyCode, IsoDate, Line, Timestamp, Uuid } from './primitives';
 import { SplitInput, SplitMethod } from './split';
 import { PaymentMethod } from './transactions';
@@ -67,8 +67,22 @@ export const ActivityEntry = z.object({
 });
 export type ActivityEntry = z.infer<typeof ActivityEntry>;
 
-/** GET /activity and GET /groups/:groupId/activity, newest first. */
-export const ActivityFeed = page(ActivityEntry).extend({ unreadCount: z.int().min(0) });
+/** GET /activity and GET /groups/:groupId/activity query parameters. */
+export const ActivityListQuery = PageQuery;
+export type ActivityListQuery = z.infer<typeof ActivityListQuery>;
+
+/**
+ * GET /activity and GET /groups/:groupId/activity, newest first.
+ *
+ * - unreadCount: entries in this feed that someone else made after I last opened Activity
+ *   (POST /activity/seen). For the group feed, those in that group.
+ * - people: everyone the page's before/after snapshots name (payers, recipients, people in a
+ *   split), so the feed can say "Bilal paid you" without loading each group.
+ */
+export const ActivityFeed = page(ActivityEntry).extend({
+  unreadCount: z.int().min(0),
+  people: z.array(UserRef),
+});
 export type ActivityFeed = z.infer<typeof ActivityFeed>;
 
 /** GET /transactions/:id/history. */

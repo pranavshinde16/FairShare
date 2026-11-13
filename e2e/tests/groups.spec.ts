@@ -71,7 +71,8 @@ test('adds a friend by name and opens their page', async ({ page }) => {
   await expect(page.getByText('You’re settled up', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Invite Chitra' })).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'People' })).toBeVisible();
+  // The main column's: on desktop the sidebar has a "People" heading too.
+  await expect(page.getByRole('main').getByRole('heading', { name: 'People' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Chitra')).toBeVisible();
 });
 

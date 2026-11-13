@@ -3,6 +3,7 @@ import type { Money } from '@fairshare/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { Plus, UserRound } from 'lucide-react';
+import { useState } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { BalanceText } from '../../components/common/balance-text';
 import { EmptyState } from '../../components/common/empty-state';
@@ -11,6 +12,7 @@ import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
 import { friendQuery } from '../../features/balances/queries';
 import { ExpensesTab } from '../../features/expenses/expenses-tab';
+import type { HistoryFilters } from '../../features/expenses/filters';
 import { useNewExpenseShortcut } from '../../features/expenses/use-new-expense-shortcut';
 import { InviteButton } from '../../features/groups/invite-button';
 import { groupQuery } from '../../features/groups/queries';
@@ -20,6 +22,7 @@ import { errorMessage } from '../../lib/errors';
 import { afterMembershipChange } from '../../lib/invalidation';
 import { useFormatMoney } from '../../lib/money';
 import { toast } from '../../lib/toast';
+import { useMarkModalOpen } from '../../lib/modal-route';
 import { useFlash } from '../../lib/use-flash';
 import { cn } from '../../lib/utils';
 
@@ -39,12 +42,15 @@ function FriendPage() {
   const direct = useQuery({ ...groupQuery(directGroupId ?? ''), enabled: directGroupId !== null });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const markModal = useMarkModalOpen();
+  const [filters, setFilters] = useState<HistoryFilters>({});
 
   // Expenses with a friend go in our friendship, which is opened on first use.
   const open = useMutation({
     mutationFn: async () => directGroupId ?? (await api.addFriend({ userId })).groupId,
     onSuccess: async (groupId) => {
       if (groupId !== directGroupId) await afterMembershipChange(queryClient, groupId);
+      markModal(`/friends/${userId}/expenses/new`);
       await navigate({ to: '/friends/$userId/expenses/new', params: { userId } });
     },
     onError: (error) => toast(errorMessage(error), { tone: 'error' }),
@@ -151,6 +157,7 @@ function FriendPage() {
                       to="/friends/$userId/settle"
                       params={{ userId }}
                       search={{ groupId: entry.groupId }}
+                      onClick={() => markModal(`/friends/${userId}/settle`)}
                     >
                       Settle
                     </Link>
@@ -174,7 +181,12 @@ function FriendPage() {
             No expenses yet outside your groups. Add one with “Add expense”.
           </p>
         ) : direct.data ? (
-          <ExpensesTab group={direct.data} meId={me.data.id} />
+          <ExpensesTab
+            group={direct.data}
+            meId={me.data.id}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
         ) : direct.error ? (
           <ErrorState error={direct.error} onRetry={() => void direct.refetch()} />
         ) : (

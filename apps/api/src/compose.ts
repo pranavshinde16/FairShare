@@ -12,6 +12,7 @@ import { createRateLimiter, type RateLimiter } from './lib/rate-limit';
 import { createAuth } from './modules/auth/auth';
 import { createDomainUserResolver } from './modules/auth/domain-users';
 import { createSignInCodeSender } from './modules/auth/sign-in-email';
+import { createActivityService } from './modules/activity/service';
 import { createBalancesService } from './modules/balances/service';
 import { createClaimsService } from './modules/claims/service';
 import { createCurrenciesService } from './modules/currencies/service';
@@ -96,6 +97,7 @@ export function composeApp(options: ComposeOptions) {
     claims: createClaimsService(db),
     transactions: createTransactionsService(db, options.clock),
     balances: createBalancesService(db),
+    activity: createActivityService(db),
     invitePreviewLimiter: options.invitePreviewLimiter ?? createRateLimiter(INVITE_PREVIEWS_PER_IP),
     clientIpHeaders: env.CLIENT_IP_HEADERS,
   });

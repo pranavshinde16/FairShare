@@ -1,19 +1,27 @@
 import type { TransactionListQuery } from '@fairshare/contracts';
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { compact, type HistoryFilters } from './filters';
 
-export type ListFilters = { q?: string; includeDeleted?: boolean };
-
-/** A group's transactions, newest first, a page at a time. Key: ['group', id, 'transactions', filters]. */
-export const transactionsQuery = (groupId: string, filters: ListFilters = {}) =>
+/**
+ * A group's transactions, newest first, a page at a time, narrowed by the history filters.
+ * Key: ['group', id, 'transactions', filters].
+ */
+export const transactionsQuery = (groupId: string, filters: HistoryFilters = {}) =>
   infiniteQueryOptions({
-    queryKey: ['group', groupId, 'transactions', filters],
+    queryKey: ['group', groupId, 'transactions', compact(filters)],
     queryFn: ({ pageParam, signal }) => {
+      const q = filters.q?.trim();
       const query: Partial<TransactionListQuery> = {
         limit: 30,
         ...(pageParam && { cursor: pageParam }),
-        ...(filters.q && filters.q.length >= 2 && { q: filters.q }),
-        ...(filters.includeDeleted && { includeDeleted: true }),
+        // The API searches from 2 characters; one is no search yet.
+        ...(q && q.length >= 2 && { q }),
+        ...(filters.person && { person: filters.person }),
+        ...(filters.type && { type: filters.type }),
+        ...(filters.from && { from: filters.from }),
+        ...(filters.to && { to: filters.to }),
+        ...(filters.deleted && { includeDeleted: true }),
       };
       return api.transactions(groupId, query, signal);
     },

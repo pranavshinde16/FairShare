@@ -285,6 +285,38 @@ separate chunk, loaded only when configured.
   paid you · Payment · UPI", open to a payment page, and edit in the same form. A changed balance
   briefly lights up (`lib/use-flash.ts`).
 
+## Activity
+
+- **One log, three readers** (Blueprint 4.9): `GET /activity` (my feed), `GET /groups/:id/activity`
+  (one group's history) and `GET /transactions/:id/history`. All present entries through
+  `modules/activity/present.ts`.
+- **What my feed shows** (`modules/activity/repo.ts`, `visible`):
+  - In groups I'm active in: entries since I joined, so joining an old group doesn't flood the
+    badge. A claimed placeholder's membership keeps its original `joined_at`, so whoever claims
+    it sees its history.
+  - A deleted group keeps only its "deleted" entry. A friendship's `group.created` is left out;
+    its "added as a friend" entry tells the story.
+  - In groups I've left: only my removal, so I learn why the group is gone.
+- **A group's feed** is that group's whole history, for any active member.
+- **Unread:** someone else's entry newer than `users.activity_seen_at`, which
+  `POST /activity/seen` sets to now. It's a property of the entry, so a group's count is my feed's
+  count narrowed to that group.
+- **Paging:** newest first by ID (insertion order), keyset cursor on the ID. The feed first reads
+  my membership rows, then the log through its `(group_id, id)` index.
+- **Claimed placeholders:** the log is append-only and keeps naming the placeholder. The presenter
+  shows the claimer instead, in the actor, the target and inside before/after snapshots (payers,
+  shares, the split's input, a new owner). `involvesMe` counts placeholders I claimed as me.
+- **`people`** in a feed response: everyone the page's snapshots name, so the web can write
+  "Bilal paid you" without loading every group.
+- **Web:** the Activity tab (`features/activity/describe.ts` turns each verb into a sentence, an
+  optional detail line and my effect), an unread badge on both navigations ("Activity (3 unread)"
+  to screen readers), refreshed every minute and on focus, and cleared on visiting.
+- **History search and filters:** the Expenses list has a search box and chips for person, type,
+  dates and "Show deleted" (deleted rows have Restore). On a group's page they live in the URL.
+- **Modal routes and Back** (`lib/modal-route.ts`): a page that opens its own modal route (Add
+  expense, Settle, Edit) marks it, and closing goes Back to that page, so a later Back doesn't
+  reopen the dialog. Otherwise closing replaces the modal's entry with its page.
+
 ## Deployment
 
 - **One image** (`Dockerfile`): build web and API, then `pnpm deploy --prod` the API. tsup bundles
@@ -362,27 +394,27 @@ is always empty.
 
 Issues found while reviewing the implementation plan, and the phase that resolves each.
 
-| Issue                                                                                                                                      | Resolution                                                                                                                                          | Phase |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| The sum trigger reads `NEW.transaction_id` on `transactions` rows, which errors in PL/pgSQL                                                | **Done:** one function per kind of table, deferred to COMMIT, also on DELETE (migration 0002)                                                       | 3     |
-| I9 has no database enforcement for settlements                                                                                             | **Done:** the same trigger raises `settlement_shape` (migration 0002)                                                                               | 3     |
-| `activity_log` is append-only, yet the merge rewrites `target_user`                                                                        | **Done:** a trigger rejects UPDATE/DELETE, and the merge leaves `target_user` alone; readers resolve old IDs through `users.merged_into` (Phase 10) | 3, 6  |
-| Settlement body (`note`, `reference`) doesn't map to `description`, `notes`, `payment_ref`                                                 | **Done:** `settlementColumns` / `settlementInput` in contracts; description is fixed "Settlement"                                                   | 2, 9  |
-| The domain-user hook runs outside the auth library's DB transaction                                                                        | **Done:** `requireUser` ensures the domain user exists (idempotent, cached)                                                                         | 5     |
-| Invite tokens appear in URL paths                                                                                                          | **Done:** request logs show `[token]`; `Referrer-Policy: no-referrer`; browser error reports are scrubbed (`lib/redact.ts`)                         | 4, 6  |
-| Merge conflict check only considers active memberships                                                                                     | **Done:** any membership row, active or not, conflicts (and the primary key backs it up)                                                            | 6     |
-| Ownership can pass to a placeholder when the owner leaves                                                                                  | **Done:** passes to the longest-standing active member with an account; with none left, the group closes                                            | 6     |
-| Direct groups: "no invites" conflicts with "targeted claim link"; direct-group ownership is undefined                                      | **Done:** a friendship has no owner and takes only invites aimed at its placeholder friend; it can't be renamed, left or deleted                    | 6     |
-| The same person can exist as several placeholders                                                                                          | **Done:** placeholders in different groups can each be claimed; two in the same group conflict, and the group removes one                           | 6     |
-| Signing up with a placeholder's hinted email offers nothing                                                                                | **Done:** `GET /claims` offers them; claiming is the same merge as an invite                                                                        | 6     |
-| Adding someone by email adds their account directly: it reveals who has an account, and adds people without asking                         | **Done:** adding by email always makes a placeholder with the email as its hint; the person is offered to claim it                                  | 6     |
-| A group's balance explanation (`paid`, `share`) folds settlement money in, so "paid · share" no longer explains a net once someone settles | **Done:** the breakdown reports settlement money apart (`sent`, `received`)                                                                         | 8     |
-| Activity snapshots omit a settlement's `paymentMethod` / `paymentRef`, so changing only those leaves no visible diff                       | **Done:** both are in a settlement's snapshot (expenses leave them out) and in `diffSnapshots`                                                      | 9     |
-| The `groups.name` CHECK (`kind = 'direct' OR length(name) BETWEEN 1 AND 60`) accepts a regular group with a NULL name                      | **Done:** explicit `name IS NOT NULL`, and direct groups must have no name                                                                          | 3     |
-| Grants can't make `activity_log` append-only when the app connects as the table owner (the default on Neon)                                | **Done:** an append-only trigger on top of the grants                                                                                               | 3     |
-| ISO 4217 gives IDR 2 decimals, but CLDR/Intl formats it with 0                                                                             | **Done:** IDR stored with 0 decimals; a test keeps every currency in step with Intl                                                                 | 3     |
-| "Phase 2" means both post-MVP features and the Contracts phase                                                                             | Post-MVP features are called **v1.1** in this repo                                                                                                  | —     |
-| Library versions in the plan date from mid-2026                                                                                            | Verified at install time; see "Version decisions"                                                                                                   | 0     |
+| Issue                                                                                                                                      | Resolution                                                                                                                                                                      | Phase    |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| The sum trigger reads `NEW.transaction_id` on `transactions` rows, which errors in PL/pgSQL                                                | **Done:** one function per kind of table, deferred to COMMIT, also on DELETE (migration 0002)                                                                                   | 3        |
+| I9 has no database enforcement for settlements                                                                                             | **Done:** the same trigger raises `settlement_shape` (migration 0002)                                                                                                           | 3        |
+| `activity_log` is append-only, yet the merge rewrites `target_user`                                                                        | **Done:** a trigger rejects UPDATE/DELETE, and the merge leaves `target_user` alone; readers resolve old IDs through `users.merged_into` (done in Phase 10, snapshots included) | 3, 6, 10 |
+| Settlement body (`note`, `reference`) doesn't map to `description`, `notes`, `payment_ref`                                                 | **Done:** `settlementColumns` / `settlementInput` in contracts; description is fixed "Settlement"                                                                               | 2, 9     |
+| The domain-user hook runs outside the auth library's DB transaction                                                                        | **Done:** `requireUser` ensures the domain user exists (idempotent, cached)                                                                                                     | 5        |
+| Invite tokens appear in URL paths                                                                                                          | **Done:** request logs show `[token]`; `Referrer-Policy: no-referrer`; browser error reports are scrubbed (`lib/redact.ts`)                                                     | 4, 6     |
+| Merge conflict check only considers active memberships                                                                                     | **Done:** any membership row, active or not, conflicts (and the primary key backs it up)                                                                                        | 6        |
+| Ownership can pass to a placeholder when the owner leaves                                                                                  | **Done:** passes to the longest-standing active member with an account; with none left, the group closes                                                                        | 6        |
+| Direct groups: "no invites" conflicts with "targeted claim link"; direct-group ownership is undefined                                      | **Done:** a friendship has no owner and takes only invites aimed at its placeholder friend; it can't be renamed, left or deleted                                                | 6        |
+| The same person can exist as several placeholders                                                                                          | **Done:** placeholders in different groups can each be claimed; two in the same group conflict, and the group removes one                                                       | 6        |
+| Signing up with a placeholder's hinted email offers nothing                                                                                | **Done:** `GET /claims` offers them; claiming is the same merge as an invite                                                                                                    | 6        |
+| Adding someone by email adds their account directly: it reveals who has an account, and adds people without asking                         | **Done:** adding by email always makes a placeholder with the email as its hint; the person is offered to claim it                                                              | 6        |
+| A group's balance explanation (`paid`, `share`) folds settlement money in, so "paid · share" no longer explains a net once someone settles | **Done:** the breakdown reports settlement money apart (`sent`, `received`)                                                                                                     | 8        |
+| Activity snapshots omit a settlement's `paymentMethod` / `paymentRef`, so changing only those leaves no visible diff                       | **Done:** both are in a settlement's snapshot (expenses leave them out) and in `diffSnapshots`                                                                                  | 9        |
+| The `groups.name` CHECK (`kind = 'direct' OR length(name) BETWEEN 1 AND 60`) accepts a regular group with a NULL name                      | **Done:** explicit `name IS NOT NULL`, and direct groups must have no name                                                                                                      | 3        |
+| Grants can't make `activity_log` append-only when the app connects as the table owner (the default on Neon)                                | **Done:** an append-only trigger on top of the grants                                                                                                                           | 3        |
+| ISO 4217 gives IDR 2 decimals, but CLDR/Intl formats it with 0                                                                             | **Done:** IDR stored with 0 decimals; a test keeps every currency in step with Intl                                                                                             | 3        |
+| "Phase 2" means both post-MVP features and the Contracts phase                                                                             | Post-MVP features are called **v1.1** in this repo                                                                                                                              | —        |
+| Library versions in the plan date from mid-2026                                                                                            | Verified at install time; see "Version decisions"                                                                                                                               | 0        |
 
 ## Version decisions
 

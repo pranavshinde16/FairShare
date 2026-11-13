@@ -6,6 +6,7 @@ import { Avatar } from '../../components/common/avatar';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
+import { useMarkModalOpen } from '../../lib/modal-route';
 import { useFormatMoney } from '../../lib/money';
 import { useFlash } from '../../lib/use-flash';
 import { cn } from '../../lib/utils';
@@ -22,6 +23,7 @@ const OWES = 'text-destructive';
 export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
   const balances = useQuery(balancesQuery(group.id));
   const format = useFormatMoney();
+  const markModal = useMarkModalOpen();
   if (balances.error) {
     return <ErrorState error={balances.error} onRetry={() => void balances.refetch()} />;
   }
@@ -97,6 +99,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                               to="/groups/$groupId/settle"
                               params={{ groupId: group.id }}
                               search={{ tab: 'balances', from: t.from, to: t.to }}
+                              onClick={() => markModal(`/groups/${group.id}/settle`)}
                             >
                               Settle
                             </Link>
@@ -125,6 +128,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                   to="/groups/$groupId/settle"
                   params={{ groupId: group.id }}
                   search={{ tab: 'balances' }}
+                  onClick={() => markModal(`/groups/${group.id}/settle`)}
                 >
                   <ArrowLeftRight aria-hidden />
                   Record a payment

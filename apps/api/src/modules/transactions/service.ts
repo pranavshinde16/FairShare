@@ -3,7 +3,6 @@ import {
   SETTLEMENT_DESCRIPTION,
   UpdateExpense,
   UpdateSettlement,
-  type ActivityEntry,
   type CreateExpense,
   type CreateSettlement,
   type DeletedTransaction,
@@ -27,7 +26,9 @@ import { aiRequests, findPgError, withTx, type Db, type Tx } from '@fairshare/db
 import { and, eq } from 'drizzle-orm';
 import { AppError } from '../../http/errors';
 import { parseBody } from '../../http/validate';
+import { presentEntries } from '../activity/present';
 import { recordActivity } from '../activity/record';
+import * as activityRepo from '../activity/repo';
 import * as groupsRepo from '../groups/repo';
 import { invalid, type Membership } from '../groups/service';
 import * as repo from './repo';
@@ -400,28 +401,17 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
       return one(id.toLowerCase(), me);
     },
 
-    /** GET /transactions/:id/history: every recorded change, oldest first. */
+    /**
+     * GET /transactions/:id/history: every recorded change, oldest first, with claimed
+     * placeholders shown as whoever claimed them.
+     */
     async history(me: string, id: string): Promise<TransactionHistory> {
-      const { row, group } = await access(db, me, id);
-      const entries = await repo.historyOf(db, row.id);
-      const people = await repo.people(
+      const { row } = await access(db, me, id);
+      const { items } = await presentEntries(
         db,
-        entries.flatMap((e) => [e.actorId, ...(e.targetUser ? [e.targetUser] : [])]),
+        await activityRepo.transactionHistory(db, row.id),
+        me,
       );
-      const items: ActivityEntry[] = entries.map((entry) => ({
-        id: entry.id,
-        groupId: entry.groupId,
-        groupName: group.kind === 'direct' ? null : group.name,
-        actor: toUserRef(people.get(entry.actorId)!),
-        verb: entry.verb as ActivityEntry['verb'],
-        entityType: entry.entityType,
-        entityId: entry.entityId,
-        target: entry.targetUser ? toUserRef(people.get(entry.targetUser)!) : null,
-        before: (entry.before as Record<string, unknown> | null) ?? null,
-        after: (entry.after as Record<string, unknown> | null) ?? null,
-        createdAt: entry.createdAt.toISOString(),
-        involvesMe: [entry.before, entry.after].some((s) => snapshotInvolves(s, me)),
-      }));
       return { items };
     },
   };
@@ -639,15 +629,6 @@ function lowerSplit(split: SplitInput): SplitInput {
     case 'shares':
       return { method: 'shares', shares: split.shares.map(lower) };
   }
-}
-
-function snapshotInvolves(snapshot: unknown, me: string): boolean {
-  if (!snapshot || typeof snapshot !== 'object') return false;
-  const { payers, shares } = snapshot as {
-    payers?: { userId: string }[];
-    shares?: { userId: string }[];
-  };
-  return [...(payers ?? []), ...(shares ?? [])].some((l) => l.userId === me);
 }
 
 const isoDate = (date: Date) => date.toISOString().slice(0, 10);

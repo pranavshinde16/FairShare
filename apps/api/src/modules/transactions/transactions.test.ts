@@ -432,6 +432,52 @@ describe('the list', () => {
     expect(await list('type=settlement')).toEqual([]);
   });
 
+  it('pages a list filtered by type, person and dates together, deleted ones included', async () => {
+    const { asha, group, bilal, chitra, add } = await seeded();
+    const pay = async (from: string, occurredOn: string) => {
+      const body = {
+        id: uuidv7(),
+        fromUserId: from,
+        toUserId: asha.id,
+        amount: 100,
+        currency: 'INR',
+        occurredOn,
+        method: 'cash',
+      };
+      const res = await ctx.call(asha, 'POST', `/api/v1/groups/${group.id}/settlements`, body);
+      expect(res.status).toBe(201);
+      return body.id;
+    };
+    await add({ occurredOn: '2026-11-04' }, [chitra]); // an expense: wrong type
+    await pay(chitra, '2026-11-01'); // before the range
+    const first = await pay(chitra, '2026-11-03');
+    await pay(bilal, '2026-11-04'); // someone else's payment
+    const second = await pay(chitra, '2026-11-06');
+    const gone = await pay(chitra, '2026-11-07');
+    await write(asha, 'DELETE', `/api/v1/transactions/${gone}`, 1);
+    await pay(chitra, '2026-11-09'); // after the range
+
+    const query = `type=settlement&person=${chitra}&from=2026-11-02&to=2026-11-08`;
+    const pages = async (extra: string) => {
+      const ids: string[] = [];
+      let cursor: string | null = null;
+      do {
+        const res = await ctx.call(
+          asha,
+          'GET',
+          `/api/v1/groups/${group.id}/transactions?${query}&${extra}&limit=1${cursor ? `&cursor=${cursor}` : ''}`,
+        );
+        const page = TransactionPage.parse(res.body);
+        ids.push(...page.items.map((t) => t.id));
+        cursor = page.nextCursor;
+      } while (cursor);
+      return ids;
+    };
+
+    expect(await pages('includeDeleted=false')).toEqual([second, first]);
+    expect(await pages('includeDeleted=true')).toEqual([gone, second, first]);
+  });
+
   it('matches % and _ in a search literally, not as wildcards', async () => {
     const { asha, group, add } = await seeded();
     await add({ description: 'Shirts at 50% off' });

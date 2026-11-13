@@ -15,4 +15,5 @@ comes next.
 | 6     | [Groups, members, friends and invites](phase-06-groups-and-invites.md) | Done        |
 | 7     | [Expense creation and editing](phase-07-expenses.md)                   | Done        |
 | 8     | [Balances and Home](phase-08-balances-and-home.md)                     | Done        |
-| 9     | [Settlements](phase-09-settlements.md)                                 | In progress |
+| 9     | [Settlements](phase-09-settlements.md)                                 | Done        |
+| 10    | [Activity feed and history search](phase-10-activity.md)               | In progress |

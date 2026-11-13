@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button';
 import { BalancesTab } from '../../features/balances/balances-tab';
 import { balancesQuery } from '../../features/balances/queries';
 import { ExpensesTab } from '../../features/expenses/expenses-tab';
+import { HistoryFilters } from '../../features/expenses/filters';
 import { useNewExpenseShortcut } from '../../features/expenses/use-new-expense-shortcut';
 import { GroupSettingsDialog } from '../../features/groups/group-settings-dialog';
 import { InviteButton } from '../../features/groups/invite-button';
@@ -19,12 +20,13 @@ import { MembersTab } from '../../features/groups/members-tab';
 import { groupQuery } from '../../features/groups/queries';
 import { groupTitle } from '../../features/groups/title';
 import { currenciesQuery, meQuery } from '../../features/profile/queries';
+import { useMarkModalOpen } from '../../lib/modal-route';
 import { useFlash } from '../../lib/use-flash';
 import { cn } from '../../lib/utils';
 
 const TABS = ['expenses', 'balances', 'members'] as const;
 
-const GroupSearch = z.object({
+const GroupSearch = HistoryFilters.extend({
   tab: z.enum(TABS).default('expenses').catch('expenses'),
   /** Set right after creating the group, to prompt sharing the invite. */
   created: z.boolean().optional().catch(undefined),
@@ -37,15 +39,19 @@ export const Route = createFileRoute('/_authed/groups/$groupId')({
 
 function GroupPage() {
   const { groupId } = Route.useParams();
-  const { tab, created } = Route.useSearch();
+  const { tab, created, ...search } = Route.useSearch();
+  const filters = HistoryFilters.parse(search);
   const me = useQuery(meQuery);
   const group = useQuery(groupQuery(groupId));
   const balances = useQuery(balancesQuery(groupId));
   const currencies = useQuery(currenciesQuery);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const navigate = useNavigate();
-  const addExpense = () =>
+  const markModal = useMarkModalOpen();
+  const addExpense = () => {
+    markModal(`/groups/${groupId}/expenses/new`);
     void navigate({ to: '/groups/$groupId/expenses/new', params: { groupId } });
+  };
 
   useNewExpenseShortcut(addExpense);
   // The position line lights up when it changes; not when it first loads.
@@ -141,7 +147,22 @@ function GroupPage() {
         ))}
       </nav>
 
-      {tab === 'expenses' && <ExpensesTab group={data} meId={me.data.id} />}
+      {tab === 'expenses' && (
+        <ExpensesTab
+          group={data}
+          meId={me.data.id}
+          filters={filters}
+          // Replace, not push: Back leaves the group instead of undoing each keystroke.
+          onFiltersChange={(next) =>
+            void navigate({
+              to: '/groups/$groupId',
+              params: { groupId },
+              search: { tab: 'expenses', ...next },
+              replace: true,
+            })
+          }
+        />
+      )}
       {tab === 'balances' && <BalancesTab group={data} meId={me.data.id} />}
       {tab === 'members' && <MembersTab group={data} meId={me.data.id} />}
 

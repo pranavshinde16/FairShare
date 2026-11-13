@@ -3,7 +3,6 @@
 // service before anything is returned.
 
 import {
-  activityLog,
   groupMembers,
   groups,
   transactionPayers,
@@ -235,13 +234,4 @@ export async function people(db: Handle, ids: string[]): Promise<Map<string, Per
   const byId = new Map(claimers.map((r) => [r.id, r]));
   // Old activity names the placeholder; show the person who claimed it (plan correction).
   return new Map(rows.map((r) => [r.id, (r.mergedInto && byId.get(r.mergedInto)) || r]));
-}
-
-/** A transaction's history, oldest first. */
-export async function historyOf(db: Handle, transactionId: string) {
-  return db
-    .select()
-    .from(activityLog)
-    .where(and(eq(activityLog.entityType, 'transaction'), eq(activityLog.entityId, transactionId)))
-    .orderBy(asc(activityLog.id));
 }

@@ -3,6 +3,7 @@ import {
   ACTIVITY_VERBS,
   ActivityEntry,
   ActivityFeed,
+  ActivityListQuery,
   TransactionHistory,
   TransactionSnapshot,
 } from './activity';
@@ -101,10 +102,27 @@ describe('ActivityEntry', () => {
     expect(rejectedPaths(ActivityEntry, withField(activityEntry, patch))).toEqual([path]),
   );
 
-  it('pages the feed with an unread count', () => {
-    expectValid(ActivityFeed, { items: [activityEntry], nextCursor: null, unreadCount: 3 });
-    expect(ActivityFeed.safeParse({ items: [], nextCursor: null }).success).toBe(false);
+  it('pages the feed with an unread count and the people it names', () => {
+    const people = [activityEntry.actor];
+    expectValid(ActivityFeed, { items: [activityEntry], nextCursor: null, unreadCount: 3, people });
+    expect(ActivityFeed.safeParse({ items: [], nextCursor: null, people }).success).toBe(false);
+    expect(ActivityFeed.safeParse({ items: [], nextCursor: null, unreadCount: 0 }).success).toBe(
+      false,
+    );
+    expect(
+      rejectedPaths(ActivityFeed, { items: [], nextCursor: null, unreadCount: -1, people }),
+    ).toEqual(['unreadCount']);
     expectValid(TransactionHistory, { items: [activityEntry] });
+  });
+
+  it('takes the usual page query for a feed', () => {
+    expect(ActivityListQuery.parse({})).toEqual({ limit: 30 });
+    expect(ActivityListQuery.parse({ limit: '5', cursor: 'abc' })).toEqual({
+      limit: 5,
+      cursor: 'abc',
+    });
+    expect(ActivityListQuery.safeParse({ limit: '101' }).success).toBe(false);
+    expect(ActivityListQuery.safeParse({ person: 'x' }).success).toBe(false);
   });
 });
 

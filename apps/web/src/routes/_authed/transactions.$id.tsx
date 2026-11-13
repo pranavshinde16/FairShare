@@ -20,6 +20,7 @@ import { methodLabel, paymentSentence } from '../../features/settlements/payment
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { afterTransactionChange } from '../../lib/invalidation';
+import { useMarkModalOpen } from '../../lib/modal-route';
 import { toast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 
@@ -41,6 +42,7 @@ function TransactionPage() {
   const currencies = useQuery(currenciesQuery);
   const group = useQuery({ ...groupQuery(tx.data?.groupId ?? ''), enabled: !!tx.data });
   const [deleting, setDeleting] = useState(false);
+  const markModal = useMarkModalOpen();
   const [restoring, setRestoring] = useState(false);
 
   if (tx.error instanceof ApiError && tx.error.status === 404) {
@@ -172,7 +174,11 @@ function TransactionPage() {
           <>
             {editable && (
               <Button asChild variant="outline">
-                <Link to="/transactions/$id/edit" params={{ id: data.id }}>
+                <Link
+                  to="/transactions/$id/edit"
+                  params={{ id: data.id }}
+                  onClick={() => markModal(`/transactions/${data.id}/edit`)}
+                >
                   <Pencil aria-hidden />
                   Edit
                 </Link>

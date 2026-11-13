@@ -2,11 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, type LinkProps } from '@tanstack/react-router';
 import { Activity, House, Plus, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { unreadActivityQuery } from '../../features/activity/queries';
 import { homeQuery } from '../../features/balances/queries';
 import { meQuery } from '../../features/profile/queries';
 import { Avatar } from '../common/avatar';
 import { Logo } from '../common/logo';
 import { Skeleton } from '../common/skeleton';
+import { cn } from '../../lib/utils';
 
 const NAV: { to: LinkProps['to']; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Home', icon: House },
@@ -47,6 +49,7 @@ function Sidebar() {
           >
             <Icon aria-hidden className="size-4" />
             {label}
+            {to === '/activity' && <UnreadBadge className="ml-auto" />}
           </Link>
         ))}
       </nav>
@@ -181,6 +184,31 @@ function MobileHeader() {
   );
 }
 
+/**
+ * How many changes others made since I last opened Activity (Blueprint 4.9: compared with
+ * activity_seen_at). The number is for the eye; screen readers hear "Activity (3 unread)" from
+ * text placed after the label, wherever the badge sits.
+ */
+function UnreadBadge({ className }: { className?: string }) {
+  const unread = useQuery(unreadActivityQuery);
+  const count = unread.data ?? 0;
+  if (count === 0) return null;
+  return (
+    <>
+      <span
+        aria-hidden
+        className={cn(
+          'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] leading-none font-semibold text-primary-foreground tabular-nums',
+          className,
+        )}
+      >
+        {count > 99 ? '99+' : count}
+      </span>
+      <span className="sr-only"> ({count} unread)</span>
+    </>
+  );
+}
+
 function BottomTabs() {
   return (
     <nav
@@ -192,11 +220,14 @@ function BottomTabs() {
           key={label}
           to={to}
           activeOptions={{ exact: to === '/' }}
-          className="flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground"
+          className="relative flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground"
           activeProps={{ className: 'text-primary' }}
         >
           <Icon aria-hidden className="size-5" />
           {label}
+          {to === '/activity' && (
+            <UnreadBadge className="absolute top-1.5 left-[calc(50%+0.25rem)]" />
+          )}
         </Link>
       ))}
     </nav>

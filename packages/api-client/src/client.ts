@@ -1,5 +1,6 @@
 import {
   AcceptInviteResponse,
+  ActivityFeed,
   AddFriendResponse,
   ClaimList,
   ClaimResponse,
@@ -22,6 +23,7 @@ import {
   TransactionHistory,
   TransactionPage,
   type AcceptInvite,
+  type ActivityListQuery,
   type AddFriend,
   type AddMember,
   type CreateGroup,
@@ -139,6 +141,18 @@ export function createApiClient(options: ApiClientOptions) {
       }),
     transactionHistory: (id: string, signal?: AbortSignal) =>
       request(TransactionHistory, `/api/v1/transactions/${seg(id)}/history`, { signal }),
+
+    /** My activity feed across groups, newest first, with the unread count. */
+    activity: (query: Partial<ActivityListQuery> = {}, signal?: AbortSignal) =>
+      request(ActivityFeed, '/api/v1/activity', { query, signal }),
+    /** One group's whole history, newest first. */
+    groupActivity: (
+      groupId: string,
+      query: Partial<ActivityListQuery> = {},
+      signal?: AbortSignal,
+    ) => request(ActivityFeed, `/api/v1/groups/${seg(groupId)}/activity`, { query, signal }),
+    /** Everything up to now is read: the unread count starts again from zero. */
+    markActivitySeen: () => requestNoContent('/api/v1/activity/seen', { method: 'POST' }),
 
     claims: (signal?: AbortSignal) => request(ClaimList, '/api/v1/claims', { signal }),
     claim: (placeholderId: string) =>
