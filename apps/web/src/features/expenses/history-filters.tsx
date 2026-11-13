@@ -1,18 +1,12 @@
 import type { Group } from '@fairshare/contracts';
 import { CalendarRange, Search, X } from 'lucide-react';
-import { useEffect, useState, type ComponentProps } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
+import { chipClass, ChipSelect, ChipToggle } from '../../components/ui/filter-chips';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { cn } from '../../lib/utils';
 import { compact, datesLabel, isFiltering, monthRange, type HistoryFilters } from './filters';
-
-const chip = (active: boolean) =>
-  cn(
-    'inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
-    active ? 'border-primary bg-accent text-accent-foreground' : 'bg-background text-foreground',
-  );
 
 /** The search box, the person / type / dates chips, "Show deleted" and "Clear". */
 export function HistoryFiltersBar({
@@ -50,13 +44,13 @@ export function HistoryFiltersBar({
       <div className="relative">
         <Search
           aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
         />
         <Input
           type="search"
           aria-label="Search expenses"
           placeholder="Search"
-          className="pl-9"
+          className="pl-10"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -90,22 +84,19 @@ export function HistoryFiltersBar({
         </ChipSelect>
         <button
           type="button"
-          className={chip(Boolean(filters.from || filters.to))}
+          className={chipClass(Boolean(filters.from || filters.to))}
           aria-label={`Dates: ${datesLabel(filters.from, filters.to)}`}
           onClick={() => setDatesOpen(true)}
         >
           <CalendarRange aria-hidden className="size-4" />
           {datesLabel(filters.from, filters.to)}
         </button>
-        <label className={cn(chip(Boolean(filters.deleted)), 'cursor-pointer')}>
-          <input
-            type="checkbox"
-            checked={Boolean(filters.deleted)}
-            onChange={(event) => set({ deleted: event.target.checked || undefined })}
-            className="size-4 accent-[var(--primary)]"
-          />
+        <ChipToggle
+          checked={Boolean(filters.deleted)}
+          onChange={(checked) => set({ deleted: checked || undefined })}
+        >
           Show deleted
-        </label>
+        </ChipToggle>
         {isFiltering(filters) && (
           <Button
             variant="ghost"
@@ -134,14 +125,6 @@ export function HistoryFiltersBar({
       )}
     </div>
   );
-}
-
-function ChipSelect({
-  active,
-  className,
-  ...props
-}: ComponentProps<'select'> & { active: boolean }) {
-  return <select className={cn(chip(active), 'pr-2', className)} {...props} />;
 }
 
 /** From and To, with "This month" and "Last month" shortcuts. Either end may be left open. */

@@ -83,7 +83,13 @@ function FriendPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex items-center gap-3">
-        <Avatar name={user.name} src={user.avatarUrl} size="lg" />
+        <Avatar
+          name={user.name}
+          src={user.avatarUrl}
+          seed={user.id}
+          deleted={user.isDeleted}
+          size={56}
+        />
         <div className="flex min-w-0 flex-1 flex-col">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{user.name}</h1>
           {user.isPlaceholder && <p className="text-sm text-muted-foreground">Not joined yet</p>}

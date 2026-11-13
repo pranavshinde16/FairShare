@@ -81,9 +81,21 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                         )}
                       >
                         <span aria-hidden className="flex shrink-0 items-center gap-1">
-                          <Avatar name={from?.name ?? '?'} src={from?.avatarUrl} size="sm" />
+                          <Avatar
+                            name={from?.name ?? '?'}
+                            src={from?.avatarUrl}
+                            seed={t.from}
+                            deleted={from?.isDeleted}
+                            size={32}
+                          />
                           <ArrowRight className="size-4" />
-                          <Avatar name={to?.name ?? '?'} src={to?.avatarUrl} size="sm" />
+                          <Avatar
+                            name={to?.name ?? '?'}
+                            src={to?.avatarUrl}
+                            seed={t.to}
+                            deleted={to?.isDeleted}
+                            size={32}
+                          />
                         </span>
                         <span className="min-w-0 flex-1 truncate text-sm">{words}</span>
                         <span className="text-sm font-medium tabular-nums">{amount}</span>
@@ -149,7 +161,13 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                     <li key={line.userId}>
                       <details className="group">
                         <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 p-3">
-                          <Avatar name={user?.name ?? '?'} src={user?.avatarUrl} size="sm" />
+                          <Avatar
+                            name={user?.name ?? '?'}
+                            src={user?.avatarUrl}
+                            seed={line.userId}
+                            deleted={user?.isDeleted}
+                            size={36}
+                          />
                           <span className="min-w-0 flex-1 truncate text-sm font-medium">
                             {nameOf(line.userId)}
                           </span>

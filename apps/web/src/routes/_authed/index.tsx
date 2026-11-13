@@ -7,6 +7,7 @@ import { Avatar } from '../../components/common/avatar';
 import { BalanceText } from '../../components/common/balance-text';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
+import { GroupTile } from '../../components/common/tiles';
 import { Button } from '../../components/ui/button';
 import { HomeEntry } from '../../features/ai/home-entry';
 import { ClaimsBanner } from '../../features/claims/claims-banner';
@@ -112,12 +113,12 @@ function HomePage() {
                     params={{ groupId: group.id }}
                     className="flex min-h-16 items-center gap-3 p-3 hover:bg-muted"
                   >
-                    <span
-                      aria-hidden
-                      className="flex size-10 items-center justify-center rounded-lg bg-accent text-xl"
-                    >
-                      {group.emoji ?? (group.name ?? '').slice(0, 1).toUpperCase()}
-                    </span>
+                    <GroupTile
+                      emoji={group.emoji}
+                      name={group.name ?? ''}
+                      seed={group.id}
+                      size={48}
+                    />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate font-medium">{group.name}</span>
                       <span className="text-xs text-muted-foreground">
@@ -155,7 +156,12 @@ function HomePage() {
                     params={{ userId: friend.user.id }}
                     className="flex min-h-16 items-center gap-3 p-3 hover:bg-muted"
                   >
-                    <Avatar name={friend.user.name} src={friend.user.avatarUrl} />
+                    <Avatar
+                      name={friend.user.name}
+                      src={friend.user.avatarUrl}
+                      seed={friend.user.id}
+                      deleted={friend.user.isDeleted}
+                    />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate font-medium">{friend.user.name}</span>
                       {friend.user.isPlaceholder && (

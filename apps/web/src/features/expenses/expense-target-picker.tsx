@@ -2,6 +2,7 @@ import type { Home } from '@fairshare/contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Avatar } from '../../components/common/avatar';
+import { GroupTile } from '../../components/common/tiles';
 import { Dialog } from '../../components/ui/dialog';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
@@ -78,12 +79,12 @@ export function ExpenseTargetPicker({
                     });
                   }}
                 >
-                  <span
-                    aria-hidden
-                    className="flex size-8 items-center justify-center rounded-lg bg-accent"
-                  >
-                    {group.emoji ?? (group.name ?? '').slice(0, 1).toUpperCase()}
-                  </span>
+                  <GroupTile
+                    emoji={group.emoji}
+                    name={group.name ?? ''}
+                    seed={group.id}
+                    size={40}
+                  />
                   <span className="truncate font-medium">{group.name}</span>
                 </button>
               </li>
@@ -105,7 +106,13 @@ export function ExpenseTargetPicker({
                   disabled={withFriend.isPending}
                   onClick={() => withFriend.mutate({ userId: user.id, directGroupId })}
                 >
-                  <Avatar name={user.name} src={user.avatarUrl} size="sm" />
+                  <Avatar
+                    name={user.name}
+                    src={user.avatarUrl}
+                    seed={user.id}
+                    deleted={user.isDeleted}
+                    size={36}
+                  />
                   <span className="truncate font-medium">{user.name}</span>
                 </button>
               </li>

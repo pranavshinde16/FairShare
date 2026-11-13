@@ -297,7 +297,9 @@ function LineList({
 }: {
   lines: { userId: string; amount: number }[];
   nameOf: (userId: string) => string;
-  person: (userId: string) => { name: string; avatarUrl: string | null } | undefined;
+  person: (
+    userId: string,
+  ) => { name: string; avatarUrl: string | null; isDeleted: boolean } | undefined;
   money: (amount: number) => string;
   /** Blueprint 7.2: the "input" view for percent and shares, such as "40% · ₹960". */
   input?: (userId: string) => string | null;
@@ -308,7 +310,13 @@ function LineList({
         const p = person(line.userId);
         return (
           <li key={line.userId} className="flex items-center gap-3 p-3">
-            <Avatar name={p?.name ?? '?'} src={p?.avatarUrl} size="sm" />
+            <Avatar
+              name={p?.name ?? '?'}
+              src={p?.avatarUrl}
+              seed={line.userId}
+              deleted={p?.isDeleted}
+              size={36}
+            />
             <span className="flex-1 text-sm">{nameOf(line.userId)}</span>
             <span className="text-sm tabular-nums">
               {input?.(line.userId) && (

@@ -193,7 +193,13 @@ function Row({
   );
   const content = (
     <>
-      <Avatar name={entry.actor.name} src={entry.actor.avatarUrl} size="sm" />
+      <Avatar
+        name={entry.actor.name}
+        src={entry.actor.avatarUrl}
+        seed={entry.actor.id}
+        deleted={entry.actor.isDeleted}
+        size={36}
+      />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className={cn('text-sm', forMe ? 'font-semibold' : 'text-foreground')}>
           {line.text}

@@ -113,7 +113,12 @@ function DeleteAccountPage() {
             >
               {owing.map((friend) => (
                 <li key={friend.user.id} className="flex items-center gap-3 p-3">
-                  <Avatar name={friend.user.name} src={friend.user.avatarUrl} />
+                  <Avatar
+                    name={friend.user.name}
+                    src={friend.user.avatarUrl}
+                    seed={friend.user.id}
+                    deleted={friend.user.isDeleted}
+                  />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {friend.user.name}
                   </span>

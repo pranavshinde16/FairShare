@@ -1,7 +1,9 @@
 import type { Group, Transaction, UpdateExpense } from '@fairshare/contracts';
 import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { AmountInput } from '../../components/ui/amount-input';
 import { Button } from '../../components/ui/button';
+import { DateQuickPick } from '../../components/ui/date-quick-pick';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { formatAmount, formatAmountInput } from '../../lib/money';
@@ -244,33 +246,21 @@ export function ExpenseForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="expense-amount">Amount</Label>
-        <div
-          className={cn(
-            'flex items-center gap-2 rounded-lg border border-input px-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40',
-            highlight('amount'),
-          )}
-        >
-          <span aria-hidden className="text-2xl text-muted-foreground">
-            {symbol}
-          </span>
-          <input
-            id="expense-amount"
-            autoFocus
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="0"
-            value={draft.amountText}
-            onChange={(event) => set({ amountText: event.target.value.replace(/[^\d.,]/g, '') })}
-            onBlur={() => {
-              if (state.amount !== null) {
-                set({
-                  amountText: formatAmountInput(state.amount, minorUnits),
-                });
-              }
-            }}
-            className="h-14 w-full bg-transparent text-3xl font-semibold tabular-nums outline-none"
-          />
-        </div>
+        <AmountInput
+          id="expense-amount"
+          symbol={symbol}
+          highlighted={filled.includes('amount')}
+          autoFocus
+          value={draft.amountText}
+          onChange={(event) => set({ amountText: event.target.value.replace(/[^\d.,]/g, '') })}
+          onBlur={() => {
+            if (state.amount !== null) {
+              set({
+                amountText: formatAmountInput(state.amount, minorUnits),
+              });
+            }
+          }}
+        />
       </div>
 
       <div className="flex flex-col gap-2">
@@ -349,32 +339,14 @@ export function ExpenseForm({
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">Date</legend>
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            ['Today', localDate()],
-            ['Yesterday', localDate(-1)],
-          ].map(([label, value]) => (
-            <Button
-              key={label}
-              type="button"
-              size="sm"
-              variant={draft.occurredOn === value ? 'default' : 'outline'}
-              aria-pressed={draft.occurredOn === value}
-              onClick={() => set({ occurredOn: value! })}
-            >
-              {label}
-            </Button>
-          ))}
-          <Input
-            type="date"
-            aria-label="Pick a date"
-            className={cn('h-9 w-auto', highlight('date'))}
-            min="2000-01-01"
-            value={draft.occurredOn}
-            onChange={(event) => event.target.value && set({ occurredOn: event.target.value })}
-          />
-        </div>
+        <legend className="mb-1.5 text-[13px] font-bold">Date</legend>
+        <DateQuickPick
+          value={draft.occurredOn}
+          onChange={(occurredOn) => set({ occurredOn })}
+          today={localDate()}
+          yesterday={localDate(-1)}
+          className={cn('rounded-md', highlight('date'))}
+        />
         {future && <p className="text-sm text-muted-foreground">That date is in the future.</p>}
       </fieldset>
 

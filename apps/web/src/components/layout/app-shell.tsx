@@ -8,6 +8,7 @@ import { meQuery } from '../../features/profile/queries';
 import { Avatar } from '../common/avatar';
 import { Logo } from '../common/logo';
 import { Skeleton } from '../common/skeleton';
+import { GroupTile } from '../common/tiles';
 import { cn } from '../../lib/utils';
 
 const NAV: { to: LinkProps['to']; label: string; icon: LucideIcon }[] = [
@@ -97,9 +98,7 @@ function SidebarGroups() {
               inactiveProps={{ className: inactiveLink }}
               activeProps={{ className: activeLink }}
             >
-              <span aria-hidden className="w-5 text-center">
-                {group.emoji ?? '•'}
-              </span>
+              <GroupTile emoji={group.emoji} name={group.name ?? ''} seed={group.id} size={32} />
               <span className="truncate">{group.name}</span>
             </Link>
           </li>
@@ -133,8 +132,9 @@ function SidebarPeople() {
               <Avatar
                 name={user.name}
                 src={user.avatarUrl}
-                size="sm"
-                className="size-6 text-[10px]"
+                seed={user.id}
+                deleted={user.isDeleted}
+                size={24}
               />
               <span className="truncate">{user.name}</span>
             </Link>
@@ -156,7 +156,7 @@ function AccountLink() {
     >
       {me.data ? (
         <>
-          <Avatar name={me.data.name} src={me.data.avatarUrl} size="sm" />
+          <Avatar name={me.data.name} src={me.data.avatarUrl} seed={me.data.id} size={32} />
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-medium">{me.data.name}</span>
             <span className="truncate text-xs text-muted-foreground">Settings</span>
@@ -181,7 +181,7 @@ function MobileHeader() {
       </Link>
       <Link to="/settings" aria-label="Settings" className="rounded-full p-1">
         {me.data ? (
-          <Avatar name={me.data.name} src={me.data.avatarUrl} size="sm" />
+          <Avatar name={me.data.name} src={me.data.avatarUrl} seed={me.data.id} size={32} />
         ) : (
           <Skeleton className="size-8 rounded-full" />
         )}

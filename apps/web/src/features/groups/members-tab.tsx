@@ -43,7 +43,13 @@ export function MembersTab({ group, meId }: { group: Group; meId: string }) {
       <ul aria-label="Members" className="flex flex-col divide-y rounded-xl border">
         {active.map((member) => (
           <li key={member.user.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3">
-            <Avatar name={member.user.name} src={member.user.avatarUrl} />
+            <Avatar
+              name={member.user.name}
+              src={member.user.avatarUrl}
+              seed={member.user.id}
+              deleted={member.user.isDeleted}
+              size={44}
+            />
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-medium">
                 {member.user.name}
@@ -96,7 +102,13 @@ export function MembersTab({ group, meId }: { group: Group; meId: string }) {
           <ul className="mt-2 flex flex-col gap-2 pl-2">
             {former.map((member) => (
               <li key={member.user.id} className="flex items-center gap-3 text-muted-foreground">
-                <Avatar name={member.user.name} src={member.user.avatarUrl} size="sm" />
+                <Avatar
+                  name={member.user.name}
+                  src={member.user.avatarUrl}
+                  seed={member.user.id}
+                  deleted={member.user.isDeleted}
+                  size={32}
+                />
                 {member.user.name}
               </li>
             ))}

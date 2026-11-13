@@ -3,6 +3,7 @@ import type { SplitMethod } from '@fairshare/core';
 import { Minus, Plus } from 'lucide-react';
 import { Avatar } from '../../components/common/avatar';
 import { Button } from '../../components/ui/button';
+import { SegmentedControl } from '../../components/ui/segmented-control';
 import { cn } from '../../lib/utils';
 import {
   assignRemaining,
@@ -89,7 +90,13 @@ export function SplitSheet({
                   onChange={() => onChange({ payers: { mode: 'single', userId: m.user.id } })}
                   className="size-4 accent-[var(--primary)]"
                 />
-                <Avatar name={m.user.name} src={m.user.avatarUrl} size="sm" />
+                <Avatar
+                  name={m.user.name}
+                  src={m.user.avatarUrl}
+                  seed={m.user.id}
+                  deleted={m.user.isDeleted}
+                  size={36}
+                />
                 <span className="text-sm">{nameOf(m.user.id)}</span>
               </label>
             ))}
@@ -123,7 +130,13 @@ export function SplitSheet({
                     }}
                     className="size-4 accent-[var(--primary)]"
                   />
-                  <Avatar name={m.user.name} src={m.user.avatarUrl} size="sm" />
+                  <Avatar
+                    name={m.user.name}
+                    src={m.user.avatarUrl}
+                    seed={m.user.id}
+                    deleted={m.user.isDeleted}
+                    size={36}
+                  />
                   <span className="flex-1 text-sm">{nameOf(id)}</span>
                   <input
                     aria-label={`What ${nameOf(id)} paid`}
@@ -181,27 +194,15 @@ export function SplitSheet({
       {/* ---- Split */}
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">Split</legend>
-        <div className="grid grid-cols-4 rounded-lg bg-muted p-1">
-          {METHODS.map(({ method, label, name }) => (
-            <button
-              key={method}
-              type="button"
-              aria-label={name}
-              aria-pressed={split.method === method}
-              onClick={() =>
-                onChange({
-                  split: switchMethod(split, method, { shares: state.shares, seed, minorUnits }),
-                })
-              }
-              className={cn(
-                'flex h-9 items-center justify-center rounded-md text-sm font-medium',
-                split.method === method ? 'bg-background shadow-sm' : 'text-muted-foreground',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          segments={METHODS.map(({ method, label, name }) => ({ value: method, label, name }))}
+          value={split.method}
+          onChange={(method) =>
+            onChange({
+              split: switchMethod(split, method, { shares: state.shares, seed, minorUnits }),
+            })
+          }
+        />
 
         {split.method === 'equal' && (
           <>
@@ -245,7 +246,13 @@ export function SplitSheet({
                     }
                     className="size-4 accent-[var(--primary)]"
                   />
-                  <Avatar name={m.user.name} src={m.user.avatarUrl} size="sm" />
+                  <Avatar
+                    name={m.user.name}
+                    src={m.user.avatarUrl}
+                    seed={m.user.id}
+                    deleted={m.user.isDeleted}
+                    size={36}
+                  />
                   <span className="flex-1 text-sm">{nameOf(id)}</span>
                   <span className="text-sm text-muted-foreground tabular-nums">
                     {share !== undefined ? money(share) : ''}
@@ -261,7 +268,13 @@ export function SplitSheet({
           <>
             {people.map((m) => (
               <div key={m.user.id} className={row}>
-                <Avatar name={m.user.name} src={m.user.avatarUrl} size="sm" />
+                <Avatar
+                  name={m.user.name}
+                  src={m.user.avatarUrl}
+                  seed={m.user.id}
+                  deleted={m.user.isDeleted}
+                  size={36}
+                />
                 <span className="flex-1 text-sm">{nameOf(m.user.id)}</span>
                 <input
                   aria-label={`${nameOf(m.user.id)}’s amount`}
@@ -305,7 +318,13 @@ export function SplitSheet({
               const share = shareOf(m.user.id);
               return (
                 <div key={m.user.id} className={row}>
-                  <Avatar name={m.user.name} src={m.user.avatarUrl} size="sm" />
+                  <Avatar
+                    name={m.user.name}
+                    src={m.user.avatarUrl}
+                    seed={m.user.id}
+                    deleted={m.user.isDeleted}
+                    size={36}
+                  />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm">{nameOf(m.user.id)}</span>
                     <span className="text-xs text-muted-foreground tabular-nums">
@@ -362,7 +381,13 @@ export function SplitSheet({
                 setSplit({ shares: { ...split.shares, [id]: clampShares(value) } });
               return (
                 <div key={id} className={row}>
-                  <Avatar name={m.user.name} src={m.user.avatarUrl} size="sm" />
+                  <Avatar
+                    name={m.user.name}
+                    src={m.user.avatarUrl}
+                    seed={m.user.id}
+                    deleted={m.user.isDeleted}
+                    size={36}
+                  />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm">{nameOf(id)}</span>
                     <span className="text-xs text-muted-foreground tabular-nums">

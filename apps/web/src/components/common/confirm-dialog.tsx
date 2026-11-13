@@ -1,9 +1,15 @@
+import { TriangleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { errorMessage } from '../../lib/errors';
 import { Button } from '../ui/button';
 import { Dialog } from '../ui/dialog';
 
-/** "Are you sure?" with the action's own error shown in place if it fails. */
+/**
+ * "Are you sure?" (DESIGN_SPEC §4 ConfirmSheet): the title, one sentence on what happens, the
+ * action and Cancel, full width. A bottom sheet on phones, a dialog on desktop. The action's own
+ * error shows in place if it fails. `notice` explains why the action can't be taken yet, with
+ * `confirmDisabled`.
+ */
 export function ConfirmDialog({
   open,
   onClose,
@@ -11,6 +17,8 @@ export function ConfirmDialog({
   children,
   confirmLabel,
   destructive = false,
+  notice,
+  confirmDisabled = false,
   onConfirm,
 }: {
   open: boolean;
@@ -19,6 +27,9 @@ export function ConfirmDialog({
   children: ReactNode;
   confirmLabel: string;
   destructive?: boolean;
+  /** Why the action is blocked, shown above the buttons ("… owes ₹11,200.00 …"). */
+  notice?: ReactNode;
+  confirmDisabled?: boolean;
   onConfirm: () => Promise<unknown>;
 }) {
   const [busy, setBusy] = useState(false);
@@ -39,21 +50,29 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onClose={onClose} title={title} description={children}>
+      {notice && (
+        <div className="flex items-start gap-2.5 rounded-lg bg-owe-muted px-3.5 py-3 text-sm leading-5 font-semibold text-owe-muted-foreground">
+          <TriangleAlert aria-hidden className="mt-px size-[18px] shrink-0" strokeWidth={1.9} />
+          <p>{notice}</p>
+        </div>
+      )}
       {error !== null && (
         <p role="alert" className="text-sm text-destructive">
           {errorMessage(error)}
         </p>
       )}
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
+      <div className="flex flex-col gap-2.5">
         <Button
+          size="lg"
           variant={destructive ? 'destructive' : 'default'}
           loading={busy}
+          disabled={confirmDisabled}
           onClick={() => void confirm()}
         >
           {confirmLabel}
+        </Button>
+        <Button size="lg" variant="secondary" onClick={onClose}>
+          Cancel
         </Button>
       </div>
     </Dialog>

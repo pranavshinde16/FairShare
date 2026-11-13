@@ -8,7 +8,9 @@ import { BalanceText } from '../../components/common/balance-text';
 import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
+import { GroupTile } from '../../components/common/tiles';
 import { Button } from '../../components/ui/button';
+import { segmentItem, segmentTrack } from '../../components/ui/segmented-control';
 import { BalancesTab } from '../../features/balances/balances-tab';
 import { balancesQuery } from '../../features/balances/queries';
 import { ExpensesTab } from '../../features/expenses/expenses-tab';
@@ -77,12 +79,7 @@ function GroupPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex items-center gap-3">
-        <span
-          aria-hidden
-          className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent text-2xl"
-        >
-          {data.emoji ?? title.slice(0, 1).toUpperCase()}
-        </span>
+        <GroupTile emoji={data.emoji} name={title} seed={data.id} size={56} />
         <div className="flex min-w-0 flex-1 flex-col">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
           <p className="text-sm text-muted-foreground">
@@ -129,7 +126,7 @@ function GroupPage() {
         </Link>
       )}
 
-      <nav aria-label="Group sections" className="grid grid-cols-3 rounded-lg bg-muted p-1">
+      <nav aria-label="Group sections" className={segmentTrack}>
         {TABS.map((name) => (
           <Link
             key={name}
@@ -137,10 +134,7 @@ function GroupPage() {
             params={{ groupId }}
             search={{ tab: name }}
             aria-current={tab === name ? 'page' : undefined}
-            className={cn(
-              'flex h-10 items-center justify-center rounded-md text-sm font-medium capitalize',
-              tab === name ? 'bg-background shadow-sm' : 'text-muted-foreground',
-            )}
+            className={cn(segmentItem(tab === name), 'capitalize')}
           >
             {name}
           </Link>

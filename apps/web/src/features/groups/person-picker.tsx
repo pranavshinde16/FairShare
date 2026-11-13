@@ -102,7 +102,7 @@ export function PersonPicker({
                   onClick={() => onPick({ userId: person.id }, person)}
                   className="flex min-h-11 w-full items-center gap-3 rounded-lg px-2 text-left hover:bg-muted disabled:opacity-50"
                 >
-                  <Avatar name={person.name} src={person.avatarUrl} size="sm" />
+                  <Avatar name={person.name} src={person.avatarUrl} seed={person.id} size={36} />
                   <span className="flex-1 text-sm font-medium">{person.name}</span>
                   {person.isPlaceholder && (
                     <span className="text-xs text-muted-foreground">Not joined</span>

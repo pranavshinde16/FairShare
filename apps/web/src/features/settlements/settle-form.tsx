@@ -2,9 +2,12 @@ import type { Group, PaymentMethod, UpdateSettlement } from '@fairshare/contract
 import { MAX_AMOUNT_MINOR, toDecimalString, tryParseMoney } from '@fairshare/core';
 import { ArrowDownUp } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { AmountInput } from '../../components/ui/amount-input';
 import { Button } from '../../components/ui/button';
+import { DateQuickPick } from '../../components/ui/date-quick-pick';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { SegmentedControl } from '../../components/ui/segmented-control';
 import { cn } from '../../lib/utils';
 import { formatAmount, formatAmountInput } from '../../lib/money';
 import { localDate } from '../expenses/expense-form';
@@ -189,29 +192,18 @@ export function SettleForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="settle-amount">Amount</Label>
-        <div className="flex items-center gap-2 rounded-lg border border-input px-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
-          <span aria-hidden className="text-2xl text-muted-foreground">
-            {symbol}
-          </span>
-          <input
-            id="settle-amount"
-            autoFocus
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="0"
-            aria-describedby="settle-amount-hint"
-            value={draft.amountText}
-            onChange={(event) => set({ amountText: event.target.value.replace(/[^\d.,]/g, '') })}
-            onBlur={() => {
-              if (body) {
-                set({
-                  amountText: formatAmountInput(body.amount, minorUnits),
-                });
-              }
-            }}
-            className="h-14 w-full bg-transparent text-3xl font-semibold tabular-nums outline-none"
-          />
-        </div>
+        <AmountInput
+          id="settle-amount"
+          size="payment"
+          symbol={symbol}
+          autoFocus
+          aria-describedby="settle-amount-hint"
+          value={draft.amountText}
+          onChange={(event) => set({ amountText: event.target.value.replace(/[^\d.,]/g, '') })}
+          onBlur={() => {
+            if (body) set({ amountText: formatAmountInput(body.amount, minorUnits) });
+          }}
+        />
         <div id="settle-amount-hint" className="flex flex-wrap items-center gap-x-2 text-sm">
           {overText && <span className="text-muted-foreground">{overText}</span>}
           {suggestion !== null && body?.amount !== suggestion && (
@@ -228,52 +220,22 @@ export function SettleForm({
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">Method</legend>
-        <div className="grid grid-cols-4 rounded-lg bg-muted p-1">
-          {PAYMENT_METHODS.map(([method, text]) => (
-            <button
-              key={method}
-              type="button"
-              aria-pressed={draft.method === method}
-              onClick={() => set({ method })}
-              className={cn(
-                'flex h-10 items-center justify-center rounded-md text-sm font-medium',
-                draft.method === method ? 'bg-background shadow-sm' : 'text-muted-foreground',
-              )}
-            >
-              {text}
-            </button>
-          ))}
-        </div>
+        <legend className="mb-1.5 text-[13px] font-bold">Method</legend>
+        <SegmentedControl
+          segments={PAYMENT_METHODS.map(([value, label]) => ({ value, label }))}
+          value={draft.method}
+          onChange={(method) => set({ method })}
+        />
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">Date</legend>
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            ['Today', localDate()],
-            ['Yesterday', localDate(-1)],
-          ].map(([text, value]) => (
-            <Button
-              key={text}
-              type="button"
-              size="sm"
-              variant={draft.occurredOn === value ? 'default' : 'outline'}
-              aria-pressed={draft.occurredOn === value}
-              onClick={() => set({ occurredOn: value! })}
-            >
-              {text}
-            </Button>
-          ))}
-          <Input
-            type="date"
-            aria-label="Pick a date"
-            className="h-9 w-auto"
-            min="2000-01-01"
-            value={draft.occurredOn}
-            onChange={(event) => event.target.value && set({ occurredOn: event.target.value })}
-          />
-        </div>
+        <legend className="mb-1.5 text-[13px] font-bold">Date</legend>
+        <DateQuickPick
+          value={draft.occurredOn}
+          onChange={(occurredOn) => set({ occurredOn })}
+          today={localDate()}
+          yesterday={localDate(-1)}
+        />
         {future && <p className="text-sm text-muted-foreground">That date is in the future.</p>}
       </fieldset>
 
