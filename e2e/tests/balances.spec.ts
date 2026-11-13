@@ -41,7 +41,7 @@ const api = (page: Page) => ({
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 test('the Goa example: balances, Home and the friend page agree', async ({ page }) => {
@@ -69,7 +69,10 @@ test('the Goa example: balances, Home and the friend page agree', async ({ page 
   );
 
   await page.goto(`/groups/${group.id}`);
-  await expect(page.getByRole('link', { name: /you’re owed ₹1,850.00/ })).toBeVisible();
+  // The group page's own balance line (the desktop sidebar's group row says it too).
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹1,850.00/i }),
+  ).toBeVisible();
   await page.getByRole('link', { name: /^balances$/i }).click();
 
   await expect(page.getByText('You’re owed ₹1,850.00', { exact: true })).toBeVisible();
@@ -87,9 +90,17 @@ test('the Goa example: balances, Home and the friend page agree', async ({ page 
   await bilalRow.locator('summary').click();
   await expect(bilalRow.getByRole('definition')).toHaveText(['₹1,200.00', '₹2,150.00']);
 
-  await page.getByRole('link', { name: 'FairShare home' }).first().click();
-  await expect(page.getByText('You’re owed ₹1,850.00', { exact: true })).toBeVisible();
-  const people = page.getByRole('main').getByRole('region', { name: 'People' });
+  // Home: "Home" in the desktop sidebar, the "Groups" tab on phones.
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: /^(Home|Groups)$/ })
+    .click();
+  await expect(page.getByRole('region', { name: 'Overall' })).toContainText(
+    /Overall, you’re owed\s*₹1,850.00/,
+  );
+  // People and what we owe each other are on the Friends tab (DESIGN_SPEC §6.1).
+  await page.goto('/friends');
+  const people = page.getByRole('main');
   await expect(people.getByRole('link', { name: /Bilal/ })).toContainText('owes you ₹950.00');
   await expect(people.getByRole('link', { name: /Dev/ })).toContainText('owes you ₹750.00');
 
@@ -116,16 +127,23 @@ test('adds an expense from Home, and the balances follow without a reload', asyn
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
   await expect(page).toHaveURL(new RegExp(`/groups/${group.id}`));
-  await expect(page.getByRole('link', { name: /you’re owed ₹450.00/ })).toBeVisible();
-
-  await page.getByRole('link', { name: 'FairShare home' }).first().click();
-  await expect(page.getByText('You’re owed ₹450.00', { exact: true })).toBeVisible();
+  // The group page's own balance line (the desktop sidebar's group row says it too).
   await expect(
-    page
-      .getByRole('main')
-      .getByRole('region', { name: 'People' })
-      .getByRole('link', { name: /Farah/ }),
-  ).toContainText('owes you ₹450.00');
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/i }),
+  ).toBeVisible();
+
+  // Home: "Home" in the desktop sidebar, the "Groups" tab on phones.
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: /^(Home|Groups)$/ })
+    .click();
+  await expect(page.getByRole('region', { name: 'Overall' })).toContainText(
+    /Overall, you’re owed\s*₹450.00/,
+  );
+  await page.goto('/friends');
+  await expect(page.getByRole('main').getByRole('link', { name: /Farah/ })).toContainText(
+    'owes you ₹450.00',
+  );
 });
 
 test('adds an expense with a friend from their page', async ({ page }) => {
@@ -142,9 +160,13 @@ test('adds an expense with a friend from their page', async ({ page }) => {
   await form.getByLabel('Amount').fill('300');
   await form.getByLabel('Description').fill('Movie');
   // A friendship takes my default currency, which follows the browser's locale (USD here).
-  await expect(form.getByRole('button', { name: /Split equally between all 2/ })).toContainText(
-    '$150.00 each',
-  );
+  // Phones: the per-person card ("$150.00 / person"); desktop: the split editor beside the form.
+  await expect(
+    form
+      .getByText(/^\$150\.00( \/ person)?$/)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
   await form.getByRole('button', { name: 'Save' }).click();
 
   // Back on Hari's page, with the expense and the new balance.

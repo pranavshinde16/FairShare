@@ -2,6 +2,7 @@ import { ApiError } from '@fairshare/api-client';
 import type { Transaction } from '@fairshare/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { RotateCw } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { ErrorState } from '../../components/common/error-state';
 import { Button } from '../../components/ui/button';
@@ -58,7 +59,7 @@ function EditTransaction() {
     if (tx.error) return null;
     const loadError = me.error ?? group.error ?? currencies.error;
     return (
-      <Dialog open size="full" title="Edit" onClose={close}>
+      <Dialog open size="full" width="xl" title="Edit" onClose={close}>
         {loadError ? (
           <ErrorState
             error={loadError}
@@ -129,6 +130,8 @@ function EditTransaction() {
       <Dialog
         open={!conflict}
         size="full"
+        width="xl"
+        reserveAction
         title="Edit expense"
         description={`Last changed by ${lastChange.name}`}
         onClose={close}
@@ -143,6 +146,7 @@ function EditTransaction() {
           symbol={currency.symbol}
           initial={draftFromTransaction(data, currency.minorUnits)}
           submitLabel="Save changes"
+          onCancel={close}
           busy={busy}
           error={error}
           onSubmit={(body) => {
@@ -171,11 +175,9 @@ function EditTransaction() {
         description="Your changes weren’t saved, so nothing of theirs was lost. Reload to see their version, then make your change again."
         onClose={close}
       >
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={close}>
-            Cancel
-          </Button>
+        <div className="flex flex-col gap-2.5">
           <Button
+            size="lg"
             onClick={() => {
               void Promise.all([
                 tx.refetch(),
@@ -184,7 +186,11 @@ function EditTransaction() {
               void queryClient.invalidateQueries({ queryKey: ['transaction', id, 'history'] });
             }}
           >
+            <RotateCw aria-hidden strokeWidth={1.9} />
             Reload
+          </Button>
+          <Button size="lg" variant="secondary" onClick={close}>
+            Cancel
           </Button>
         </div>
       </Dialog>

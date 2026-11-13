@@ -1,59 +1,152 @@
 @import 'tailwindcss';
 
-/* Dark mode follows a class on <html> (set by public/theme.js and src/lib/theme.ts). */
+/*
+ * Design tokens: Direction 04 "Classic" (design/fairshare-classic/tokens.css, DESIGN_SPEC.md §1).
+ * Manrope is self-hosted (imported in main.tsx from @fontsource-variable/manrope): the CSP allows
+ * fonts and styles from our own origin only, so the hand-off's Google Fonts @import is left out.
+ */
+
+/* Dark mode follows a class on <html> (set by public/theme.js and src/lib/theme.ts from the
+   Appearance setting: System / Light / Dark). */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens. Components use them through Tailwind (bg-background, text-muted-foreground…). */
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --background: #f6f8f7;
   --card: #ffffff;
-  --muted: #f1f5f9;
-  --muted-foreground: #566476;
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --primary: #0f766e;
+  --muted: #eef2f1;
+  --foreground: #101615;
+  --muted-foreground: #56635f;
+  --border: #e1e7e5;
+  --primary: #0e7c6b;
   --primary-foreground: #ffffff;
-  --accent: #f0fdfa;
-  --accent-foreground: #115e59;
-  --ring: #14b8a6;
-  --destructive: #b91c1c;
+  --accent: #ddf1ec;
+  --owed: #0b7a5f;
+  --owed-muted: #e1f4ee;
+  --owe: #c2410c;
+  --owe-muted: #fdebdd;
+  --destructive: #b42318;
   --destructive-foreground: #ffffff;
+  --destructive-muted: #fdecea;
+  --overlay: rgba(16, 22, 21, 0.45);
+  --focus-ring: rgba(14, 124, 107, 0.22);
+  --unread: #eef8f5;
+  --elevation-card: 0 1px 2px rgba(16, 22, 21, 0.05), 0 6px 20px rgba(16, 22, 21, 0.06);
+  --elevation-pop: 0 24px 64px rgba(16, 22, 21, 0.22);
+  --elevation-fab: 0 8px 24px rgba(14, 124, 107, 0.32);
+  --nav: rgba(255, 255, 255, 0.88);
+  --tile-gold: #ffefd1;
+  --tile-gold-foreground: #8a5200;
+  --tile-blue: #e3ecff;
+  --tile-blue-foreground: #2f55c9;
+  --tile-pink: #fce4ee;
+  --tile-pink-foreground: #a62659;
+  --tile-green: #dff3e6;
+  --tile-green-foreground: #1f7a44;
+  --input: var(--border);
+  --ring: var(--primary);
+  --popover: var(--card);
+  /* Added to the hand-off: text on the tinted surfaces. --primary on --accent (4.34:1) and --owe on
+     --owe-muted (4.46:1) fall just under WCAG AA's 4.5:1 (spec §7), so the text is ~3% darker. */
+  --accent-foreground: #0d7767;
+  --owe-muted-foreground: #be400c;
 }
 
 .dark {
-  --background: #0b1120;
-  --foreground: #e2e8f0;
-  --card: #111827;
-  --muted: #1e293b;
-  --muted-foreground: #aab6c8;
-  --border: #1f2937;
-  --input: #334155;
+  --background: #0c100f;
+  --card: #141918;
+  --muted: #1d2422;
+  --foreground: #e9efee;
+  --muted-foreground: #93a19e;
+  --border: #25302d;
   --primary: #2dd4bf;
-  --primary-foreground: #042f2e;
-  --accent: #134e4a;
-  --accent-foreground: #ccfbf1;
-  --ring: #2dd4bf;
-  --destructive: #f87171;
-  --destructive-foreground: #450a0a;
+  --primary-foreground: #032620;
+  --accent: #123c35;
+  --owed: #3dd9ae;
+  --owed-muted: #0f2e27;
+  --owe: #ff9459;
+  --owe-muted: #3a1f0f;
+  --destructive: #f97066;
+  --destructive-foreground: #2a0a08;
+  --destructive-muted: #3a1513;
+  --overlay: rgba(0, 0, 0, 0.62);
+  --focus-ring: rgba(45, 212, 191, 0.28);
+  --unread: #10231f;
+  --elevation-card: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --elevation-pop: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --elevation-fab: 0 8px 28px rgba(45, 212, 191, 0.25);
+  --nav: rgba(20, 25, 24, 0.88);
+  --tile-gold: #3a2a0b;
+  --tile-gold-foreground: #f7b955;
+  --tile-blue: #16254a;
+  --tile-blue-foreground: #8eaeff;
+  --tile-pink: #3d1426;
+  --tile-pink-foreground: #ff8db8;
+  --tile-green: #12301e;
+  --tile-green-foreground: #6fdb98;
+  --input: var(--border);
+  --ring: var(--primary);
+  --popover: var(--card);
+  --accent-foreground: var(--primary);
+  --owe-muted-foreground: var(--owe);
 }
 
 @theme inline {
+  --font-sans: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
+  /* shadcn/ui semantic colours */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* FairShare money + UI colours */
+  --color-owed: var(--owed);
+  --color-owed-muted: var(--owed-muted);
+  --color-owe: var(--owe);
+  --color-owe-muted: var(--owe-muted);
+  --color-owe-muted-foreground: var(--owe-muted-foreground);
+  --color-destructive-muted: var(--destructive-muted);
+  --color-overlay: var(--overlay);
+  --color-unread: var(--unread);
+  --color-nav: var(--nav);
+  --color-focus-ring: var(--focus-ring);
+
+  /* Avatar / group tiles */
+  --color-tile-gold: var(--tile-gold);
+  --color-tile-gold-foreground: var(--tile-gold-foreground);
+  --color-tile-blue: var(--tile-blue);
+  --color-tile-blue-foreground: var(--tile-blue-foreground);
+  --color-tile-pink: var(--tile-pink);
+  --color-tile-pink-foreground: var(--tile-pink-foreground);
+  --color-tile-green: var(--tile-green);
+  --color-tile-green-foreground: var(--tile-green-foreground);
+
+  /* Radius scale (px values used in the designs) */
+  --radius-sm: 8px; /* small chips inside inputs */
+  --radius-md: 12px; /* compact buttons, chips, icon buttons */
+  --radius-lg: 14px; /* inputs, standard buttons, tiles 48px */
+  --radius-xl: 20px; /* cards and list cards */
+  --radius-2xl: 24px; /* sheets, dialogs, invite card */
+
+  /* Elevation */
+  --shadow-card: var(--elevation-card);
+  --shadow-pop: var(--elevation-pop);
+  --shadow-fab: var(--elevation-fab);
 }
 
 @layer base {
@@ -70,6 +163,8 @@
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
   }
 }

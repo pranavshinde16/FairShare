@@ -65,11 +65,16 @@ function setup(initial: ExpenseDraft = blank) {
       onSubmit={onSubmit}
     />,
   );
-  const save = screen.getByRole('button', { name: 'Save' });
-  const summary = screen.getByRole('button', { name: /^Paid by/ });
+  // Two Save buttons, both the form's submit: the phone header's and desktop's footer (only one
+  // shows at a time; jsdom has no CSS). They share the form's state.
+  const save = screen.getAllByRole('button', { name: 'Save' })[0]!;
+  const summary = screen.getAllByRole('button', { name: /^Paid by/ })[0]!;
   const status = () => screen.getByRole('status');
   return { user, onSubmit, save, summary, status };
 }
+
+/** The card under the sentence: who's in and what each pays (m-add-expense). */
+const card = () => screen.getByRole('region', { name: 'Each person’s share' });
 
 async function typeBasics(user: ReturnType<typeof userEvent.setup>, amount = '1200') {
   await user.type(screen.getByLabelText('Amount'), amount);
@@ -81,7 +86,9 @@ describe('the expense form', () => {
     const { user, save, summary, onSubmit } = setup();
     expect(disabled(save)).toBe(true);
     await typeBasics(user);
-    expect(text(summary)).toContain('Paid by you · Split equally between all 3 · ₹400.00 each');
+    expect(text(summary)).toContain('Paid by you and split equally');
+    expect(text(card())).toContain('3 people');
+    expect(text(card())).toContain('₹400.00 / person');
     expect(disabled(save)).toBe(false);
     await user.click(save);
     expect(onSubmit.mock.calls[0]![0]).toEqual({
@@ -102,7 +109,7 @@ describe('the expense form', () => {
     await user.clear(screen.getByLabelText('Description'));
     expect(screen.getByText('Add a description.')).toBeTruthy();
     await user.type(screen.getByLabelText('Description'), 'Dinner');
-    await user.click(screen.getByRole('button', { name: /^Paid by/ }));
+    await user.click(screen.getAllByRole('button', { name: /^Paid by/ })[0]!);
     await user.click(screen.getByRole('button', { name: 'Nobody' }));
     expect(screen.getByText('Choose at least one person to split with.')).toBeTruthy();
   });
@@ -113,9 +120,11 @@ describe('the expense form', () => {
     await user.click(summary);
     expect(screen.getByText('₹33.33 each, and ₹0.01 more for 1 person')).toBeTruthy();
     await user.click(screen.getByRole('checkbox', { name: /Chitra/ }));
-    expect(text(summary)).toContain('Split equally between 2 of 3 · ₹50.00 each');
+    expect(text(card())).toContain('2 of 3 people');
+    expect(text(card())).toContain('₹50.00 / person');
     await user.click(screen.getByRole('button', { name: 'Split with everyone' }));
-    expect(text(summary)).toContain('Split equally between all 3');
+    expect(text(card())).toContain('3 people');
+    expect(text(card())).not.toContain('of 3');
   });
 });
 
@@ -124,14 +133,14 @@ describe('the split sheet', () => {
     const { user, save, summary, status, onSubmit } = setup();
     await typeBasics(user);
     await user.click(summary);
-    await user.click(screen.getByRole('button', { name: 'Exact amounts' }));
-    expect(screen.getByRole('button', { name: 'Exact amounts' }).getAttribute('aria-pressed')).toBe(
+    await user.click(screen.getByRole('button', { name: 'Exact split' }));
+    expect(screen.getByRole('button', { name: 'Exact split' }).getAttribute('aria-pressed')).toBe(
       'true',
     );
     expect(text(status())).toContain('All assigned');
-    expect(text(summary)).toContain('Split by exact amounts');
+    expect(text(summary)).toContain('split by exact amounts');
 
-    const asha = screen.getByLabelText('Asha (you)’s amount');
+    const asha = screen.getByLabelText('Asha (you)’s exact share');
     await user.clear(asha);
     await user.type(asha, '300');
     expect(text(status())).toContain('₹100.00 left to assign');
@@ -144,7 +153,7 @@ describe('the split sheet', () => {
     await user.clear(asha);
     await user.type(asha, '200');
     await user.selectOptions(screen.getByLabelText('Assign remaining to'), 'Bilal');
-    expect(value(screen.getByLabelText('Bilal’s amount'))).toBe('600.00');
+    expect(value(screen.getByLabelText('Bilal’s exact share'))).toBe('600.00');
     expect(text(status())).toContain('All assigned');
     await user.click(save);
     expect(onSubmit.mock.calls[0]![0].split).toEqual({
@@ -252,7 +261,7 @@ describe('the split sheet', () => {
     await user.click(save);
     const [body] = onSubmit.mock.calls[0]!;
     const expected = computeShares(body.amount, body.split, SEED);
-    await user.click(screen.getByRole('button', { name: /^Paid by/ }));
+    await user.click(screen.getAllByRole('button', { name: /^Paid by/ })[0]!);
     for (const line of expected) {
       const name = group.members.find((m) => m.user.id === line.userId)!.user.name;
       const row = screen.getByRole('checkbox', { name: new RegExp(name) }).closest('label')!;
@@ -337,7 +346,7 @@ describe('typed entry (Blueprint 8)', () => {
         onSubmit={onSubmit}
       />,
     );
-    return { user, onSubmit, save: screen.getByRole('button', { name: 'Save' }) };
+    return { user, onSubmit, save: screen.getAllByRole('button', { name: 'Save' })[0]! };
   }
 
   it('fills the form from a sentence, and saves it in one more tap', async () => {
@@ -345,9 +354,8 @@ describe('typed entry (Blueprint 8)', () => {
     await user.type(screen.getByLabelText('Type it'), 'I paid 900 for dinner with Chitra{Enter}');
     expect(value(screen.getByLabelText('Amount'))).toBe('900.00');
     expect(value(screen.getByLabelText('Description'))).toBe('Dinner');
-    expect(text(screen.getByRole('button', { name: /^Paid by/ }))).toContain(
-      'Split equally between 2 of 4 · ₹450.00 each',
-    );
+    expect(text(card())).toContain('2 of 4 people');
+    expect(text(card())).toContain('₹450.00 / person');
     // What the sentence filled is marked until it's edited.
     expect(screen.getByLabelText('Description').className).toContain('ring-primary/40');
     await user.type(screen.getByLabelText('Description'), ' out');
@@ -405,15 +413,15 @@ describe('typed entry (Blueprint 8)', () => {
     expect(value(screen.getByLabelText('Amount'))).toBe('950.00');
     expect(value(screen.getByLabelText('Description'))).toBe('lunch with Bilal Khan');
     expect(value(screen.getByLabelText('Pick a date'))).toBe('2026-11-10');
-    expect(text(screen.getByRole('button', { name: /^Paid by/ }))).toContain(
-      'Split equally between 2 of 4',
-    );
+    expect(text(card())).toContain('2 of 4 people');
   });
 
   it('reads a sentence handed over from Home as it opens', () => {
     entrySetup('Bilal Khan paid 300 for snacks');
     expect(value(screen.getByLabelText('Type it'))).toBe('Bilal Khan paid 300 for snacks');
-    expect(text(screen.getByRole('button', { name: /^Paid by/ }))).toContain('Paid by Bilal Khan');
+    expect(text(screen.getAllByRole('button', { name: /^Paid by/ })[0]!)).toContain(
+      'Paid by Bilal Khan',
+    );
     expect(screen.queryByText('Couldn’t fully understand. Please check the details.')).toBeNull();
   });
 });

@@ -19,7 +19,7 @@ test('deleting the account shows what’s unsettled, signs out, and the address 
   const email = newEmail('dana');
   await page.goto('/');
   await signIn(page, email);
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
   const group = await createGroup(page, 'Flat', ['Rahul']);
   const [me, rahul] = group.members.map((m) => m.user.id);
   // Rahul paid ₹600 for both of us: I owe him ₹300.
@@ -56,7 +56,7 @@ test('deleting the account shows what’s unsettled, signs out, and the address 
 
   // The same address again: a new account, with nothing in it.
   await signIn(page, email);
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
   expect(await (await page.request.get('/api/v1/groups')).json()).toEqual({ items: [] });
 });
 

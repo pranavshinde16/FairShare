@@ -1,6 +1,7 @@
 import { ApiError } from '@fairshare/api-client';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
+import { Link2Off } from 'lucide-react';
 import { ErrorState } from '../components/common/error-state';
 import { Logo } from '../components/common/logo';
 import { Skeleton } from '../components/common/skeleton';
@@ -25,21 +26,21 @@ function InvitePage() {
   let body;
   if (preview.error instanceof ApiError && preview.error.status === 404) {
     body = (
-      <Message title="This invite link doesn’t work">
+      <Message icon={Link2Off} title="This invite link doesn’t work">
         It may have been revoked, or the group closed. Ask for a new link.
       </Message>
     );
   } else if (preview.error) {
     body = <ErrorState error={preview.error} onRetry={() => void preview.refetch()} />;
   } else if (!preview.data || session.isPending) {
-    body = <Skeleton className="h-48 w-full rounded-xl" />;
+    body = <Skeleton className="h-72 w-full rounded-2xl" />;
   } else {
     body = <InviteView token={token} preview={preview.data} signedIn={!!session.data} />;
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-8 px-4 py-10">
-      <Logo className="text-lg" />
+    <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center gap-7 px-6 py-10 lg:px-0">
+      <Logo size="lg" />
       {body}
     </main>
   );

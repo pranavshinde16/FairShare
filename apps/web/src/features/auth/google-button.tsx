@@ -50,12 +50,15 @@ export function GoogleButton({ returnTo }: { returnTo?: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <Button variant="outline" loading={loading} onClick={() => void start()}>
+      <Button variant="secondary" size="lg" loading={loading} onClick={() => void start()}>
         {!loading && <GoogleMark />}
         Continue with Google
       </Button>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-muted px-3 py-2 text-sm text-destructive"
+        >
           {error}
         </p>
       )}

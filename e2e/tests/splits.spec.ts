@@ -7,7 +7,7 @@ import { expect, newEmail, signIn, test } from './fixtures';
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 async function createGroup(page: Page, members: string[]) {
@@ -35,6 +35,12 @@ async function addExpense(page: Page, groupId: string, amount: string, descripti
   return form;
 }
 
+/** Phones show the split editor full-screen; Done goes back to the form (desktop shows both). */
+async function backToForm(form: Locator) {
+  const done = form.getByRole('button', { name: 'Done' });
+  if (await done.isVisible()) await done.click();
+}
+
 /** The saved expense, read back from the API by the ID in the page's address. */
 async function saved(page: Page): Promise<Transaction> {
   const id = new URL(page.url()).pathname.split('/').pop()!;
@@ -53,7 +59,7 @@ test('a percent split: preview, save, the expense page, and edit reopen as enter
 
   await form.getByRole('button', { name: 'Percentages', exact: true }).click();
   // It starts from the equal split: 33.33 / 33.33 / 33.34 in some order.
-  await expect(form.getByRole('status')).toHaveText('All assigned');
+  await expect(form.getByRole('status')).toHaveText('All assigned · 100%');
   for (const [name, pct] of [
     ['Asha (you)', '50'],
     ['Bilal', '30'],
@@ -62,12 +68,15 @@ test('a percent split: preview, save, the expense page, and edit reopen as enter
     await form.getByLabel(`${name}’s percentage`).fill(pct!);
   }
   await expect(form.getByRole('status')).toHaveText('5% left to assign');
+  await backToForm(form);
   await expect(form.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await form.getByRole('button', { name: /^Paid by/ }).click();
   await form.getByLabel('Fill remainder').selectOption({ label: 'Chitra' });
   await expect(form.getByLabel('Chitra’s percentage')).toHaveValue('20');
   await expect(form.getByText('₹500.00', { exact: true })).toBeVisible();
+  await backToForm(form);
   await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText(
-    'Split by percentages',
+    'split by percentages',
   );
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
@@ -101,6 +110,7 @@ test('a percent split: preview, save, the expense page, and edit reopen as enter
   await expect(edit.getByLabel('Bilal’s percentage')).toHaveValue('30');
   await expect(edit.getByLabel('Chitra’s percentage')).toHaveValue('20');
   // Saving it unchanged changes nothing.
+  await backToForm(edit);
   await edit.getByRole('button', { name: 'Save changes' }).click();
   await expect(edit).toBeHidden();
   expect((await saved(page)).version).toBe(1);
@@ -123,12 +133,16 @@ test('two people paid: “Split payment equally”, and the balances follow', as
   await expect(form.getByLabel('What Farah paid')).toHaveValue('1500.00');
   await form.getByLabel('What Esha (you) paid').fill('2000');
   await form.getByLabel('What Farah paid').fill('1000');
+  await backToForm(form);
   await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText('Paid by 2 people');
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
 
   // ₹1,000 each: Esha paid 2,000 (+1,000), Farah 1,000 (0), Gopal nothing (−1,000).
-  await expect(page.getByRole('link', { name: /you’re owed ₹1,000.00/ })).toBeVisible();
+  // The group page's own balance line (the desktop sidebar's group row says it too).
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹1,000.00/i }),
+  ).toBeVisible();
   await page.getByRole('link', { name: /Fuel/ }).click();
   const payers = page.getByRole('region', { name: 'Paid by' }).getByRole('listitem');
   await expect(payers).toHaveCount(2);
@@ -158,6 +172,7 @@ test('what the form shows is what is saved, to the paisa (same seed)', async ({ 
       .filter({ has: page.getByRole('checkbox') });
     shown.set(member.user.id, (await amountIn(row).textContent())!);
   }
+  await backToForm(form);
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
   await page.getByRole('link', { name: /Snacks/ }).click();

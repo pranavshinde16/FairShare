@@ -11,12 +11,14 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-12 text-center">
-      <span className="inline-flex size-12 items-center justify-center rounded-full bg-accent text-accent-foreground">
-        <Icon aria-hidden className="size-6" />
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card/40 px-6 py-12 text-center">
+      <span className="inline-flex size-14 items-center justify-center rounded-[17px] bg-accent text-accent-foreground">
+        <Icon aria-hidden className="size-6" strokeWidth={1.9} />
       </span>
-      <h2 className="text-base font-semibold">{title}</h2>
-      {children && <div className="max-w-sm text-sm text-muted-foreground">{children}</div>}
+      <h2 className="text-lg leading-6 font-extrabold">{title}</h2>
+      {children && (
+        <div className="max-w-sm text-[15px] leading-[22px] text-muted-foreground">{children}</div>
+      )}
     </div>
   );
 }

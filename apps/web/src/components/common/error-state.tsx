@@ -5,10 +5,13 @@ import { Button } from '../ui/button';
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const requestId = errorRequestId(error);
   return (
-    <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border p-5">
-      <p className="text-sm">{errorMessage(error)}</p>
+    <div
+      role="alert"
+      className="flex flex-col items-start gap-3 rounded-xl border bg-card p-5 shadow-card"
+    >
+      <p className="text-[15px] leading-[22px] font-medium">{errorMessage(error)}</p>
       {onRetry && (
-        <Button variant="outline" size="sm" onClick={onRetry}>
+        <Button variant="secondary" size="sm" onClick={onRetry}>
           Retry
         </Button>
       )}

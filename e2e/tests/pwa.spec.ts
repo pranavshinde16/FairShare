@@ -7,7 +7,7 @@ import { expect, newEmail, signIn, test } from './fixtures';
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 // Offline, requests to the API fail, and the browser says so.

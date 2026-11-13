@@ -1,7 +1,8 @@
 import { ApiError } from '@fairshare/api-client';
 import type { Currency, NewMember, Profile } from '@fairshare/contracts';
-import { useNavigate } from '@tanstack/react-router';
-import { X } from 'lucide-react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { ChevronDown, X } from 'lucide-react';
+import { Avatar } from '../../components/common/avatar';
 import { useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -14,7 +15,8 @@ import { useCreateGroup } from './queries';
 
 type Chip = { key: string; member: NewMember; name: string };
 
-const currencyName = (() => {
+/** "Indian Rupee" for INR, in the browser's language: currency pickers show "INR · Indian Rupee". */
+export const currencyName = (() => {
   const names = new Intl.DisplayNames(undefined, { type: 'currency' });
   return (code: string) => names.of(code) ?? code;
 })();
@@ -61,77 +63,99 @@ export function CreateGroupForm({ me, currencies }: { me: Profile; currencies: C
     }
   }
 
+  const select =
+    'h-12 w-full appearance-none rounded-lg border bg-card pr-11 pl-3.5 text-base font-medium outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-focus-ring';
   return (
     <form
       noValidate
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-[18px] lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-5"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="group-name">Group name</Label>
-        <Input
-          id="group-name"
-          value={name}
-          autoFocus
-          placeholder="e.g. Goa Trip"
-          aria-invalid={nameError ? true : undefined}
-          aria-describedby={nameError ? 'group-name-error' : undefined}
-          onChange={(event) => setName(event.target.value)}
-        />
-        {nameError && (
-          <p id="group-name-error" className="text-sm text-destructive">
-            {nameError}
-          </p>
-        )}
+      {/* Desktop (d-new-group): the group in one card, its people in another. */}
+      <div className="flex flex-col gap-[18px] lg:rounded-xl lg:border lg:bg-card lg:p-5 lg:shadow-card">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="group-name">Group name</Label>
+          <Input
+            id="group-name"
+            value={name}
+            autoFocus
+            placeholder="e.g. Goa Trip"
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? 'group-name-error' : undefined}
+            onChange={(event) => setName(event.target.value)}
+          />
+          {nameError && (
+            <p id="group-name-error" className="text-[13px] leading-[18px] text-destructive">
+              {nameError}
+            </p>
+          )}
+        </div>
+
+        <EmojiPicker value={emoji} onChange={setEmoji} />
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="group-currency">Currency</Label>
+          <div className="relative">
+            <select
+              id="group-currency"
+              value={currency}
+              onChange={(event) => setCurrency(event.target.value)}
+              className={select}
+            >
+              {currencies.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} · {currencyName(c.code)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 right-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
+              strokeWidth={1.9}
+            />
+          </div>
+        </div>
       </div>
 
-      <EmojiPicker value={emoji} onChange={setEmoji} />
+      <div aria-hidden className="h-px bg-border lg:hidden" />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="group-currency">Currency</Label>
-        <select
-          id="group-currency"
-          value={currency}
-          onChange={(event) => setCurrency(event.target.value)}
-          className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 sm:text-sm"
-        >
-          {currencies.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.code} · {currencyName(c.code)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <section aria-labelledby="people-heading" className="flex flex-col gap-3">
-        <h2 id="people-heading" className="text-sm font-medium">
-          People <span className="font-normal text-muted-foreground">(you’re added as owner)</span>
-        </h2>
-        {chips.length > 0 && (
-          <ul className="flex flex-wrap gap-2">
-            {chips.map((chip) => (
-              <li
-                key={chip.key}
-                className="inline-flex h-9 items-center gap-1 rounded-full border bg-muted pr-1 pl-3 text-sm"
+      <section
+        aria-labelledby="people-heading"
+        className="flex flex-col gap-3 lg:rounded-xl lg:border lg:bg-card lg:p-5 lg:shadow-card"
+      >
+        <div>
+          <h2 id="people-heading" className="text-[13px] font-bold lg:text-base">
+            People
+          </h2>
+          <p className="text-[13px] leading-5 text-muted-foreground">You’re added as the owner.</p>
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          <li className="inline-flex h-10 items-center gap-2 rounded-full bg-muted pr-3 pl-1 text-sm font-bold">
+            <Avatar name={me.name} src={me.avatarUrl} seed={me.id} size={32} />
+            You · owner
+          </li>
+          {chips.map((chip) => (
+            <li
+              key={chip.key}
+              className="inline-flex h-10 items-center gap-1 rounded-full bg-muted pr-1 pl-3.5 text-sm font-bold"
+            >
+              {chip.name}
+              <button
+                type="button"
+                aria-label={`Remove ${chip.name}`}
+                className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-card hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
+                onClick={() => setChips(chips.filter((c) => c.key !== chip.key))}
               >
-                {chip.name}
-                <button
-                  type="button"
-                  aria-label={`Remove ${chip.name}`}
-                  className="inline-flex size-7 items-center justify-center rounded-full hover:bg-background"
-                  onClick={() => setChips(chips.filter((c) => c.key !== chip.key))}
-                >
-                  <X aria-hidden className="size-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+                <X aria-hidden className="size-4" strokeWidth={1.9} />
+              </button>
+            </li>
+          ))}
+        </ul>
         {duplicateNames.size > 0 && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13px] leading-5 text-muted-foreground">
             Two people have the same name. That’s fine if they really are different people.
           </p>
         )}
@@ -144,14 +168,32 @@ export function CreateGroupForm({ me, currencies }: { me: Profile; currencies: C
         />
       </section>
 
-      {create.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {create.error instanceof ApiError ? errorMessage(create.error) : 'Something went wrong.'}
-        </p>
-      )}
-      <Button type="submit" size="lg" loading={create.isPending}>
-        Create group
-      </Button>
+      {/* The bottom bar: full width on phones (m-new-group), Cancel and Create on desktop. */}
+      <div className="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-2 border-t bg-background px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:static lg:col-span-2 lg:pb-0 lg:mx-0 lg:flex-row lg:items-center lg:border-0 lg:bg-transparent lg:px-0 lg:pt-1">
+        {create.error && (
+          <p
+            role="alert"
+            className="rounded-md bg-destructive-muted px-3 py-2 text-sm text-destructive lg:flex-1"
+          >
+            {create.error instanceof ApiError
+              ? errorMessage(create.error)
+              : 'Something went wrong.'}
+          </p>
+        )}
+        <div className="flex gap-2.5 lg:ml-auto">
+          <Button asChild variant="secondary" size="md" className="hidden lg:inline-flex">
+            <Link to="/">Cancel</Link>
+          </Button>
+          <Button
+            type="submit"
+            size="lg"
+            className="flex-1 lg:h-12 lg:flex-none"
+            loading={create.isPending}
+          >
+            Create group
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }

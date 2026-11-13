@@ -1,5 +1,4 @@
 import type { Group, UpdateSettlement } from '@fairshare/contracts';
-import { formatMoney, toDecimalString } from '@fairshare/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Skeleton } from '../../components/common/skeleton';
@@ -7,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { formatAmount, formatAmountInput } from '../../lib/money';
 import { uuidv7 } from '../../lib/ids';
 import { afterTransactionChange } from '../../lib/invalidation';
 import { toast } from '../../lib/toast';
@@ -69,8 +69,7 @@ export function SettleDialog({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const money = (amount: number) =>
-    formatMoney(amount, minorUnits, Intl, { locale: navigator.language, currency: group.currency });
+  const money = (amount: number) => formatAmount(amount, group.currency, minorUnits);
   const nameOf = (userId: string) =>
     group.members.find((m) => m.user.id === userId)?.user.name ?? 'Someone';
 
@@ -91,6 +90,7 @@ export function SettleDialog({
       <Dialog
         open={open && question === null}
         size="full"
+        width="lg"
         title={title}
         description={description}
         onClose={onClose}
@@ -107,6 +107,7 @@ export function SettleDialog({
           submitLabel={submitLabel}
           busy={busy}
           error={error}
+          onCancel={onClose}
           onSubmit={(body) => {
             const over = overpayment(nets, body.fromUserId, body.toUserId, body.amount);
             if (!over) {
@@ -129,11 +130,9 @@ export function SettleDialog({
         }
         onClose={() => setQuestion(null)}
       >
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => setQuestion(null)}>
-            Change amount
-          </Button>
+        <div className="flex flex-col gap-2.5">
           <Button
+            size="lg"
             onClick={() => {
               const body = question!.body;
               setQuestion(null);
@@ -141,6 +140,9 @@ export function SettleDialog({
             }}
           >
             {confirmLabel}
+          </Button>
+          <Button size="lg" variant="secondary" onClick={() => setQuestion(null)}>
+            Change amount
           </Button>
         </div>
       </Dialog>
@@ -183,7 +185,7 @@ export function NewSettlementDialog({
   const currency = currencies.data?.items.find((c) => c.code === group.data?.currency);
   if (!group.data || !me.data || !balances.data || !currency) {
     return (
-      <Dialog open size="full" title="Record a payment" onClose={onClose}>
+      <Dialog open size="full" width="lg" title="Record a payment" onClose={onClose}>
         {(group.error ?? balances.error) ? (
           <p role="alert" className="text-sm text-destructive">
             {errorMessage(group.error ?? balances.error)}
@@ -206,11 +208,7 @@ export function NewSettlementDialog({
   const amount = suggestedAmount(transfers, pair.from, pair.to);
   const nameOf = (userId: string) =>
     userId === meId ? 'You' : (data.members.find((m) => m.user.id === userId)?.user.name ?? '');
-  const money = (value: number) =>
-    formatMoney(value, currency.minorUnits, Intl, {
-      locale: navigator.language,
-      currency: data.currency,
-    });
+  const money = (value: number) => formatAmount(value, data.currency, currency.minorUnits);
 
   return (
     <SettleDialog
@@ -223,7 +221,7 @@ export function NewSettlementDialog({
       initial={{
         fromUserId: pair.from,
         toUserId: pair.to,
-        amountText: amount === null ? '' : toDecimalString(amount, currency.minorUnits),
+        amountText: amount === null ? '' : formatAmountInput(amount, currency.minorUnits),
         occurredOn: localDate(),
         method: defaultMethod(data.currency),
         reference: '',

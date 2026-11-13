@@ -30,8 +30,8 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#0f766e',
+        background_color: '#f6f8f7',
+        theme_color: '#0e7c6b',
         icons: [
           { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -53,6 +53,11 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // Never inline assets as data: URIs (Vite's default for files under 4 KB): the CSP allows
+    // fonts and images from our own origin only, so an inlined font subset would be blocked.
+    assetsInlineLimit: 0,
+  },
   server: {
     port: 5173,
     // In development the API runs separately; proxying keeps everything same-origin,

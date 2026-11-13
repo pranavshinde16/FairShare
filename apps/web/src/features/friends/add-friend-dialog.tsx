@@ -40,6 +40,7 @@ export function AddFriendDialog({ open, onClose }: { open: boolean; onClose: () 
       )}
       <PersonPicker
         submitLabel="Add friend"
+        list
         busy={add.isPending}
         onPick={(friend) => add.mutate(friend)}
       />

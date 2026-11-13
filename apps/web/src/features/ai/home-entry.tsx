@@ -98,17 +98,24 @@ export function HomeEntry({ home, me }: { home: Home; me: { id: string; name: st
         void go();
       }}
     >
-      <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
-        <Sparkles aria-hidden className="size-4 shrink-0 text-primary" />
+      <div className="flex h-[50px] items-center gap-2 rounded-lg border bg-card pr-1 pl-3.5 shadow-card focus-within:border-primary focus-within:ring-3 focus-within:ring-focus-ring">
+        <Sparkles aria-hidden className="size-[18px] shrink-0 text-primary" strokeWidth={1.9} />
         <input
           aria-label="Type an expense"
           autoComplete="off"
           placeholder="Type it: ‘Dinner 2400 with Rahul & Amit’"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className="h-12 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm"
+          className="h-full min-w-0 flex-1 bg-transparent text-base font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground sm:text-sm"
         />
-        <Button type="submit" size="sm" variant="ghost" disabled={!text.trim()} loading={busy}>
+        <Button
+          type="submit"
+          size="sm"
+          variant="tint"
+          className="h-10 rounded-[10px]"
+          disabled={!text.trim()}
+          loading={busy}
+        >
           Add
         </Button>
       </div>

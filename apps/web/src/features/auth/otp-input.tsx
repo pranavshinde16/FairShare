@@ -41,10 +41,10 @@ export function OtpInput({
           <div
             key={i}
             className={cn(
-              'flex h-14 items-center justify-center rounded-lg border border-input bg-background text-2xl font-semibold tabular-nums transition-shadow',
-              focused && i === active && 'border-ring ring-2 ring-ring/40',
+              'flex h-14 items-center justify-center rounded-lg border bg-card text-2xl font-extrabold tabular-nums transition-shadow',
+              focused && i === active && 'border-primary ring-3 ring-focus-ring',
               invalid && 'border-destructive',
-              props.disabled && 'opacity-50',
+              props.disabled && 'opacity-45',
             )}
           >
             {value[i] ?? ''}

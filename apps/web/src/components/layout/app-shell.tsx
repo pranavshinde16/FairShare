@@ -1,199 +1,345 @@
+import type { Home } from '@fairshare/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { Link, type LinkProps } from '@tanstack/react-router';
-import { Activity, House, Plus, type LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Link, useRouterState, type LinkProps } from '@tanstack/react-router';
+import {
+  Activity,
+  Bell,
+  House,
+  Plus,
+  ReceiptText,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { unreadActivityQuery } from '../../features/activity/queries';
 import { homeQuery } from '../../features/balances/queries';
+import { useGroupSummaries } from '../../features/balances/summaries';
+import { ExpenseTargetPicker } from '../../features/expenses/expense-target-picker';
+import { useNewExpenseShortcut } from '../../features/expenses/use-new-expense-shortcut';
+import { AddFriendDialog } from '../../features/friends/add-friend-dialog';
 import { meQuery } from '../../features/profile/queries';
-import { Avatar } from '../common/avatar';
-import { Logo } from '../common/logo';
-import { Skeleton } from '../common/skeleton';
+import { useFormatMoney } from '../../lib/money';
+import { groupWords, personWords, TONE_TEXT } from '../../lib/money-words';
 import { cn } from '../../lib/utils';
-
-const NAV: { to: LinkProps['to']; label: string; icon: LucideIcon }[] = [
-  { to: '/', label: 'Home', icon: House },
-  { to: '/activity', label: 'Activity', icon: Activity },
-];
+import { Avatar } from '../common/avatar';
+import { Spinner } from '../common/spinner';
+import { GroupTile } from '../common/tiles';
+import { buttonVariants } from '../ui/button';
+import { useAddExpenseAction } from './add-expense-action';
+import { LogoMark } from '../common/logo';
 
 /**
- * The signed-in layout (Blueprint 7.1). Below 768px: a header, one column and a bottom tab bar.
- * From 768px: a sidebar with navigation, groups and people, and the main column.
+ * The signed-in layout (DESIGN_SPEC §2). Below `lg` (1024px): one column, a frosted bottom tab bar
+ * (Groups · Friends · Activity · Account) and, on the pages that ask for it, the floating "Add
+ * expense" button. From `lg`: a top bar (logo · Add expense · Activity · avatar), a sidebar with
+ * the navigation and the groups and friends with their balances, and the main area.
  */
 export function AppShell({ children }: { children: ReactNode }) {
+  const home = useQuery(homeQuery);
+  const action = useAddExpenseAction();
+  const [picking, setPicking] = useState(false);
+  const [addingFriend, setAddingFriend] = useState(false);
+  // Create flows are full-screen on phones (DESIGN_SPEC §2): no tab bar under New group.
+  const createFlow = useRouterState({ select: (s) => s.location.pathname === '/groups/new' });
+  // The page's own "Add expense" (its group's form), else "Who is it with?".
+  // Without the page's own action, the picker needs Home's groups and people first.
+  const ready = Boolean(action?.run) || home.data !== undefined;
+  const addExpense = () => {
+    if (action?.run) action.run();
+    else if (home.data) setPicking(true);
+  };
+  // The desktop shortcut (Blueprint 7.1): "n" does the same, on the pages that offer it.
+  useNewExpenseShortcut(() => {
+    if (action && !action.busy) addExpense();
+  });
+
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr]">
-      <Sidebar />
-      <MobileHeader />
-      <main className="mx-auto w-full max-w-3xl px-4 pt-6 pb-28 md:px-8 md:pt-10 md:pb-10">
-        {children}
-      </main>
-      <BottomTabs />
+    <div className="min-h-dvh bg-background">
+      <TopBar onAddExpense={addExpense} busy={action?.busy ?? false} ready={ready} />
+      <div className="lg:flex">
+        <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-[264px] shrink-0 flex-col gap-0.5 overflow-y-auto border-r bg-card px-3 pt-5 pb-8 lg:flex">
+          <nav aria-label="Main" className="flex flex-col gap-0.5">
+            <SidebarLink to="/" icon={House} label="Home" exact />
+            <SidebarLink to="/activity" icon={Activity} label="Activity" badge />
+            <SidebarLink to="/settings" icon={UserRound} label="Account" />
+          </nav>
+          <SidebarGroups home={home.data} />
+          <SidebarFriends home={home.data} onAdd={() => setAddingFriend(true)} />
+        </aside>
+        <main
+          className={cn(
+            'min-w-0 flex-1 px-4 pt-3 lg:px-8 lg:pt-7 lg:pb-14',
+            createFlow ? 'pb-0' : 'pb-[calc(10rem+env(safe-area-inset-bottom))]',
+          )}
+        >
+          {children}
+        </main>
+      </div>
+      {action && (
+        <button
+          type="button"
+          aria-label="Add expense"
+          disabled={action.busy || !ready}
+          onClick={addExpense}
+          className="fixed right-4 bottom-[calc(94px+env(safe-area-inset-bottom))] z-20 inline-flex h-14 items-center gap-2 rounded-[18px] bg-primary px-5 text-[15px] font-bold text-primary-foreground shadow-fab outline-none focus-visible:ring-3 focus-visible:ring-focus-ring focus-visible:outline-1 focus-visible:outline-primary disabled:opacity-45 lg:hidden"
+        >
+          {action.busy ? (
+            <Spinner className="size-5" />
+          ) : (
+            <ReceiptText aria-hidden className="size-5" strokeWidth={1.9} />
+          )}
+          Add expense
+        </button>
+      )}
+      {!createFlow && <TabBar />}
+      {home.data && (
+        <ExpenseTargetPicker open={picking} onClose={() => setPicking(false)} home={home.data} />
+      )}
+      <AddFriendDialog open={addingFriend} onClose={() => setAddingFriend(false)} />
     </div>
   );
 }
 
-function Sidebar() {
-  return (
-    <aside className="sticky top-0 hidden h-dvh flex-col gap-6 overflow-y-auto border-r bg-card p-4 md:flex">
-      <Link to="/" className="px-2 pt-1" aria-label="FairShare home">
-        <Logo />
-      </Link>
-      <nav aria-label="Main" className="flex flex-col gap-1">
-        {NAV.map(({ to, label, icon: Icon }) => (
-          <Link
-            key={label}
-            to={to}
-            activeOptions={{ exact: to === '/' }}
-            className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium"
-            // Colours only in one state or the other: both at once, the muted text would win over
-            // the accent's and fail contrast on it.
-            inactiveProps={{ className: inactiveLink }}
-            activeProps={{ className: activeLink }}
-          >
-            <Icon aria-hidden className="size-4" />
-            {label}
-            {to === '/activity' && <UnreadBadge className="ml-auto" />}
-          </Link>
-        ))}
-      </nav>
-      <SidebarGroups />
-      <SidebarPeople />
-      <div className="mt-auto">
-        <AccountLink />
-      </div>
-    </aside>
-  );
-}
+/** Focus ring shared by the shell's links and buttons. */
+const focusRing =
+  'outline-none focus-visible:ring-3 focus-visible:ring-focus-ring focus-visible:outline-1 focus-visible:outline-primary';
 
-const sidebarLink = 'flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm';
-const inactiveLink = 'text-muted-foreground hover:bg-muted hover:text-foreground';
-const activeLink = 'bg-accent text-accent-foreground';
-
-function SidebarSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section aria-label={title} className="flex min-h-0 flex-col gap-1">
-      <h2 className="px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function SidebarGroups() {
-  const home = useQuery(homeQuery);
-  return (
-    <SidebarSection title="Groups">
-      {home.data?.groups.length === 0 && (
-        <p className="px-3 text-sm text-muted-foreground">No groups yet.</p>
-      )}
-      <ul className="flex flex-col">
-        {home.data?.groups.map(({ group }) => (
-          <li key={group.id}>
-            <Link
-              to="/groups/$groupId"
-              params={{ groupId: group.id }}
-              className={sidebarLink}
-              inactiveProps={{ className: inactiveLink }}
-              activeProps={{ className: activeLink }}
-            >
-              <span aria-hidden className="w-5 text-center">
-                {group.emoji ?? '•'}
-              </span>
-              <span className="truncate">{group.name}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <Link to="/groups/new" className={`${sidebarLink} ${inactiveLink}`}>
-        <Plus aria-hidden className="size-4" />
-        New group
-      </Link>
-    </SidebarSection>
-  );
-}
-
-function SidebarPeople() {
-  const home = useQuery(homeQuery);
-  return (
-    <SidebarSection title="People">
-      {home.data?.people.length === 0 && (
-        <p className="px-3 text-sm text-muted-foreground">No friends yet.</p>
-      )}
-      <ul className="flex flex-col">
-        {home.data?.people.map(({ user }) => (
-          <li key={user.id}>
-            <Link
-              to="/friends/$userId"
-              params={{ userId: user.id }}
-              className={sidebarLink}
-              inactiveProps={{ className: inactiveLink }}
-              activeProps={{ className: activeLink }}
-            >
-              <Avatar
-                name={user.name}
-                src={user.avatarUrl}
-                size="sm"
-                className="size-6 text-[10px]"
-              />
-              <span className="truncate">{user.name}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </SidebarSection>
-  );
-}
-
-/** The signed-in person, linking to settings. */
-function AccountLink() {
+function TopBar({
+  onAddExpense,
+  busy,
+  ready,
+}: {
+  onAddExpense: () => void;
+  busy: boolean;
+  ready: boolean;
+}) {
   const me = useQuery(meQuery);
   return (
-    <Link
-      to="/settings"
-      className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted"
-      activeProps={{ className: 'bg-muted' }}
-    >
-      {me.data ? (
-        <>
-          <Avatar name={me.data.name} src={me.data.avatarUrl} size="sm" />
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-medium">{me.data.name}</span>
-            <span className="truncate text-xs text-muted-foreground">Settings</span>
-          </span>
-        </>
-      ) : (
-        <>
-          <Skeleton className="size-8 rounded-full" />
-          <Skeleton className="h-4 w-28" />
-        </>
-      )}
-    </Link>
-  );
-}
-
-function MobileHeader() {
-  const me = useQuery(meQuery);
-  return (
-    <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur md:hidden">
-      <Link to="/" aria-label="FairShare home">
-        <Logo />
+    <header className="sticky top-0 z-30 hidden h-16 items-center gap-3 border-b bg-card px-6 lg:flex">
+      <Link
+        to="/"
+        aria-label="FairShare home"
+        className={cn('inline-flex items-center gap-2.5 rounded-md', focusRing)}
+      >
+        <LogoMark />
+        <span className="text-[19px] font-extrabold tracking-[-0.02em]">FairShare</span>
       </Link>
-      <Link to="/settings" aria-label="Settings" className="rounded-full p-1">
+      <span className="flex-1" />
+      <button
+        type="button"
+        disabled={busy || !ready}
+        onClick={onAddExpense}
+        className={cn(buttonVariants({ size: 'default' }), 'rounded-md px-[18px]')}
+      >
+        {busy ? <Spinner /> : <ReceiptText aria-hidden strokeWidth={1.9} />}
+        Add expense
+      </button>
+      <Link
+        to="/activity"
+        className={cn(
+          'relative inline-flex size-11 items-center justify-center rounded-full text-foreground hover:bg-muted',
+          focusRing,
+        )}
+      >
+        <Bell aria-hidden className="size-5" strokeWidth={1.9} />
+        <span className="sr-only">Activity</span>
+        <UnreadBadge className="absolute top-[5px] right-[3px]" />
+      </Link>
+      <Link to="/settings" aria-label="Account" className={cn('rounded-full', focusRing)}>
         {me.data ? (
-          <Avatar name={me.data.name} src={me.data.avatarUrl} size="sm" />
+          <Avatar name={me.data.name} src={me.data.avatarUrl} seed={me.data.id} size={40} />
         ) : (
-          <Skeleton className="size-8 rounded-full" />
+          <span className="block size-10 rounded-full bg-muted" />
         )}
       </Link>
     </header>
   );
 }
 
+function SidebarLink({
+  to,
+  icon: Icon,
+  label,
+  exact = false,
+  badge = false,
+}: {
+  to: LinkProps['to'];
+  icon: LucideIcon;
+  label: string;
+  exact?: boolean;
+  badge?: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      activeOptions={{ exact }}
+      className={cn('flex min-h-11 items-center gap-2.5 rounded-md px-3 text-[15px]', focusRing)}
+      // Colours only in one state or the other: both at once, the muted text would win over the
+      // accent's and fail contrast on it.
+      inactiveProps={{ className: 'font-semibold text-foreground hover:bg-muted' }}
+      activeProps={{ className: 'bg-accent font-bold text-accent-foreground' }}
+    >
+      <Icon aria-hidden className="size-5" strokeWidth={1.9} />
+      {label}
+      {badge && <UnreadBadge className="ml-auto" />}
+    </Link>
+  );
+}
+
+function SidebarSection({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-label={title} className="mt-[18px] flex flex-col gap-0.5">
+      <div className="mb-0.5 flex items-center justify-between pl-3">
+        <h2 className="text-xs font-bold tracking-[0.06em] text-muted-foreground uppercase">
+          {title}
+        </h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+const sidebarRow = cn('flex min-h-[52px] items-center gap-2.5 rounded-md px-3 py-1.5', focusRing);
+const sidebarAdd = cn(
+  'inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground',
+  focusRing,
+);
+
+/** A row's name and its balance line ("you’re owed ₹5,550.00", "no expenses yet"). */
+function RowText({ name, line }: { name: string; line: ReactNode }) {
+  return (
+    <span className="flex min-w-0 flex-1 flex-col">
+      <span className="truncate text-sm font-semibold">{name}</span>
+      <span className="text-xs font-semibold whitespace-nowrap tabular-nums">{line}</span>
+    </span>
+  );
+}
+
+function SidebarGroups({ home }: { home: Home | undefined }) {
+  const format = useFormatMoney();
+  const groups = home?.groups ?? [];
+  const summaries = useGroupSummaries(groups.map((g) => g.group));
+  return (
+    <SidebarSection
+      title="Groups"
+      action={
+        <Link to="/groups/new" aria-label="Start a new group" className={sidebarAdd}>
+          <Plus aria-hidden className="size-5" strokeWidth={1.9} />
+        </Link>
+      }
+    >
+      {home && groups.length === 0 && (
+        <p className="px-3 text-sm text-muted-foreground">No groups yet.</p>
+      )}
+      <ul className="flex flex-col gap-0.5">
+        {groups.map(({ group, myNet }) => {
+          const hasExpenses = summaries.get(group.id)?.hasExpenses ?? true;
+          const lines = myNet.length > 0 ? myNet : [null];
+          return (
+            <li key={group.id}>
+              <Link
+                to="/groups/$groupId"
+                params={{ groupId: group.id }}
+                className={sidebarRow}
+                inactiveProps={{ className: 'hover:bg-muted' }}
+                activeProps={{ className: 'bg-accent' }}
+              >
+                <GroupTile emoji={group.emoji} name={group.name ?? ''} seed={group.id} size={32} />
+                <RowText
+                  name={group.name ?? ''}
+                  line={lines.map((money) => {
+                    const { words, tone } = groupWords(money?.amount ?? 0, hasExpenses);
+                    return (
+                      <span
+                        key={money?.currency ?? 'zero'}
+                        className={cn('block', TONE_TEXT[tone])}
+                      >
+                        {words}
+                        {money && ` ${format(money)}`}
+                      </span>
+                    );
+                  })}
+                />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </SidebarSection>
+  );
+}
+
+function SidebarFriends({ home, onAdd }: { home: Home | undefined; onAdd: () => void }) {
+  const format = useFormatMoney();
+  const people = home?.people ?? [];
+  return (
+    <SidebarSection
+      title="Friends"
+      action={
+        <button type="button" aria-label="Add a friend" onClick={onAdd} className={sidebarAdd}>
+          <Plus aria-hidden className="size-5" strokeWidth={1.9} />
+        </button>
+      }
+    >
+      {home && people.length === 0 && (
+        <p className="px-3 text-sm text-muted-foreground">No friends yet.</p>
+      )}
+      <ul className="flex flex-col gap-0.5">
+        {people.map(({ user, balances }) => {
+          const lines = balances.length > 0 ? balances : [null];
+          return (
+            <li key={user.id}>
+              <Link
+                to="/friends/$userId"
+                params={{ userId: user.id }}
+                className={sidebarRow}
+                inactiveProps={{ className: 'hover:bg-muted' }}
+                activeProps={{ className: 'bg-accent' }}
+              >
+                <Avatar
+                  name={user.name}
+                  src={user.avatarUrl}
+                  seed={user.id}
+                  deleted={user.isDeleted}
+                  size={32}
+                />
+                <RowText
+                  name={user.name}
+                  line={lines.map((money) => {
+                    const { words, tone } = personWords(money?.amount ?? 0);
+                    return (
+                      <span
+                        key={money?.currency ?? 'zero'}
+                        className={cn('block', TONE_TEXT[tone])}
+                      >
+                        {words}
+                        {money && ` ${format(money)}`}
+                      </span>
+                    );
+                  })}
+                />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </SidebarSection>
+  );
+}
+
 /**
- * How many changes others made since I last opened Activity (Blueprint 4.9: compared with
- * activity_seen_at). The number is for the eye; screen readers hear "Activity (3 unread)" from
- * text placed after the label, wherever the badge sits.
+ * How many changes others made since I last opened Activity. The number is for the eye; screen
+ * readers hear "Activity (3 unread)" from text placed after the label, wherever the badge sits.
  */
 function UnreadBadge({ className }: { className?: string }) {
   const unread = useQuery(unreadActivityQuery);
@@ -204,7 +350,7 @@ function UnreadBadge({ className }: { className?: string }) {
       <span
         aria-hidden
         className={cn(
-          'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] leading-none font-semibold text-primary-foreground tabular-nums',
+          'inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-[5px] text-[10px] leading-none font-extrabold text-primary-foreground tabular-nums',
           className,
         )}
       >
@@ -215,28 +361,85 @@ function UnreadBadge({ className }: { className?: string }) {
   );
 }
 
-function BottomTabs() {
+/** Which tab a page belongs to: a group and its expenses are under Groups, a friend under Friends. */
+function useCurrentTab(): 'groups' | 'friends' | 'activity' | 'account' | null {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname === '/' || pathname.startsWith('/groups') || pathname.startsWith('/transactions'))
+    return 'groups';
+  if (pathname.startsWith('/friends')) return 'friends';
+  if (pathname.startsWith('/activity')) return 'activity';
+  if (pathname.startsWith('/settings')) return 'account';
+  return null;
+}
+
+function TabBar() {
+  const me = useQuery(meQuery);
+  const tab = useCurrentTab();
+  const item = (active: boolean) =>
+    cn(
+      'relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px]',
+      focusRing,
+      // The active tab is marked by its tinted pill and bold label. The label stays in the text
+      // colour: over the frosted bar, whatever scrolls behind it (a primary button) can take the
+      // primary colour below AA contrast at 11px.
+      active ? 'font-bold text-foreground' : 'font-semibold text-muted-foreground',
+    );
+  const pill = (active: boolean) =>
+    cn(
+      'flex h-[30px] w-[52px] items-center justify-center rounded-full',
+      active && 'bg-accent text-accent-foreground',
+    );
+  const icon = 'size-5';
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-2 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 flex h-[calc(78px+env(safe-area-inset-bottom))] border-t bg-nav pb-[calc(8px+env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden"
     >
-      {NAV.map(({ to, label, icon: Icon }) => (
-        <Link
-          key={label}
-          to={to}
-          activeOptions={{ exact: to === '/' }}
-          className="relative flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium"
-          inactiveProps={{ className: 'text-muted-foreground' }}
-          activeProps={{ className: 'text-primary' }}
-        >
-          <Icon aria-hidden className="size-5" />
-          {label}
-          {to === '/activity' && (
-            <UnreadBadge className="absolute top-1.5 left-[calc(50%+0.25rem)]" />
+      <Link
+        to="/"
+        aria-current={tab === 'groups' ? 'page' : undefined}
+        className={item(tab === 'groups')}
+      >
+        <span className={pill(tab === 'groups')}>
+          <Users aria-hidden className={icon} strokeWidth={1.9} />
+        </span>
+        Groups
+      </Link>
+      <Link
+        to="/friends"
+        aria-current={tab === 'friends' ? 'page' : undefined}
+        className={item(tab === 'friends')}
+      >
+        <span className={pill(tab === 'friends')}>
+          <UserRound aria-hidden className={icon} strokeWidth={1.9} />
+        </span>
+        Friends
+      </Link>
+      <Link
+        to="/activity"
+        aria-current={tab === 'activity' ? 'page' : undefined}
+        className={item(tab === 'activity')}
+      >
+        <span className={pill(tab === 'activity')}>
+          <Activity aria-hidden className={icon} strokeWidth={1.9} />
+        </span>
+        Activity
+        <UnreadBadge className="absolute top-1.5 left-[calc(50%+8px)]" />
+      </Link>
+      <Link
+        to="/settings"
+        aria-current={tab === 'account' ? 'page' : undefined}
+        className={item(tab === 'account')}
+      >
+        <span className={pill(tab === 'account')}>
+          {me.data ? (
+            <Avatar name={me.data.name} src={me.data.avatarUrl} seed={me.data.id} size={24} />
+          ) : (
+            <span className="size-6 rounded-full bg-muted" />
           )}
-        </Link>
-      ))}
+        </span>
+        Account
+      </Link>
     </nav>
   );
 }

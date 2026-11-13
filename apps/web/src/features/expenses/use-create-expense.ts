@@ -1,10 +1,11 @@
 import type { CreateExpense, Group, Transaction, TransactionPage } from '@fairshare/contracts';
-import { computeShares, formatMoney } from '@fairshare/core';
+import { computeShares } from '@fairshare/core';
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useSyncExternalStore } from 'react';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { formatAmount } from '../../lib/money';
 import { afterTransactionChange } from '../../lib/invalidation';
 import { toast } from '../../lib/toast';
 import { expenseDrafts } from './drafts';
@@ -55,10 +56,7 @@ export function useCreateExpense(group: Group, meId: string, minorUnits: number)
     setPending(body.id, true);
     expenseDrafts.clear(group.id);
 
-    const amount = formatMoney(body.amount, minorUnits, Intl, {
-      locale: navigator.language,
-      currency: body.currency,
-    });
+    const amount = formatAmount(body.amount, body.currency, minorUnits);
     const saving = api.createExpense(group.id, body);
     toast(`Added ‘${body.description}’ · ${amount}`, {
       action: {

@@ -1,13 +1,36 @@
+import { Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-/** The FairShare mark (same as the favicon) and name. */
-export function Logo({ className }: { className?: string }) {
+/**
+ * The FairShare mark: a plus on a primary rounded square (DESIGN_SPEC top bar). md: 34px (the top
+ * bar), lg: 40px (sign-in, invite, legal pages).
+ */
+export function LogoMark({ size = 'md', className }: { size?: 'md' | 'lg'; className?: string }) {
   return (
-    <span className={cn('inline-flex items-center gap-2 font-semibold tracking-tight', className)}>
-      <svg viewBox="0 0 32 32" aria-hidden className="size-7">
-        <rect width="32" height="32" rx="8" fill="#0f766e" />
-        <path d="M9 16h14M16 9v14" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-      </svg>
+    <span
+      aria-hidden
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center bg-primary text-primary-foreground',
+        size === 'lg' ? 'size-10 rounded-[12px]' : 'size-[34px] rounded-[10px]',
+        className,
+      )}
+    >
+      <Plus className={size === 'lg' ? 'size-5' : 'size-[19px]'} strokeWidth={1.9} />
+    </span>
+  );
+}
+
+/** The mark and the name. */
+export function Logo({ size = 'md', className }: { size?: 'md' | 'lg'; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-2.5 font-extrabold tracking-[-0.02em]',
+        size === 'lg' ? 'text-[22px]' : 'text-[19px]',
+        className,
+      )}
+    >
+      <LogoMark size={size} />
       FairShare
     </span>
   );

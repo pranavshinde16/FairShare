@@ -55,17 +55,20 @@ export function EmailStep({ returnTo }: { returnTo?: string }) {
           {...form.register('email')}
         />
         {fieldError && (
-          <p id="email-error" className="text-sm text-destructive">
+          <p id="email-error" className="text-[13px] leading-[18px] text-destructive">
             {fieldError}
           </p>
         )}
       </div>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-muted px-3 py-2 text-sm text-destructive"
+        >
           {error}
         </p>
       )}
-      <Button type="submit" loading={form.formState.isSubmitting}>
+      <Button type="submit" size="lg" loading={form.formState.isSubmitting}>
         Continue
       </Button>
     </form>

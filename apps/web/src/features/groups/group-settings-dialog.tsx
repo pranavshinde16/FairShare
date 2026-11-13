@@ -1,6 +1,8 @@
 import type { Currency, Group } from '@fairshare/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
+import { ChevronDown, Trash2 } from 'lucide-react';
+import { currencyName } from './create-group-form';
 import { useState } from 'react';
 import { ConfirmDialog } from '../../components/common/confirm-dialog';
 import { Button } from '../../components/ui/button';
@@ -49,13 +51,13 @@ export function GroupSettingsDialog({
       <Dialog open={open && !deleting} onClose={onClose} title="Group settings">
         <form
           noValidate
-          className="flex flex-col gap-5"
+          className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
             save();
           }}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="settings-name">Name</Label>
             <Input
               id="settings-name"
@@ -63,42 +65,50 @@ export function GroupSettingsDialog({
               aria-invalid={nameError ? true : undefined}
               onChange={(event) => setName(event.target.value)}
             />
-            {nameError && <p className="text-sm text-destructive">{nameError}</p>}
+            {nameError && (
+              <p className="text-[13px] leading-[18px] text-destructive">{nameError}</p>
+            )}
           </div>
           <EmojiPicker value={emoji} onChange={setEmoji} />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="settings-currency">Currency</Label>
-            <select
-              id="settings-currency"
-              value={currency}
-              onChange={(event) => setCurrency(event.target.value)}
-              className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base sm:text-sm"
-            >
-              {currencies.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.code}
-                </option>
-              ))}
-            </select>
-            <p className="text-sm text-muted-foreground">
+            <div className="relative">
+              <select
+                id="settings-currency"
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value)}
+                className="h-12 w-full appearance-none rounded-lg border bg-card pr-11 pl-3.5 text-base font-medium outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
+              >
+                {currencies.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} · {currencyName(c.code)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
+                strokeWidth={1.9}
+              />
+            </div>
+            <p className="text-[13px] leading-[18px] text-muted-foreground">
               Can change only while the group has no expenses.
             </p>
           </div>
           {update.error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p
+              role="alert"
+              className="rounded-md bg-destructive-muted px-3 py-2 text-sm text-destructive"
+            >
               {errorMessage(update.error)}
             </p>
           )}
-          <Button type="submit" loading={update.isPending}>
+          <Button type="submit" size="lg" loading={update.isPending}>
             Save
           </Button>
           {group.myRole === 'owner' && (
-            <Button
-              type="button"
-              variant="ghost"
-              className="text-destructive"
-              onClick={() => setDeleting(true)}
-            >
+            <Button type="button" variant="destructive-ghost" onClick={() => setDeleting(true)}>
+              <Trash2 aria-hidden strokeWidth={1.9} />
               Delete group
             </Button>
           )}
@@ -110,6 +120,7 @@ export function GroupSettingsDialog({
         title={`Delete ${group.name}?`}
         confirmLabel="Delete group"
         destructive
+        icon={Trash2}
         onConfirm={async () => {
           await api.deleteGroup(group.id);
           queryClient.removeQueries({ queryKey: ['group', group.id] });

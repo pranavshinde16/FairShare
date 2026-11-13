@@ -21,11 +21,11 @@ export function UpdatePrompt() {
   return (
     <div
       role="status"
-      className="fixed inset-x-4 bottom-24 z-50 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4 text-sm shadow-lg md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm"
+      className="fixed inset-x-4 bottom-[calc(94px+env(safe-area-inset-bottom))] z-50 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4 text-[15px] shadow-pop lg:inset-x-auto lg:right-6 lg:bottom-6 lg:max-w-sm"
     >
-      <p className="min-w-0 flex-1">A new version of FairShare is ready.</p>
+      <p className="min-w-0 flex-1 font-semibold">A new version of FairShare is ready.</p>
       <div className="flex gap-2">
-        <Button size="sm" variant="ghost" onClick={() => setNeedRefresh(false)}>
+        <Button size="sm" variant="plain" onClick={() => setNeedRefresh(false)}>
           Later
         </Button>
         <Button size="sm" onClick={() => void updateServiceWorker(true)}>

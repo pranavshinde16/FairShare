@@ -41,7 +41,7 @@ const api = (page: Page) => ({
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 const yourBalance = (page: Page) => page.getByRole('region', { name: 'Your balance' });
@@ -140,7 +140,8 @@ test('asks before an overpayment, and settling up reaches zero everywhere', asyn
   await page.goto(`/groups/${group.id}?tab=balances`);
 
   // Without a suggestion picked, the form opens on my own suggested payment.
-  await page.getByRole('link', { name: 'Record a payment' }).click();
+  // On desktop the group header has it too.
+  await page.getByRole('link', { name: 'Record a payment' }).first().click();
   const form = page.getByRole('dialog', { name: 'Record a payment' });
   await expect(form.getByLabel('From')).toHaveValue(farah);
   await expect(form.getByLabel('Amount')).toHaveValue('500.00');
@@ -170,7 +171,11 @@ test('asks before an overpayment, and settling up reaches zero everywhere', asyn
   await payments(page).getByRole('link', { name: 'Settle: Farah pays you ₹500.00' }).click();
   await form.getByRole('button', { name: 'Record payment' }).click();
   await expect(yourBalance(page)).toContainText('You’re settled up');
-  await page.getByRole('link', { name: 'FairShare home' }).first().click();
+  // Home: "Home" in the desktop sidebar, the "Groups" tab on phones.
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: /^(Home|Groups)$/ })
+    .click();
   await expect(page.getByText('You’re all settled up', { exact: true })).toBeVisible();
 
   // Edit the payment: it was by bank transfer.
@@ -182,7 +187,7 @@ test('asks before an overpayment, and settling up reaches zero everywhere', asyn
   await edit.getByRole('button', { name: 'Bank' }).click();
   await edit.getByRole('button', { name: 'Save changes' }).click();
   await expect(edit).toBeHidden();
-  await expect(page.getByText(/changed the method to Bank$/)).toBeVisible();
+  await expect(page.getByText(/^Method .+ → Bank$/).filter({ visible: true })).toBeVisible();
 });
 
 test('settles up with a friend from their page, past what they owe', async ({ page }) => {

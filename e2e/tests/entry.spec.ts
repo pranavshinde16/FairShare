@@ -1,13 +1,26 @@
 import { Group, Transaction } from '@fairshare/contracts';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { BASE_URL } from '../playwright.config';
 import { expect, newEmail, signIn, test } from './fixtures';
 
+/**
+ * Each person's share as the form shows it: the card under "Paid by … and split …" on phones, the
+ * split editor's note beside the form on desktop (d-add-expense has no card).
+ */
+async function expectShares(form: Locator, card: string[], note: string | RegExp) {
+  if (test.info().project.name === 'mobile') {
+    const shares = form.getByRole('region', { name: 'Each person’s share' });
+    for (const text of card) await expect(shares).toContainText(text);
+  } else {
+    await expect(form.getByText(note)).toBeVisible();
+  }
+}
+
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 async function createGroup(page: Page, name: string, members: string[]) {
@@ -36,8 +49,9 @@ test('a simple sentence fills the form and saves (Blueprint 10.5 "AI entry")', a
   await expect(form.getByLabel('Amount')).toHaveValue('2,400.00');
   await expect(form.getByLabel('Description')).toHaveValue('Dinner');
   await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText(
-    'Paid by you · Split equally between 3 of 4 · ₹800.00 each',
+    'Paid by you and split equally',
   );
+  await expectShares(form, ['3 of 4 people', '₹800.00 / person'], '₹800.00 each · 3 people');
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
 
@@ -67,9 +81,7 @@ test('asks which Rahul, and adds someone who isn’t in the group', async ({ pag
   await expect(zara).toContainText('Zara isn’t in Flat.');
   await zara.getByRole('button', { name: 'Add as new member' }).click();
   await expect(zara).toBeHidden();
-  await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText(
-    'Split equally between 3 of 4',
-  );
+  await expectShares(form, ['3 of 4 people'], /each · 3 people$/);
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
 
@@ -91,11 +103,17 @@ test('typed on Home, it goes to the group the names belong to', async ({ page })
   const form = page.getByRole('dialog', { name: 'Add expense' });
   await expect(form.getByLabel('Type it')).toHaveValue('groceries 900 with Farah yesterday');
   await expect(form.getByLabel('Description')).toHaveValue('Groceries');
-  await expect(form.getByRole('button', { name: 'Yesterday' })).toHaveAttribute(
+  // Phones keep the date behind the bottom bar's date button.
+  const date = form.getByRole('button', { name: /^Date:/ });
+  if (await date.isVisible()) await date.click();
+  await expect(form.getByRole('button', { name: 'Yesterday', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
-  await expect(page.getByRole('link', { name: /you’re owed ₹450.00/ })).toBeVisible();
+  // The group page's own balance line (the desktop sidebar's group row says it too).
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/i }),
+  ).toBeVisible();
 });

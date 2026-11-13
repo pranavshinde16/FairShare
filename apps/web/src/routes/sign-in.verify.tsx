@@ -17,11 +17,13 @@ function VerifyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-[30px] leading-9 font-extrabold tracking-[-0.03em]">
+          Check your email
+        </h1>
+        <p className="text-[15px] leading-[22px] text-muted-foreground">
           Enter the 6-digit code we sent to{' '}
-          <span className="font-medium break-all text-foreground">{pending.email}</span>. It expires
+          <span className="font-bold break-all text-foreground">{pending.email}</span>. It expires
           in 5 minutes.
         </p>
       </div>

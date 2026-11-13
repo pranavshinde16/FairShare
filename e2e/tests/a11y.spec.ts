@@ -32,7 +32,7 @@ async function check(page: Page, screen: string) {
 async function setUp(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
   const created = await page.request.post('/api/v1/groups', {
     headers: { Origin: BASE_URL },
     data: { id: randomUUID(), name: 'Goa Trip', currency: 'INR', members: [{ name: 'Rahul' }] },

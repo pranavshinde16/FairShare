@@ -34,16 +34,21 @@ export function JoinWithLink() {
           value={link}
           placeholder="Paste the link"
           aria-invalid={error ? true : undefined}
+          aria-describedby={error ? 'invite-link-error' : undefined}
           onChange={(event) => {
             setLink(event.target.value);
             setError(null);
           }}
         />
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="secondary">
           Open
         </Button>
       </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p id="invite-link-error" className="text-[13px] leading-5 text-destructive">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

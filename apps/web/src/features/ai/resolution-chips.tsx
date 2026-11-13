@@ -77,10 +77,14 @@ function Chip({
       aria-label={
         item.status === 'ambiguous' ? `Which ${item.name}?` : `${item.name} isn’t in the group`
       }
-      className="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+      className="flex flex-col gap-2.5 rounded-lg border border-owe/30 bg-owe-muted px-3.5 py-3 text-sm"
     >
-      <p className="flex items-center gap-2 font-medium text-amber-950 dark:text-amber-100">
-        <HelpCircle aria-hidden className="size-4 shrink-0" />
+      <p className="flex items-center gap-2 font-medium text-foreground">
+        <HelpCircle
+          aria-hidden
+          className="size-[18px] shrink-0 text-owe-muted-foreground"
+          strokeWidth={1.9}
+        />
         {item.status === 'ambiguous'
           ? `Which ${item.name}${paid}?`
           : group.kind === 'group'
@@ -94,7 +98,7 @@ function Chip({
                 key={userId}
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="tint"
                 onClick={() => onSettle(item, userId)}
               >
                 {nameOf(userId)}
@@ -104,7 +108,7 @@ function Chip({
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="tint"
                 loading={adding}
                 onClick={() => void add()}
               >
