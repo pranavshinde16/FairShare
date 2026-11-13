@@ -1,8 +1,7 @@
 # Phase 10: Activity feed and history search
 
 - **Dates:** 2026-11-12 to 2026-11-13 (code part)
-- **Status:** In progress. The code is done and verified locally (integration, end-to-end, Docker
-  image). It goes live with the next push; then check it on staging (see "Lined up next").
+- **Status:** Done. Committed as 5687999 and marked done on your go-ahead.
 - **Plan reference:** Implementation blueprint §4.9 (activity and its feeds), §6.3 (activity
   endpoints), §7.2 (the Activity screen, the Expenses tab's search and filter chips), §10.4
   (search and filter combinations), §11 Phase 10, I11

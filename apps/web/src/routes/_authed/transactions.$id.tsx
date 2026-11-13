@@ -1,4 +1,5 @@
 import { ApiError } from '@fairshare/api-client';
+import type { SplitInput } from '@fairshare/contracts';
 import { formatMoney } from '@fairshare/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router';
@@ -10,12 +11,12 @@ import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
-import { isEditableHere } from '../../features/expenses/expense-form';
 import { describeEntry, shortDate } from '../../features/expenses/history';
 import { historyQuery, transactionQuery } from '../../features/expenses/queries';
 import { groupQuery } from '../../features/groups/queries';
 import { groupTitle } from '../../features/groups/title';
 import { currenciesQuery, meQuery } from '../../features/profile/queries';
+import { percentText } from '../../features/expenses/split-draft';
 import { methodLabel, paymentSentence } from '../../features/settlements/payment';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
@@ -81,7 +82,6 @@ function TransactionPage() {
     data.type === 'settlement'
       ? paymentSentence(data.payers[0].userId, data.shares[0].userId, meId, nameOf)
       : data.description;
-  const editable = data.type === 'settlement' || isEditableHere(data);
 
   async function restore() {
     setRestoring(true);
@@ -172,18 +172,16 @@ function TransactionPage() {
           </Button>
         ) : (
           <>
-            {editable && (
-              <Button asChild variant="outline">
-                <Link
-                  to="/transactions/$id/edit"
-                  params={{ id: data.id }}
-                  onClick={() => markModal(`/transactions/${data.id}/edit`)}
-                >
-                  <Pencil aria-hidden />
-                  Edit
-                </Link>
-              </Button>
-            )}
+            <Button asChild variant="outline">
+              <Link
+                to="/transactions/$id/edit"
+                params={{ id: data.id }}
+                onClick={() => markModal(`/transactions/${data.id}/edit`)}
+              >
+                <Pencil aria-hidden />
+                Edit
+              </Link>
+            </Button>
             <Button variant="outline" onClick={() => setDeleting(true)}>
               <Trash2 aria-hidden />
               Delete
@@ -191,11 +189,6 @@ function TransactionPage() {
           </>
         )}
       </div>
-      {!deleted && !editable && (
-        <p className="text-sm text-muted-foreground">
-          This expense uses a split the editor can’t change yet.
-        </p>
-      )}
 
       <section aria-labelledby="paid-heading" className="flex flex-col gap-2">
         <h2 id="paid-heading" className="text-sm font-semibold">
@@ -205,11 +198,15 @@ function TransactionPage() {
       </section>
       <section aria-labelledby="split-heading" className="flex flex-col gap-2">
         <h2 id="split-heading" className="text-sm font-semibold">
-          {data.type === 'settlement'
-            ? 'To'
-            : `Split ${data.splitMethod === 'equal' ? 'equally' : `by ${data.splitMethod}`}`}
+          {data.type === 'settlement' ? 'To' : SPLIT_HEADING[data.splitMethod]}
         </h2>
-        <LineList lines={data.shares} nameOf={nameOf} person={person} money={money} />
+        <LineList
+          lines={data.shares}
+          nameOf={nameOf}
+          person={person}
+          money={money}
+          input={data.type === 'expense' ? inputOf(data.splitInput) : undefined}
+        />
       </section>
 
       <section aria-labelledby="history-heading" className="flex flex-col gap-2">
@@ -268,16 +265,43 @@ function TransactionPage() {
   );
 }
 
+const SPLIT_HEADING = {
+  equal: 'Split equally',
+  exact: 'Split by exact amounts',
+  percent: 'Split by percentages',
+  shares: 'Split by shares',
+} as const;
+
+/** What was typed for each person, shown beside their share: "40%", "2 shares". */
+function inputOf(split: SplitInput | null): ((userId: string) => string | null) | undefined {
+  if (split?.method === 'percent') {
+    return (userId) => {
+      const bp = split.basisPoints.find((p) => p.userId === userId)?.bp;
+      return bp === undefined ? null : `${percentText(bp)}%`;
+    };
+  }
+  if (split?.method === 'shares') {
+    return (userId) => {
+      const n = split.shares.find((s) => s.userId === userId)?.shares;
+      return n === undefined ? null : `${n} ${n === 1 ? 'share' : 'shares'}`;
+    };
+  }
+  return undefined;
+}
+
 function LineList({
   lines,
   nameOf,
   person,
   money,
+  input,
 }: {
   lines: { userId: string; amount: number }[];
   nameOf: (userId: string) => string;
   person: (userId: string) => { name: string; avatarUrl: string | null } | undefined;
   money: (amount: number) => string;
+  /** Blueprint 7.2: the "input" view for percent and shares, such as "40% · ₹960". */
+  input?: (userId: string) => string | null;
 }) {
   return (
     <ul className="flex flex-col divide-y rounded-xl border">
@@ -287,7 +311,12 @@ function LineList({
           <li key={line.userId} className="flex items-center gap-3 p-3">
             <Avatar name={p?.name ?? '?'} src={p?.avatarUrl} size="sm" />
             <span className="flex-1 text-sm">{nameOf(line.userId)}</span>
-            <span className="text-sm tabular-nums">{money(line.amount)}</span>
+            <span className="text-sm tabular-nums">
+              {input?.(line.userId) && (
+                <span className="text-muted-foreground">{input(line.userId)} · </span>
+              )}
+              {money(line.amount)}
+            </span>
           </li>
         );
       })}

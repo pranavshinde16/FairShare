@@ -1,4 +1,3 @@
-import { toDecimalString } from '@fairshare/core';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Skeleton } from '../../components/common/skeleton';
@@ -8,6 +7,7 @@ import { groupQuery } from '../groups/queries';
 import { currenciesQuery, meQuery } from '../profile/queries';
 import { expenseDrafts } from './drafts';
 import { ExpenseForm, newDraft, type ExpenseDraft } from './expense-form';
+import { draftFromExpense } from './split-draft';
 import { useCreateExpense } from './use-create-expense';
 
 /**
@@ -29,15 +29,9 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
 
   let initial: ExpenseDraft | undefined;
   if (ready) {
+    // A draft the server refused reopens exactly as it was sent.
     initial = draft
-      ? {
-          amountText: toDecimalString(draft.body.amount, currency.minorUnits),
-          description: draft.body.description,
-          payerId: draft.body.payers[0]!.userId,
-          participants: draft.body.split.method === 'equal' ? draft.body.split.participants : [],
-          occurredOn: draft.body.occurredOn,
-          notes: draft.body.notes ?? '',
-        }
+      ? draftFromExpense({ ...draft.body, split: draft.body.split }, currency.minorUnits)
       : newDraft(group.data, me.data.id);
   }
 

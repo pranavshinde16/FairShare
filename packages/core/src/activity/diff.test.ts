@@ -148,6 +148,33 @@ describe('diffSnapshots', () => {
 });
 
 describe('canonicalSnapshot', () => {
+  it('serializes a split read back from the database exactly like the one sent', () => {
+    // jsonb returns `bp` before `userId`; a request has `userId` first. The server compares the
+    // JSON text, so the order inside each entry must not matter.
+    const fromRequest: TransactionSnapshot = {
+      ...base,
+      splitMethod: 'percent',
+      splitInput: {
+        method: 'percent',
+        basisPoints: [
+          { userId: 'a', bp: 6_000 },
+          { userId: 'b', bp: 4_000 },
+        ],
+      },
+    };
+    const fromDatabase = JSON.parse(
+      '{"method":"percent","basisPoints":[{"bp":4000,"userId":"b"},{"bp":6000,"userId":"a"}]}',
+    ) as SplitInput;
+    expect(JSON.stringify(canonicalSnapshot({ ...fromRequest, splitInput: fromDatabase }))).toBe(
+      JSON.stringify(canonicalSnapshot(fromRequest)),
+    );
+    const shares = (json: string) =>
+      JSON.stringify(canonicalSnapshot({ ...base, splitInput: JSON.parse(json) as SplitInput }));
+    expect(shares('{"method":"shares","shares":[{"shares":2,"userId":"a"}]}')).toBe(
+      shares('{"method":"shares","shares":[{"userId":"a","shares":2}]}'),
+    );
+  });
+
   it('sorts payers and shares by userId without mutating the input', () => {
     const messy = {
       ...base,

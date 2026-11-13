@@ -182,6 +182,113 @@ describe('creating an expense', () => {
   });
 });
 
+describe('every split method and several payers (Phase 11)', () => {
+  // ₹1,200 among Asha, Bilal and Chitra, paid by Asha (₹1,000) and Bilal (₹200).
+  const cases = (
+    asha: string,
+    bilal: string,
+    chitra: string,
+  ): [string, CreateExpense['split']][] => [
+    [
+      'exact',
+      {
+        method: 'exact',
+        amounts: [
+          { userId: asha, amount: 700 },
+          { userId: chitra, amount: 500 },
+        ],
+      },
+    ],
+    [
+      'percent',
+      {
+        method: 'percent',
+        basisPoints: [
+          { userId: chitra, bp: 3333 },
+          { userId: bilal, bp: 3333 },
+          { userId: asha, bp: 3334 },
+        ],
+      },
+    ],
+    [
+      'shares',
+      {
+        method: 'shares',
+        shares: [
+          { userId: bilal, shares: 1 },
+          { userId: asha, shares: 2 },
+          { userId: chitra, shares: 0 },
+        ],
+      },
+    ],
+  ];
+
+  it('saves each as computed, replays it (200), and treats an unchanged edit as a no-op', async () => {
+    const { asha, group, bilal, chitra } = await goa();
+    for (const [method, split] of cases(asha.id, bilal, chitra)) {
+      const body = dinner(asha, [bilal, chitra], {
+        amount: 1200,
+        payers: [
+          { userId: asha.id, amount: 1000 },
+          { userId: bilal, amount: 200 },
+        ],
+        split,
+      });
+
+      const created = await create(asha, group.id, body);
+      expect(created.status, method).toBe(201);
+      const tx = Transaction.parse(created.body);
+      expect(tx.type === 'expense' && tx.shares, method).toEqual(
+        computeShares(1200, split, body.id),
+      );
+      expect(tx.payers, method).toEqual(
+        [
+          { userId: asha.id, amount: 1000 },
+          { userId: bilal, amount: 200 },
+        ].sort((a, b) => (a.userId < b.userId ? -1 : 1)),
+      );
+
+      // The same request again: the stored one, not a conflict.
+      const replay = await create(asha, group.id, body);
+      expect([replay.status, Transaction.parse(replay.body).version], method).toEqual([200, 1]);
+
+      // The same expense sent back as an edit (entries in another order): nothing changes.
+      const { id: _id, ...update } = body;
+      const reordered = {
+        ...update,
+        split: reverseEntries(split),
+        payers: [...update.payers].reverse(),
+      };
+      const unchanged = await write(asha, 'PUT', `/api/v1/transactions/${body.id}`, 1, reordered);
+      expect([unchanged.status, Transaction.parse(unchanged.body).version], method).toEqual([
+        200, 1,
+      ]);
+      const entries = await ctx.db
+        .select()
+        .from(activityLog)
+        .where(eq(activityLog.entityId, body.id));
+      expect(
+        entries.map((e) => e.verb),
+        method,
+      ).toEqual(['transaction.created']);
+    }
+  });
+});
+
+/** The same split with its entries listed the other way round. */
+function reverseEntries(split: CreateExpense['split']): CreateExpense['split'] {
+  switch (split.method) {
+    case 'equal':
+      return { ...split, participants: [...split.participants].reverse() };
+    case 'exact':
+      return { ...split, amounts: [...split.amounts].reverse() };
+    case 'percent':
+      return { ...split, basisPoints: [...split.basisPoints].reverse() };
+    case 'shares':
+      return { ...split, shares: [...split.shares].reverse() };
+  }
+}
+
 describe('idempotency (C6)', () => {
   it('replays the same body (200), and refuses a different body or creator with the ID (409)', async () => {
     const { asha, group, bilal } = await goa();

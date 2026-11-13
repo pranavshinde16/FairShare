@@ -6,11 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { balancesQuery } from '../../features/balances/queries';
-import {
-  draftFromTransaction,
-  ExpenseForm,
-  isEditableHere,
-} from '../../features/expenses/expense-form';
+import { draftFromTransaction, ExpenseForm } from '../../features/expenses/expense-form';
 import { transactionQuery } from '../../features/expenses/queries';
 import { groupQuery } from '../../features/groups/queries';
 import { currenciesQuery, meQuery } from '../../features/profile/queries';
@@ -109,7 +105,6 @@ function EditTransaction() {
       />
     );
   } else {
-    if (!isEditableHere(data)) return null;
     form = (
       <Dialog
         open={!conflict}
