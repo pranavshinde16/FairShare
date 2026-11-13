@@ -4,13 +4,18 @@
 
 import type { Group, UpdateExpense } from '@fairshare/contracts';
 import { computeShares } from '@fairshare/core';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { cleanup, render as rtlRender, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ExpenseForm, type ExpenseDraft } from './expense-form';
 import { draftFromExpense, emptySplit } from './split-draft';
 
 afterEach(cleanup);
+
+/** Renders inside a QueryClient: the name chips can add a member to the group. */
+const render = (ui: React.ReactElement) =>
+  rtlRender(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
 
 // Plain DOM checks (no jest-dom): text with whitespace collapsed, an input's value, disabled.
 const text = (el: Element) => (el.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -301,5 +306,114 @@ describe('editing', () => {
         ],
       },
     });
+  });
+});
+
+describe('typed entry (Blueprint 8)', () => {
+  const D = uid(4);
+  const two: Group = {
+    ...group,
+    // Two Bilals, neither named just "Bilal": a first name alone is ambiguous.
+    members: [
+      member(A, 'Asha'),
+      member(B, 'Bilal Ahmed'),
+      member(C, 'Chitra'),
+      member(D, 'Bilal Khan'),
+    ],
+  };
+  function entrySetup(text?: string) {
+    const onSubmit = vi.fn<(body: UpdateExpense, draft: ExpenseDraft) => void>();
+    const user = userEvent.setup();
+    render(
+      <ExpenseForm
+        id={SEED}
+        group={two}
+        meId={A}
+        minorUnits={2}
+        symbol="₹"
+        initial={blank}
+        submitLabel="Save"
+        entry={text === undefined ? {} : { text }}
+        onSubmit={onSubmit}
+      />,
+    );
+    return { user, onSubmit, save: screen.getByRole('button', { name: 'Save' }) };
+  }
+
+  it('fills the form from a sentence, and saves it in one more tap', async () => {
+    const { user, onSubmit, save } = entrySetup();
+    await user.type(screen.getByLabelText('Type it'), 'I paid 900 for dinner with Chitra{Enter}');
+    expect(value(screen.getByLabelText('Amount'))).toBe('900.00');
+    expect(value(screen.getByLabelText('Description'))).toBe('Dinner');
+    expect(text(screen.getByRole('button', { name: /^Paid by/ }))).toContain(
+      'Split equally between 2 of 4 · ₹450.00 each',
+    );
+    // What the sentence filled is marked until it's edited.
+    expect(screen.getByLabelText('Description').className).toContain('ring-primary/40');
+    await user.type(screen.getByLabelText('Description'), ' out');
+    expect(screen.getByLabelText('Description').className).not.toContain('ring-primary/40');
+    // Enter in the bar filled the form; it didn't save it.
+    expect(onSubmit).not.toHaveBeenCalled();
+    await user.click(save);
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({
+      amount: 90_000,
+      description: 'Dinner out',
+      payers: [{ userId: A, amount: 90_000 }],
+      split: { method: 'equal', participants: [A, C] },
+    });
+  });
+
+  it('asks which Bilal, and waits for the answer before saving', async () => {
+    const { user, onSubmit, save } = entrySetup();
+    await user.type(screen.getByLabelText('Type it'), 'taxi 600 with Bilal');
+    await user.click(screen.getByRole('button', { name: 'Fill' }));
+    const chip = screen.getByRole('group', { name: 'Which Bilal?' });
+    expect(disabled(save)).toBe(true);
+    expect(screen.getByText('Answer the questions about names above to save.')).toBeTruthy();
+    await user.click(within(chip).getByRole('button', { name: 'Bilal Khan' }));
+    expect(screen.queryByRole('group', { name: 'Which Bilal?' })).toBeNull();
+    await user.click(save);
+    expect(onSubmit.mock.calls[0]![0].split).toEqual({ method: 'equal', participants: [A, D] });
+  });
+
+  it('offers to remove a name that isn’t in the group', async () => {
+    const { user, save } = entrySetup();
+    await user.type(screen.getByLabelText('Type it'), 'taxi 600 with Zara and Chitra{Enter}');
+    const chip = screen.getByRole('group', { name: 'Zara isn’t in the group' });
+    expect(text(chip)).toContain('Zara isn’t in Goa Trip.');
+    expect(within(chip).getByRole('button', { name: 'Add as new member' })).toBeTruthy();
+    await user.click(within(chip).getByRole('button', { name: 'Remove' }));
+    expect(disabled(save)).toBe(false);
+  });
+
+  it('says so when it can’t follow the sentence, keeping it as the description', () => {
+    entrySetup('dinner ka 2400 maine diya');
+    expect(screen.getByText('Couldn’t fully understand. Please check the details.')).toBeTruthy();
+    expect(value(screen.getByLabelText('Amount'))).toBe('2,400.00');
+    expect(value(screen.getByLabelText('Description'))).toBe('dinner ka 2400 maine diya');
+  });
+
+  it('a new sentence replaces what the last one filled, not what was typed by hand', async () => {
+    const { user } = entrySetup();
+    const bar = screen.getByLabelText('Type it');
+    await user.type(bar, 'dinner 900 with Chitra yesterday{Enter}');
+    await user.clear(screen.getByLabelText('Amount'));
+    await user.type(screen.getByLabelText('Amount'), '950');
+    await user.clear(bar);
+    await user.type(bar, 'lunch with Bilal Khan{Enter}');
+    // By hand: kept. From the last sentence: gone (the date is today again, Chitra is out).
+    expect(value(screen.getByLabelText('Amount'))).toBe('950.00');
+    expect(value(screen.getByLabelText('Description'))).toBe('lunch with Bilal Khan');
+    expect(value(screen.getByLabelText('Pick a date'))).toBe('2026-11-10');
+    expect(text(screen.getByRole('button', { name: /^Paid by/ }))).toContain(
+      'Split equally between 2 of 4',
+    );
+  });
+
+  it('reads a sentence handed over from Home as it opens', () => {
+    entrySetup('Bilal Khan paid 300 for snacks');
+    expect(value(screen.getByLabelText('Type it'))).toBe('Bilal Khan paid 300 for snacks');
+    expect(text(screen.getByRole('button', { name: /^Paid by/ }))).toContain('Paid by Bilal Khan');
+    expect(screen.queryByText('Couldn’t fully understand. Please check the details.')).toBeNull();
   });
 });

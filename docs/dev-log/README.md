@@ -17,4 +17,5 @@ comes next.
 | 8     | [Balances and Home](phase-08-balances-and-home.md)                     | Done        |
 | 9     | [Settlements](phase-09-settlements.md)                                 | Done        |
 | 10    | [Activity feed and history search](phase-10-activity.md)               | Done        |
-| 11    | [Advanced splits](phase-11-advanced-splits.md)                         | In progress |
+| 11    | [Advanced splits](phase-11-advanced-splits.md)                         | Done        |
+| 12    | [Rule-based text entry](phase-12-rule-parsing.md)                      | In progress |

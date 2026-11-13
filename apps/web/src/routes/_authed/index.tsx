@@ -8,6 +8,7 @@ import { BalanceText } from '../../components/common/balance-text';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
+import { HomeEntry } from '../../features/ai/home-entry';
 import { ClaimsBanner } from '../../features/claims/claims-banner';
 import { homeQuery } from '../../features/balances/queries';
 import { ExpenseTargetPicker } from '../../features/expenses/expense-target-picker';
@@ -59,6 +60,7 @@ function HomePage() {
         )}
       </header>
       <ClaimsBanner />
+      {data && !empty && me.data && <HomeEntry home={data} me={me.data} />}
 
       {!data && <ListSkeleton />}
 

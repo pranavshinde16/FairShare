@@ -324,6 +324,36 @@ separate chunk, loaded only when configured.
   expense, Settle, Edit) marks it, and closing goes Back to that page, so a later Back doesn't
   reopen the dialog. Otherwise closing replaces the modal's entry with its page.
 
+## Typed entry
+
+- **Rules first, in the browser** (Blueprint 8.1, 8.2): `packages/core/src/parse/rules.ts`
+  (`parseRules`) reads simple sentences instantly, without any service:
+  - amounts: ₹2,400, rs 2400, 2.4k, INR 2400; another currency is not used;
+  - people: "with A, B and C", "between A & B", "with everyone", bare member names;
+  - payers: "I paid", "X paid", "paid by X";
+  - "split equally"; today / yesterday.
+- **Confidence:** high only when exactly one amount is found and no unsupported instruction appears
+  (%, only, except, half, each, debts, other dates, Hindi/Hinglish grammar). It is never a guess:
+  "taxi paid" or an unknown name before "paid" is a doubt, not a payer.
+- **Names to members** (`resolve/resolve.ts`, C7): case- and accent-insensitive.
+  - Stages: the whole name, then word prefixes or one word of the name, then one typo for 5+
+    letters.
+  - "me / I / maine / mujhe" are the person typing.
+  - The result: resolved, ambiguous (candidates) or unknown.
+- **Group choice from Home** (`resolve/groups.ts`): the most names resolved, a friendship when one
+  other person is named, then the latest activity.
+- **Web** (`features/ai/`):
+  - `applyEntry` turns a sentence into the form's draft, plus chips for unsettled names and the
+    fields it filled (highlighted until edited).
+  - Not understood: what was found, the sentence as the description, and "Couldn't fully
+    understand. Please check the details."
+  - Chips: "Which Rahul?" or "Amit isn't in Goa Trip: Add as new member / Remove". Save waits for
+    them.
+  - From Home, the sentence picks its group and is handed over in memory (never in the address) to
+    that group's form.
+- **Saving** is the normal create; nothing about typed entry writes anything else. The LLM path
+  (`POST /ai/parse-expense`) for low-confidence sentences comes later.
+
 ## Deployment
 
 - **One image** (`Dockerfile`): build web and API, then `pnpm deploy --prod` the API. tsup bundles

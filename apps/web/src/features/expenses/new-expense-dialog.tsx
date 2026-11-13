@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Skeleton } from '../../components/common/skeleton';
 import { Dialog } from '../../components/ui/dialog';
 import { uuidv7 } from '../../lib/ids';
 import { groupQuery } from '../groups/queries';
 import { currenciesQuery, meQuery } from '../profile/queries';
+import { clearHandoff, peekHandoff } from '../ai/handoff';
 import { expenseDrafts } from './drafts';
 import { ExpenseForm, newDraft, type ExpenseDraft } from './expense-form';
 import { draftFromExpense } from './split-draft';
@@ -22,6 +23,9 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
   // retry can't create it twice.
   const [draft] = useState(() => expenseDrafts.get(groupId));
   const [id] = useState(() => draft?.body.id ?? uuidv7());
+  // A sentence typed on Home for this group, read into the form as it opens (not over a draft).
+  const [entryText] = useState(() => (draft ? undefined : peekHandoff(groupId)));
+  useEffect(() => clearHandoff(groupId), [groupId]);
 
   const currency = currencies.data?.items.find((c) => c.code === group.data?.currency);
   const ready = group.data && me.data && currency;
@@ -47,6 +51,7 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
           initial={initial}
           error={draft?.error ?? null}
           submitLabel="Save"
+          entry={{ ...(entryText && { text: entryText }) }}
           onSubmit={(body, typed) => {
             void save({ id, ...body }, typed);
             onClose();

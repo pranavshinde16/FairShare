@@ -1,9 +1,7 @@
 # Phase 11: Advanced splits
 
 - **Dates:** 2026-11-13 (code part)
-- **Status:** In progress. The code is done and verified locally (unit, component, integration,
-  end-to-end, Docker image). It goes live with the next push; then check it on staging (see "Lined
-  up next").
+- **Status:** Done. Committed as ad8d4fc and marked done on your go-ahead.
 - **Plan reference:** Implementation blueprint §4.5 (split engine, multiple payers), §7.3 (the Add
   Expense experience: the Split sheet, smart defaults, edit mode), §7.2 (expense details: the
   "input" view), §11 Phase 11

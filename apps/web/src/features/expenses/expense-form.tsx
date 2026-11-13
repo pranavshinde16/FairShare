@@ -1,12 +1,14 @@
 import type { Group, Transaction, UpdateExpense } from '@fairshare/contracts';
 import { formatMoney } from '@fairshare/core';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { readStored, writeStored } from '../../lib/storage';
 import { cn } from '../../lib/utils';
+import { applyEntry, settlePending, type Filled, type Pending } from '../ai/entry';
+import { ResolutionChips } from '../ai/resolution-chips';
 import {
   draftFromExpense,
   evaluate,
@@ -84,6 +86,7 @@ export function ExpenseForm({
   submitLabel,
   busy = false,
   error = null,
+  entry,
   onSubmit,
 }: {
   id: string;
@@ -95,16 +98,59 @@ export function ExpenseForm({
   submitLabel: string;
   busy?: boolean;
   error?: string | null;
+  /**
+   * New expenses: the "Type it" bar (Blueprint 7.3, 8). `text`: a sentence typed elsewhere (Home),
+   * read into the form as it opens.
+   */
+  entry?: { text?: string };
   onSubmit: (body: UpdateExpense, draft: ExpenseDraft) => void;
 }) {
-  const [draft, setDraft] = useState(initial);
+  const read = (text: string, from: ExpenseDraft) =>
+    applyEntry(text, from, { group, meId, minorUnits, today: localDate() });
+  const [opening] = useState(() => (entry?.text ? read(entry.text, initial) : null));
+  const [draft, setDraft] = useState(opening?.draft ?? initial);
+  const [entryText, setEntryText] = useState(entry?.text ?? '');
+  const [pending, setPending] = useState<Pending[]>(opening?.pending ?? []);
+  const [filled, setFilled] = useState<Filled[]>(opening?.filled ?? []);
+  const [understood, setUnderstood] = useState(opening?.understood ?? true);
   // Anything but one payer and an equal split opens with the sheet showing, so it's never hidden.
   const [splitOpen, setSplitOpen] = useState(
     initial.payers.mode === 'multiple' || initial.split.method !== 'equal',
   );
   const [notesOpen, setNotesOpen] = useState(initial.notes !== '');
   const saveRef = useRef<HTMLButtonElement>(null);
-  const set = (changes: Partial<ExpenseDraft>) => setDraft((d) => ({ ...d, ...changes }));
+  /** A change by hand: what the sentence filled stops being highlighted once it's edited. */
+  const set = (changes: Partial<ExpenseDraft>) => {
+    setDraft((d) => ({ ...d, ...changes }));
+    const touched: Filled[] = [
+      ...(changes.amountText !== undefined ? (['amount'] as const) : []),
+      ...(changes.description !== undefined ? (['description'] as const) : []),
+      ...(changes.occurredOn !== undefined ? (['date'] as const) : []),
+      ...(changes.split !== undefined || changes.payers !== undefined ? (['split'] as const) : []),
+    ];
+    if (touched.length) setFilled((f) => f.filter((x) => !touched.includes(x)));
+  };
+  const highlight = (field: Filled) =>
+    filled.includes(field) && 'bg-accent/60 ring-1 ring-primary/40';
+
+  function fill() {
+    const text = entryText.trim();
+    if (!text) return;
+    // A new sentence replaces what the last one filled (fields still as it left them); anything
+    // changed by hand stays.
+    const base: ExpenseDraft = {
+      ...draft,
+      ...(filled.includes('amount') && { amountText: initial.amountText }),
+      ...(filled.includes('description') && { description: initial.description }),
+      ...(filled.includes('date') && { occurredOn: initial.occurredOn }),
+      ...(filled.includes('split') && { payers: initial.payers, split: initial.split }),
+    };
+    const result = read(text, base);
+    setDraft(result.draft);
+    setPending(result.pending);
+    setFilled(result.filled);
+    setUnderstood(result.understood);
+  }
 
   const money = (amount: number) =>
     formatMoney(amount, minorUnits, Intl, { locale: navigator.language, currency: group.currency });
@@ -121,14 +167,17 @@ export function ExpenseForm({
       }),
     [draft, id, minorUnits, group.currency],
   );
-  const body = expenseBody(draft, state, group.currency);
+  // Save waits until every name from a typed entry is settled (Blueprint 8.7).
+  const body = pending.length === 0 ? expenseBody(draft, state, group.currency) : null;
   // In form order: the amount (evaluate puts its problem first), the description, then the split.
   const problem =
-    state.amount === null
-      ? state.problem
-      : !draft.description.trim()
-        ? 'Add a description.'
-        : state.problem;
+    pending.length > 0
+      ? 'Answer the questions about names above to save.'
+      : state.amount === null
+        ? state.problem
+        : !draft.description.trim()
+          ? 'Add a description.'
+          : state.problem;
 
   const active = group.members.filter((m) => m.leftAt === null);
   const nameOf = (userId: string) =>
@@ -150,9 +199,60 @@ export function ExpenseForm({
         submit();
       }}
     >
+      {entry && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 rounded-lg border border-input px-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
+            <Sparkles aria-hidden className="size-4 shrink-0 text-primary" />
+            <input
+              aria-label="Type it"
+              autoComplete="off"
+              placeholder="Type it: ‘Dinner 2400 with Rahul & Amit’"
+              value={entryText}
+              onChange={(event) => setEntryText(event.target.value)}
+              onKeyDown={(event) => {
+                // Enter fills the form; it mustn't save it.
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  fill();
+                }
+              }}
+              className="h-11 min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={!entryText.trim()}
+              onClick={fill}
+            >
+              Fill
+            </Button>
+          </div>
+          {!understood && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Couldn’t fully understand. Please check the details.
+            </p>
+          )}
+          <ResolutionChips
+            group={group}
+            pending={pending}
+            onSettle={(item, userId) => {
+              setDraft((d) => settlePending(d, item, userId));
+              setPending((list) => list.filter((p) => p !== item));
+            }}
+            onRemove={(item) => setPending((list) => list.filter((p) => p !== item))}
+          />
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <Label htmlFor="expense-amount">Amount</Label>
-        <div className="flex items-center gap-2 rounded-lg border border-input px-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
+        <div
+          className={cn(
+            'flex items-center gap-2 rounded-lg border border-input px-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40',
+            highlight('amount'),
+          )}
+        >
           <span aria-hidden className="text-2xl text-muted-foreground">
             {symbol}
           </span>
@@ -180,6 +280,7 @@ export function ExpenseForm({
         <Label htmlFor="expense-description">Description</Label>
         <Input
           id="expense-description"
+          className={cn(highlight('description'))}
           value={draft.description}
           maxLength={120}
           placeholder="e.g. Dinner"
@@ -199,7 +300,10 @@ export function ExpenseForm({
           aria-expanded={splitOpen}
           aria-controls="split-panel"
           onClick={() => setSplitOpen(!splitOpen)}
-          className="flex min-h-12 items-center gap-2 rounded-lg border px-3 text-left text-sm hover:bg-muted"
+          className={cn(
+            'flex min-h-12 items-center gap-2 rounded-lg border px-3 text-left text-sm hover:bg-muted',
+            highlight('split'),
+          )}
         >
           <span className="flex-1">
             <Summary
@@ -268,7 +372,7 @@ export function ExpenseForm({
           <Input
             type="date"
             aria-label="Pick a date"
-            className="h-9 w-auto"
+            className={cn('h-9 w-auto', highlight('date'))}
             min="2000-01-01"
             value={draft.occurredOn}
             onChange={(event) => event.target.value && set({ occurredOn: event.target.value })}
@@ -302,7 +406,7 @@ export function ExpenseForm({
 
       <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-card pt-2">
         {/* One message at a time (Blueprint 7.3), once there's something to judge. */}
-        {(error ?? (draft.amountText || draft.description ? problem : null)) && (
+        {(error ?? (draft.amountText || draft.description || pending.length ? problem : null)) && (
           <p
             role={error ? 'alert' : undefined}
             className={cn('text-sm', error ? 'text-destructive' : 'text-muted-foreground')}
