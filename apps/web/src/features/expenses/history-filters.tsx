@@ -50,10 +50,24 @@ export function HistoryFiltersBar({
           type="search"
           aria-label="Search expenses"
           placeholder="Search"
-          className="pl-10"
+          // The browser's own clear button is replaced by ours, which also clears the address.
+          className="pr-12 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
+        {search && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => {
+              setSearch('');
+              set({ q: undefined });
+            }}
+            className="absolute top-1/2 right-0.5 inline-flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
+          >
+            <X aria-hidden className="size-[18px]" strokeWidth={1.9} />
+          </button>
+        )}
       </div>
 
       <div role="group" aria-label="Filters" className="flex flex-wrap items-center gap-2">
@@ -150,7 +164,7 @@ function DatesDialog({
             key={which}
             type="button"
             size="sm"
-            variant="outline"
+            variant="secondary"
             onClick={() => {
               const range = monthRange(which);
               setFrom(range.from);
@@ -189,7 +203,7 @@ function DatesDialog({
         </p>
       )}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="outline" onClick={() => onApply(undefined, undefined)}>
+        <Button variant="secondary" onClick={() => onApply(undefined, undefined)}>
           Any date
         </Button>
         <Button disabled={reversed} onClick={() => onApply(from || undefined, to || undefined)}>

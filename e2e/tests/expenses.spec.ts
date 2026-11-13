@@ -38,13 +38,13 @@ test('adds, opens, edits, deletes and restores an expense', async ({ page }) => 
   await page.goto('/');
   await signIn(page, newEmail('asha'));
   // Signed in once Home shows; only then does the API see the session cookie.
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
   const group = await api(page).createGroup('Goa Trip', ['Bilal']);
   await page.goto(`/groups/${group.id}`);
 
   const dialog = await addExpense(page, '1200', 'Dinner');
-  await expect(dialog.getByRole('button', { name: /Split equally between all 2/ })).toContainText(
-    '₹600.00 each',
+  await expect(dialog.getByRole('region', { name: 'Each person’s share' })).toContainText(
+    '₹600.00 / person',
   );
   await dialog.getByRole('button', { name: 'Save' }).click();
 
@@ -65,7 +65,9 @@ test('adds, opens, edits, deletes and restores an expense', async ({ page }) => 
   await edit.getByRole('button', { name: 'Save changes' }).click();
   await expect(edit).toBeHidden();
   await expect(page.locator('header').getByText('₹1,500.00', { exact: true })).toBeVisible();
-  await expect(page.getByText('Asha changed the amount ₹1,200.00 → ₹1,500.00')).toBeVisible();
+  // The history lists each change on its own line (DESIGN_SPEC §6.3).
+  await expect(page.getByText('Asha changed it')).toBeVisible();
+  await expect(page.getByText('Amount ₹1,200.00 → ₹1,500.00')).toBeVisible();
 
   await page.getByRole('button', { name: 'Delete' }).click();
   await page
@@ -87,7 +89,7 @@ test('undoes an expense straight after adding it', async ({ page }) => {
   await page.goto('/');
   await signIn(page, newEmail('bilal'));
   // Signed in once Home shows; only then does the API see the session cookie.
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
   const group = await api(page).createGroup('Flat', ['Chitra']);
   await page.goto(`/groups/${group.id}`);
 
@@ -105,7 +107,7 @@ test('shows a conflict when someone else saved first, and reloads their version'
   await page.goto('/');
   await signIn(page, newEmail('chitra'));
   // Signed in once Home shows; only then does the API see the session cookie.
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
   const group = await api(page).createGroup('Trip', ['Dev']);
   await page.goto(`/groups/${group.id}`);
   const dialog = await addExpense(page, '800', 'Taxi');
@@ -140,7 +142,7 @@ test('shows a conflict when someone else saved first, and reloads their version'
 test('closes the add-expense form without saving, with ✕ or the Back button', async ({ page }) => {
   await page.goto('/');
   await signIn(page, newEmail('dev'));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
   const group = await api(page).createGroup('Weekend', ['Esha']);
   await page.goto(`/groups/${group.id}`);
 

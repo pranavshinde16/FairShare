@@ -1,9 +1,11 @@
 import type { Home } from '@fairshare/contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
+import { ChevronRight } from 'lucide-react';
 import { Avatar } from '../../components/common/avatar';
 import { GroupTile } from '../../components/common/tiles';
 import { Dialog } from '../../components/ui/dialog';
+import { CapsLabel, ListCard } from '../../components/ui/list-card';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { afterMembershipChange } from '../../lib/invalidation';
@@ -44,7 +46,10 @@ export function ExpenseTargetPicker({
   });
 
   const row =
-    'flex min-h-14 w-full items-center gap-3 p-3 text-left hover:bg-muted disabled:opacity-50';
+    'flex min-h-14 w-full items-center gap-3 px-3.5 py-2.5 text-left outline-none hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-focus-ring focus-visible:ring-inset disabled:opacity-45';
+  const chevron = (
+    <ChevronRight aria-hidden className="size-[18px] text-muted-foreground" strokeWidth={1.9} />
+  );
   return (
     <Dialog
       open={open}
@@ -62,10 +67,8 @@ export function ExpenseTargetPicker({
       )}
       {home.groups.length > 0 && (
         <section aria-label="Groups" className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Groups
-          </h3>
-          <ul className="flex flex-col divide-y rounded-xl border">
+          <CapsLabel>Groups</CapsLabel>
+          <ListCard inset="avatar">
             {home.groups.map(({ group }) => (
               <li key={group.id}>
                 <button
@@ -85,19 +88,20 @@ export function ExpenseTargetPicker({
                     seed={group.id}
                     size={40}
                   />
-                  <span className="truncate font-medium">{group.name}</span>
+                  <span className="min-w-0 flex-1 text-base leading-[21px] font-bold break-words">
+                    {group.name}
+                  </span>
+                  {chevron}
                 </button>
               </li>
             ))}
-          </ul>
+          </ListCard>
         </section>
       )}
       {home.people.length > 0 && (
         <section aria-label="People" className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            People
-          </h3>
-          <ul className="flex flex-col divide-y rounded-xl border">
+          <CapsLabel>People</CapsLabel>
+          <ListCard inset="avatar">
             {home.people.map(({ user, directGroupId }) => (
               <li key={user.id}>
                 <button
@@ -111,13 +115,16 @@ export function ExpenseTargetPicker({
                     src={user.avatarUrl}
                     seed={user.id}
                     deleted={user.isDeleted}
-                    size={36}
+                    size={40}
                   />
-                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="min-w-0 flex-1 text-base leading-[21px] font-bold break-words">
+                    {user.name}
+                  </span>
+                  {chevron}
                 </button>
               </li>
             ))}
-          </ul>
+          </ListCard>
         </section>
       )}
       {home.groups.length === 0 && home.people.length === 0 && (

@@ -111,17 +111,18 @@ export function CodeStep({ pending, returnTo }: { pending: PendingSignIn; return
         />
       </div>
       <div id="code-status" aria-live="polite" className="min-h-5 text-sm">
-        {problem && <p className="text-destructive">{problem.message}</p>}
+        {problem && <p className="font-semibold text-destructive">{problem.message}</p>}
         {notice && !problem && <p className="text-muted-foreground">{notice}</p>}
       </div>
       {!locked && (
-        <Button type="submit" loading={submitting} disabled={code.length !== CODE_LENGTH}>
+        <Button type="submit" size="lg" loading={submitting} disabled={code.length !== CODE_LENGTH}>
           Sign in
         </Button>
       )}
       <Button
         type="button"
-        variant={locked ? 'default' : 'outline'}
+        size="lg"
+        variant={locked ? 'default' : 'secondary'}
         loading={resending}
         disabled={resendIn > 0}
         onClick={() => void resend()}
@@ -132,7 +133,7 @@ export function CodeStep({ pending, returnTo }: { pending: PendingSignIn; return
         <Link
           to="/sign-in"
           search={{ returnTo }}
-          className="text-primary underline-offset-4 hover:underline"
+          className="inline-flex min-h-11 items-center font-bold text-primary underline-offset-4 hover:underline"
         >
           Use a different email
         </Link>

@@ -41,6 +41,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [picking, setPicking] = useState(false);
   const [addingFriend, setAddingFriend] = useState(false);
   // The page's own "Add expense" (its group's form), else "Who is it with?".
+  // Without the page's own action, the picker needs Home's groups and people first.
+  const ready = Boolean(action?.run) || home.data !== undefined;
   const addExpense = () => {
     if (action?.run) action.run();
     else if (home.data) setPicking(true);
@@ -52,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh bg-background">
-      <TopBar onAddExpense={addExpense} busy={action?.busy ?? false} />
+      <TopBar onAddExpense={addExpense} busy={action?.busy ?? false} ready={ready} />
       <div className="lg:flex">
         <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-[264px] shrink-0 flex-col gap-0.5 overflow-y-auto border-r bg-card px-3 pt-5 pb-8 lg:flex">
           <nav aria-label="Main" className="flex flex-col gap-0.5">
@@ -71,7 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <button
           type="button"
           aria-label="Add expense"
-          disabled={action.busy}
+          disabled={action.busy || !ready}
           onClick={addExpense}
           className="fixed right-4 bottom-[calc(94px+env(safe-area-inset-bottom))] z-20 inline-flex h-14 items-center gap-2 rounded-[18px] bg-primary px-5 text-[15px] font-bold text-primary-foreground shadow-fab outline-none focus-visible:ring-3 focus-visible:ring-focus-ring focus-visible:outline-1 focus-visible:outline-primary disabled:opacity-45 lg:hidden"
         >
@@ -96,7 +98,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 const focusRing =
   'outline-none focus-visible:ring-3 focus-visible:ring-focus-ring focus-visible:outline-1 focus-visible:outline-primary';
 
-function TopBar({ onAddExpense, busy }: { onAddExpense: () => void; busy: boolean }) {
+function TopBar({
+  onAddExpense,
+  busy,
+  ready,
+}: {
+  onAddExpense: () => void;
+  busy: boolean;
+  ready: boolean;
+}) {
   const me = useQuery(meQuery);
   return (
     <header className="sticky top-0 z-30 hidden h-16 items-center gap-3 border-b bg-card px-6 lg:flex">
@@ -111,7 +121,7 @@ function TopBar({ onAddExpense, busy }: { onAddExpense: () => void; busy: boolea
       <span className="flex-1" />
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || !ready}
         onClick={onAddExpense}
         className={cn(buttonVariants({ size: 'default' }), 'rounded-md px-[18px]')}
       >

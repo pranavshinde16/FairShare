@@ -91,6 +91,7 @@ export function SettleDialog({
       <Dialog
         open={open && question === null}
         size="full"
+        width="lg"
         title={title}
         description={description}
         onClose={onClose}
@@ -107,6 +108,7 @@ export function SettleDialog({
           submitLabel={submitLabel}
           busy={busy}
           error={error}
+          onCancel={onClose}
           onSubmit={(body) => {
             const over = overpayment(nets, body.fromUserId, body.toUserId, body.amount);
             if (!over) {
@@ -129,11 +131,9 @@ export function SettleDialog({
         }
         onClose={() => setQuestion(null)}
       >
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => setQuestion(null)}>
-            Change amount
-          </Button>
+        <div className="flex flex-col gap-2.5">
           <Button
+            size="lg"
             onClick={() => {
               const body = question!.body;
               setQuestion(null);
@@ -141,6 +141,9 @@ export function SettleDialog({
             }}
           >
             {confirmLabel}
+          </Button>
+          <Button size="lg" variant="secondary" onClick={() => setQuestion(null)}>
+            Change amount
           </Button>
         </div>
       </Dialog>
@@ -183,7 +186,7 @@ export function NewSettlementDialog({
   const currency = currencies.data?.items.find((c) => c.code === group.data?.currency);
   if (!group.data || !me.data || !balances.data || !currency) {
     return (
-      <Dialog open size="full" title="Record a payment" onClose={onClose}>
+      <Dialog open size="full" width="lg" title="Record a payment" onClose={onClose}>
         {(group.error ?? balances.error) ? (
           <p role="alert" className="text-sm text-destructive">
             {errorMessage(group.error ?? balances.error)}

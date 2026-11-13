@@ -48,8 +48,8 @@ export function PersonPicker({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="person-name">Name</Label>
         <Input
           id="person-name"
@@ -57,6 +57,7 @@ export function PersonPicker({
           autoComplete="off"
           placeholder="e.g. Rahul"
           aria-invalid={error ? true : undefined}
+          aria-describedby={error ? 'person-error' : undefined}
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
@@ -65,10 +66,39 @@ export function PersonPicker({
             }
           }}
         />
+        {matches.length > 0 && (
+          // Typeahead: the people I already share a group with, narrowed by what's typed.
+          <section
+            aria-label="People you know"
+            className="flex flex-col rounded-lg border bg-card px-3 py-1 shadow-card"
+          >
+            <h3 className="mt-2 text-xs font-bold tracking-[0.06em] text-muted-foreground uppercase">
+              People you know
+            </h3>
+            <ul className="flex flex-col">
+              {matches.slice(0, 8).map((person) => (
+                <li key={person.id}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onPick({ userId: person.id }, person)}
+                    className="-mx-1 flex min-h-[52px] w-[calc(100%+0.5rem)] items-center gap-3 rounded-md px-1 text-left outline-none hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-focus-ring disabled:opacity-45"
+                  >
+                    <Avatar name={person.name} src={person.avatarUrl} seed={person.id} size={36} />
+                    <span className="flex-1 text-[15px] font-semibold">{person.name}</span>
+                    {person.isPlaceholder && (
+                      <span className="text-[13px] text-muted-foreground">Not joined</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="person-email">
-          Email <span className="font-normal text-muted-foreground">(optional)</span>
+          Email <span className="font-medium text-muted-foreground">(optional)</span>
         </Label>
         <Input
           id="person-email"
@@ -80,39 +110,13 @@ export function PersonPicker({
         />
       </div>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id="person-error" role="alert" className="text-[13px] leading-[18px] text-destructive">
           {error}
         </p>
       )}
-      <Button type="button" loading={busy} onClick={addNew}>
+      <Button type="button" variant="tint" size="md" loading={busy} onClick={addNew}>
         {submitLabel}
       </Button>
-
-      {matches.length > 0 && (
-        <section aria-label="People you know" className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            People you know
-          </h3>
-          <ul className="flex flex-col gap-1">
-            {matches.slice(0, 8).map((person) => (
-              <li key={person.id}>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onPick({ userId: person.id }, person)}
-                  className="flex min-h-11 w-full items-center gap-3 rounded-lg px-2 text-left hover:bg-muted disabled:opacity-50"
-                >
-                  <Avatar name={person.name} src={person.avatarUrl} seed={person.id} size={36} />
-                  <span className="flex-1 text-sm font-medium">{person.name}</span>
-                  {person.isPlaceholder && (
-                    <span className="text-xs text-muted-foreground">Not joined</span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }

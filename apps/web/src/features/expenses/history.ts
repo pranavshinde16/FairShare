@@ -57,6 +57,125 @@ export function describeChanges(
   return parts.length ? joinAnd(parts) : null;
 }
 
+/**
+ * An entry's headline for the expense page's timeline (§6.3): "Asha added it", "Asha recorded it",
+ * "Asha changed it", "Asha deleted it", "Asha restored it". Its changes go under it, one per line.
+ */
+export function entryHeadline(entry: ActivityEntry): string {
+  const actor = entry.actor.name;
+  const settlement = isSettlement(entry.before) || isSettlement(entry.after);
+  switch (entry.verb) {
+    case 'transaction.created':
+      return `${actor} ${settlement ? 'recorded' : 'added'} it`;
+    case 'transaction.updated':
+      return `${actor} changed it`;
+    case 'transaction.deleted':
+      return `${actor} deleted it`;
+    case 'transaction.restored':
+      return `${actor} restored it`;
+    default:
+      return `${actor}: ${entry.verb}`;
+  }
+}
+
+/** One line of an edit: "Amount" with "₹18,000.00" → "₹19,500.00", or words alone. */
+export type ChangeLine = { label: string; from?: string; to?: string };
+
+/**
+ * What an edit changed, one line each (DESIGN_SPEC §6.3): Amount ₹18,000.00 → ₹19,500.00, Your
+ * share ₹6,000.00 → ₹6,500.00, Added Amit to the split, Notes removed. Empty when a snapshot can't
+ * be read or nothing shows.
+ */
+export function changeLines(
+  rawBefore: unknown,
+  rawAfter: unknown,
+  name: Names,
+  money: Money,
+): ChangeLine[] {
+  const before = TransactionSnapshot.safeParse(rawBefore);
+  const after = TransactionSnapshot.safeParse(rawAfter);
+  if (!before.success || !after.success) return [];
+  const settlement = isSettlement(rawBefore) || isSettlement(rawAfter);
+  const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+  const date = (value: string | null) => (value ? shortDate(value) : '—');
+  const lines: ChangeLine[] = [];
+  for (const change of diffSnapshots(before.data, after.data)) {
+    switch (change.field) {
+      case 'amount':
+        lines.push({ label: 'Amount', from: money(change.from), to: money(change.to) });
+        break;
+      case 'description':
+        lines.push({
+          label: 'Description',
+          from: `“${change.from ?? ''}”`,
+          to: `“${change.to ?? ''}”`,
+        });
+        break;
+      case 'occurredOn':
+        lines.push({ label: 'Date', from: date(change.from), to: date(change.to) });
+        break;
+      case 'notes':
+        lines.push({
+          label: change.to ? (change.from ? 'Notes changed' : 'Notes added') : 'Notes removed',
+        });
+        break;
+      case 'splitMethod':
+        lines.push({ label: 'Split', from: change.from ?? 'none', to: change.to ?? 'none' });
+        break;
+      case 'currency':
+        lines.push({ label: 'Currency', from: change.from ?? '', to: change.to ?? '' });
+        break;
+      case 'paymentMethod': {
+        const label = (m: string | null) => (m ? methodLabel(m as PaymentMethod) : 'none');
+        lines.push({ label: 'Method', from: label(change.from), to: label(change.to) });
+        break;
+      }
+      case 'paymentRef':
+        lines.push(
+          change.to
+            ? {
+                label: 'Reference',
+                from: change.from ? `“${change.from}”` : 'none',
+                to: `“${change.to}”`,
+              }
+            : { label: 'Reference removed' },
+        );
+        break;
+      case 'payers':
+      case 'shares': {
+        if (settlement) {
+          // One payer and one recipient: a new person is a new payer or recipient.
+          const [added] = change.added;
+          const [removed] = change.removed;
+          if (added) {
+            lines.push({
+              label: change.field === 'payers' ? 'Who paid' : 'Who was paid',
+              ...(removed && { from: name(removed.userId) }),
+              to: name(added.userId),
+            });
+          }
+          break;
+        }
+        const what = change.field === 'payers' ? 'payment' : 'share';
+        const where = change.field === 'payers' ? 'who paid' : 'the split';
+        for (const c of change.changed) {
+          lines.push({
+            label: `${cap(possessive(name(c.userId)))} ${what}`,
+            from: money(c.from),
+            to: money(c.to),
+          });
+        }
+        for (const l of change.added) lines.push({ label: `Added ${name(l.userId)} to ${where}` });
+        for (const l of change.removed) {
+          lines.push({ label: `Removed ${name(l.userId)} from ${where}` });
+        }
+        break;
+      }
+    }
+  }
+  return lines;
+}
+
 /** Whether a snapshot is a payment's (only those record a method). */
 export const isSettlement = (snapshot: unknown) =>
   typeof snapshot === 'object' && snapshot !== null && 'paymentMethod' in snapshot;

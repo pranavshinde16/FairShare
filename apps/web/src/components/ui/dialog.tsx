@@ -38,6 +38,7 @@ export function Dialog({
   size = 'sheet',
   width,
   action,
+  reserveAction = false,
   footer,
 }: {
   open: boolean;
@@ -50,6 +51,11 @@ export function Dialog({
   width?: keyof typeof WIDTHS;
   /** full only: a text action in the header ("Save", "Done"). */
   action?: ReactNode;
+  /**
+   * full only: keep room at the header's right for an action the content places there itself (a
+   * form's own submit button, positioned over the header on phones).
+   */
+  reserveAction?: boolean;
   /** A bar pinned to the bottom (the form's main button). */
   footer?: ReactNode;
 }) {
@@ -121,7 +127,7 @@ export function Dialog({
       {open && (
         <div
           className={cn(
-            'flex flex-col',
+            'relative flex flex-col',
             full ? 'h-dvh lg:h-auto lg:max-h-[90dvh]' : 'max-h-[90dvh] lg:max-h-[85dvh]',
           )}
         >
@@ -141,7 +147,12 @@ export function Dialog({
                   </div>
                 )}
               </div>
-              {action ?? <span aria-hidden className="w-11 shrink-0 lg:hidden" />}
+              {action ?? (
+                <span
+                  aria-hidden
+                  className={cn('shrink-0 lg:hidden', reserveAction ? 'w-24' : 'w-11')}
+                />
+              )}
             </header>
           ) : (
             <header className="flex shrink-0 flex-col px-5 pt-2 lg:px-6 lg:pt-6">

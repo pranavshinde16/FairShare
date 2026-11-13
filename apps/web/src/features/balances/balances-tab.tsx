@@ -1,24 +1,25 @@
 import type { Group, GroupBalances, Money } from '@fairshare/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeftRight, ArrowRight, ChevronDown, Info, PartyPopper } from 'lucide-react';
+import { ArrowLeftRight, ArrowRight, ChevronDown, CircleCheck, Info } from 'lucide-react';
 import { Avatar } from '../../components/common/avatar';
 import { ErrorState } from '../../components/common/error-state';
+import { MoneyLabel } from '../../components/common/money-label';
 import { Skeleton } from '../../components/common/skeleton';
 import { Button } from '../../components/ui/button';
+import { ListCard } from '../../components/ui/list-card';
 import { useMarkModalOpen } from '../../lib/modal-route';
 import { useFormatMoney } from '../../lib/money';
+import { memberWords } from '../../lib/money-words';
 import { useFlash } from '../../lib/use-flash';
 import { cn } from '../../lib/utils';
 import { balancesQuery } from './queries';
 
-const OWED = 'text-owed';
-const OWES = 'text-owe';
-
 /**
- * Blueprint 7.2 Balances tab, in the order 4.7 explains it: my position first, then the suggested
- * payments (each with "Settle"), then everyone's balance with what it's made of, so anyone can
- * check their own number.
+ * The Balances tab (DESIGN_SPEC §5 m-group-balances, d-group-balances), in the order Blueprint 4.7
+ * explains it: my position, then the suggested payments (each with "Settle"), how they're
+ * suggested, then everyone's balance, each opening to what it's made of, so anyone can check their
+ * own number. A group with money in another currency gets a section per currency (D19).
  */
 export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
   const balances = useQuery(balancesQuery(group.id));
@@ -37,7 +38,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
   const everyoneSettled = data.balances.every((entry) => entry.transfers.length === 0);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-[18px]">
       <PositionCard net={data.me.net} groupId={group.id} />
 
       {data.balances.map((entry) => {
@@ -47,21 +48,26 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
           ...entry.transfers.filter((t) => !mine(t)),
         ];
         const breakdown = data.breakdown.filter((b) => b.paid.currency === entry.currency);
+        const inCurrency = several ? ` (${entry.currency})` : '';
         return (
-          <div key={entry.currency} className="flex flex-col gap-6">
-            <section aria-labelledby={`payments-${entry.currency}`} className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-2">
-                <h2 id={`payments-${entry.currency}`} className="text-lg font-semibold">
-                  Suggested payments{several && ` (${entry.currency})`}
-                </h2>
-              </div>
+          <div key={entry.currency} className="flex flex-col gap-[18px]">
+            <section
+              aria-labelledby={`payments-${entry.currency}`}
+              className="flex flex-col gap-2.5"
+            >
+              <h2
+                id={`payments-${entry.currency}`}
+                className="text-lg leading-6 font-extrabold lg:text-base"
+              >
+                Suggested payments{inCurrency}
+              </h2>
               {transfers.length === 0 ? (
-                <p className="flex items-center gap-2 rounded-xl border p-4 text-sm">
-                  <PartyPopper aria-hidden className="size-4 text-primary" />
+                <p className="flex items-center gap-2.5 rounded-xl border bg-card px-4 py-3.5 text-[15px] font-semibold shadow-card">
+                  <CircleCheck aria-hidden className="size-5 text-owed" strokeWidth={1.9} />
                   {everyoneSettled ? 'All settled up' : `All settled up in ${entry.currency}`}
                 </p>
               ) : (
-                <ul className="flex flex-col divide-y rounded-xl border">
+                <ListCard inset="none">
                   {transfers.map((t) => {
                     const from = person(t.from);
                     const to = person(t.to);
@@ -75,10 +81,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                     return (
                       <li
                         key={`${t.from} ${t.to}`}
-                        className={cn(
-                          'flex min-h-14 items-center gap-3 p-3',
-                          !mine(t) && 'text-muted-foreground',
-                        )}
+                        className="flex min-h-16 items-center gap-3 px-3.5 py-3"
                       >
                         <span aria-hidden className="flex shrink-0 items-center gap-1">
                           <Avatar
@@ -88,7 +91,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                             deleted={from?.isDeleted}
                             size={32}
                           />
-                          <ArrowRight className="size-4" />
+                          <ArrowRight className="size-4 text-muted-foreground" strokeWidth={1.9} />
                           <Avatar
                             name={to?.name ?? '?'}
                             src={to?.avatarUrl}
@@ -97,14 +100,20 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                             size={32}
                           />
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-sm">{words}</span>
-                        <span className="text-sm font-medium tabular-nums">{amount}</span>
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="text-[15px] leading-5 font-semibold break-words">
+                            {words}
+                          </span>
+                          <span className="text-[15px] leading-5 font-extrabold tabular-nums">
+                            {amount}
+                          </span>
+                        </span>
                         {/* Anyone can record any payment (Blueprint 4.8); mine stand out. */}
                         {entry.currency === group.currency && (
                           <Button
                             asChild
                             size="sm"
-                            variant={mine(t) ? 'default' : 'outline'}
+                            variant={mine(t) ? 'default' : 'secondary'}
                             aria-label={`Settle: ${words} ${amount}`}
                           >
                             <Link
@@ -120,47 +129,49 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                       </li>
                     );
                   })}
-                </ul>
+                </ListCard>
               )}
-              <details className="text-sm text-muted-foreground">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2">
-                  <Info aria-hidden className="size-4" />
-                  How payments are suggested
-                </summary>
-                <p className="pb-2 pl-6">
-                  Payments are simplified so the group settles with as few transfers as possible.
-                  Your total is what matters; who pays whom may change as expenses are added.
+              <div className="flex gap-2.5 rounded-lg bg-muted px-3.5 py-3 text-sm leading-5 text-muted-foreground">
+                <Info aria-hidden className="mt-px size-[18px] shrink-0" strokeWidth={1.9} />
+                <p>
+                  <b className="font-bold text-foreground">How payments are suggested.</b> Payments
+                  are simplified so the group settles with as few transfers as possible. Your total
+                  is what matters; who pays whom may change as expenses are added.
                 </p>
-              </details>
+              </div>
             </section>
 
             {entry.currency === group.currency && (
-              <Button asChild variant="outline" className="self-start">
+              <Button asChild variant="secondary" className="self-start">
                 <Link
                   to="/groups/$groupId/settle"
                   params={{ groupId: group.id }}
                   search={{ tab: 'balances' }}
                   onClick={() => markModal(`/groups/${group.id}/settle`)}
                 >
-                  <ArrowLeftRight aria-hidden />
+                  <ArrowLeftRight aria-hidden strokeWidth={1.9} />
                   Record a payment
                 </Link>
               </Button>
             )}
 
-            <section aria-labelledby={`all-${entry.currency}`} className="flex flex-col gap-3">
-              <h2 id={`all-${entry.currency}`} className="text-lg font-semibold">
-                Everyone’s balance{several && ` (${entry.currency})`}
+            <section aria-labelledby={`all-${entry.currency}`} className="flex flex-col gap-2.5">
+              <h2
+                id={`all-${entry.currency}`}
+                className="text-lg leading-6 font-extrabold lg:text-base"
+              >
+                Everyone’s balance{inCurrency}
               </h2>
-              <ul className="flex flex-col divide-y rounded-xl border">
+              <ListCard inset="none">
                 {entry.nets.map((line) => {
                   const user = person(line.userId);
                   const parts = breakdown.find((b) => b.userId === line.userId);
-                  const net = { amount: line.amount, currency: entry.currency };
+                  const { words, tone } = memberWords(line.amount, line.userId === meId);
                   return (
                     <li key={line.userId}>
+                      {/* BalanceRow (DESIGN_SPEC §4): opens to what the number is made of (D9). */}
                       <details className="group">
-                        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 p-3">
+                        <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 px-3.5 py-3 outline-none hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-focus-ring focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
                           <Avatar
                             name={user?.name ?? '?'}
                             src={user?.avatarUrl}
@@ -168,13 +179,22 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                             deleted={user?.isDeleted}
                             size={36}
                           />
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                          <span className="min-w-0 flex-1 text-[15px] leading-5 font-semibold break-words">
                             {nameOf(line.userId)}
                           </span>
-                          <MemberNet net={net} me={line.userId === meId} />
+                          <MoneyLabel
+                            words={words}
+                            amount={
+                              line.amount === 0
+                                ? null
+                                : format({ amount: line.amount, currency: entry.currency })
+                            }
+                            tone={tone}
+                          />
                           <ChevronDown
                             aria-hidden
-                            className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                            className="size-[18px] shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                            strokeWidth={1.9}
                           />
                         </summary>
                         {parts && <Explanation parts={parts} />}
@@ -182,7 +202,7 @@ export function BalancesTab({ group, meId }: { group: Group; meId: string }) {
                     </li>
                   );
                 })}
-              </ul>
+              </ListCard>
             </section>
           </div>
         );
@@ -198,9 +218,9 @@ function PositionCard({ net, groupId }: { net: Money[]; groupId: string }) {
     <section
       key={flash.key}
       aria-labelledby="position-heading"
-      className={cn('rounded-xl border p-4', flash.className)}
+      className={cn('rounded-xl border bg-card px-4 py-3.5 shadow-card', flash.className)}
     >
-      <h2 id="position-heading" className="text-sm font-medium text-muted-foreground">
+      <h2 id="position-heading" className="text-[13px] text-muted-foreground">
         Your balance
       </h2>
       <Position net={net} />
@@ -212,14 +232,19 @@ function PositionCard({ net, groupId }: { net: Money[]; groupId: string }) {
 export function Position({ net, className }: { net: Money[]; className?: string }) {
   const format = useFormatMoney();
   if (net.length === 0) {
-    return <p className={cn('mt-1 text-xl font-semibold', className)}>You’re settled up</p>;
+    return (
+      <p className={cn('text-xl leading-[26px] font-extrabold', className)}>You’re settled up</p>
+    );
   }
   return (
-    <div className={cn('mt-1 flex flex-col', className)}>
+    <div className={cn('flex flex-col', className)}>
       {net.map((money) => (
         <p
           key={money.currency}
-          className={cn('text-xl font-semibold tabular-nums', money.amount > 0 ? OWED : OWES)}
+          className={cn(
+            'text-xl leading-[26px] font-extrabold tabular-nums',
+            money.amount > 0 ? 'text-owed' : 'text-owe',
+          )}
         >
           {money.amount > 0 ? `You’re owed ${format(money)}` : `You owe ${format(money)}`}
         </p>
@@ -228,17 +253,7 @@ export function Position({ net, className }: { net: Money[]; className?: string 
   );
 }
 
-function MemberNet({ net, me }: { net: Money; me: boolean }) {
-  const format = useFormatMoney();
-  if (net.amount === 0) return <span className="text-sm text-muted-foreground">settled up</span>;
-  const owed = net.amount > 0;
-  const words = owed
-    ? `${me ? 'get' : 'gets'} back ${format(net)}`
-    : `${me ? 'owe' : 'owes'} ${format(net)}`;
-  return <span className={cn('text-right text-sm', owed ? OWED : OWES)}>{words}</span>;
-}
-
-/** What a balance is made of: net = paid − share + sent − received. */
+/** What a balance is made of: net = paid − share + sent − received (D9). */
 function Explanation({ parts }: { parts: GroupBalances['breakdown'][number] }) {
   const format = useFormatMoney();
   const items: [string, Money][] = [
@@ -248,11 +263,11 @@ function Explanation({ parts }: { parts: GroupBalances['breakdown'][number] }) {
   if (parts.sent.amount > 0) items.push(['Paid back', parts.sent]);
   if (parts.received.amount > 0) items.push(['Received back', parts.received]);
   return (
-    <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-3 pb-3 pl-14 text-sm text-muted-foreground">
+    <dl className="mx-3.5 mb-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 rounded-lg bg-muted px-3.5 py-3 text-sm text-muted-foreground">
       {items.map(([label, money]) => (
         <div key={label} className="contents">
           <dt>{label}</dt>
-          <dd className="text-right tabular-nums">{format(money)}</dd>
+          <dd className="text-right font-semibold text-foreground tabular-nums">{format(money)}</dd>
         </div>
       ))}
     </dl>
@@ -261,10 +276,12 @@ function Explanation({ parts }: { parts: GroupBalances['breakdown'][number] }) {
 
 function BalancesSkeleton() {
   return (
-    <div className="flex flex-col gap-4">
-      <Skeleton className="h-20 w-full rounded-xl" />
-      <Skeleton className="h-32 w-full rounded-xl" />
-      <Skeleton className="h-48 w-full rounded-xl" />
+    <div className="flex flex-col gap-[18px]">
+      <Skeleton className="h-[78px] w-full rounded-xl" />
+      <Skeleton className="h-5 w-48" />
+      <Skeleton className="h-40 w-full rounded-xl" />
+      <Skeleton className="h-5 w-40" />
+      <Skeleton className="h-56 w-full rounded-xl" />
     </div>
   );
 }

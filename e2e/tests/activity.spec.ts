@@ -104,7 +104,7 @@ const api = (page: Page) => {
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 const activityLink = (page: Page) =>
@@ -171,7 +171,8 @@ test('shows others’ changes in Activity, with an unread badge that clears on v
   // A row opens what it's about.
   await rows.nth(0).getByRole('link').click();
   await expect(page.getByRole('heading', { name: 'Dinner' })).toBeVisible();
-  await expect(page.getByText('Bilal changed the amount ₹1,200.00 → ₹1,500.00')).toBeVisible();
+  await expect(page.getByText('Bilal changed it')).toBeVisible();
+  await expect(page.getByText('Amount ₹1,200.00 → ₹1,500.00')).toBeVisible();
 
   // Back on Activity, what was opened (and everything else seen) is no longer new.
   await page.goBack();
@@ -230,13 +231,13 @@ test('finds an old expense with search and filters, edits it, and restores a del
   await expect(list).toContainText('Farah paid ₹1,200.00');
 
   // Payments only, then everything again.
-  await page.getByRole('button', { name: 'Clear' }).click();
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(page.getByLabel('Search expenses')).toHaveValue('');
   await page.getByLabel('Type').selectOption({ label: 'Payments' });
   const payments = page.getByRole('main').getByRole('link', { name: /Gopal paid you/ });
   await expect(payments).toHaveCount(1);
   await expect(list).toHaveCount(0);
-  await page.getByRole('button', { name: 'Clear' }).click();
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(list).toHaveCount(3);
   await expect(payments).toHaveCount(1);
 

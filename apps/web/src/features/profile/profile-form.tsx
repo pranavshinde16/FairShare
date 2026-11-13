@@ -7,6 +7,7 @@ import {
   type Profile,
 } from '@fairshare/contracts';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -75,38 +76,47 @@ export function ProfileForm({ profile, currencies }: { profile: Profile; currenc
   });
   const fieldError = (name: keyof ProfileFields) =>
     errors[name] && (
-      <p id={`${name}-error`} className="text-sm text-destructive">
+      <p id={`${name}-error`} className="text-[13px] leading-[18px] text-destructive">
         {errors[name].message}
       </p>
     );
 
   return (
-    <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
+    <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="name">Name</Label>
         <Input id="name" autoComplete="name" {...field('name')} {...form.register('name')} />
         {fieldError('name')}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="defaultCurrency">Default currency</Label>
-        <select
-          id="defaultCurrency"
-          className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 sm:text-sm"
-          {...field('defaultCurrency')}
-          {...form.register('defaultCurrency')}
-        >
-          {currencies.map((currency) => (
-            <option key={currency.code} value={currency.code}>
-              {currency.code} · {currencyName(currency.code)}
-            </option>
-          ))}
-        </select>
-        <p className="text-sm text-muted-foreground">New groups start in this currency.</p>
+        <div className="relative">
+          <select
+            id="defaultCurrency"
+            className="h-12 w-full appearance-none rounded-lg border bg-card pr-11 pl-3.5 text-base font-medium outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-focus-ring aria-invalid:border-destructive"
+            {...field('defaultCurrency')}
+            {...form.register('defaultCurrency')}
+          >
+            {currencies.map((currency) => (
+              <option key={currency.code} value={currency.code}>
+                {currency.code} · {currencyName(currency.code)}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 right-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
+            strokeWidth={1.9}
+          />
+        </div>
+        <p className="text-[13px] leading-[18px] text-muted-foreground">
+          New groups start in this currency.
+        </p>
         {fieldError('defaultCurrency')}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="upiVpa">
           UPI ID <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
@@ -119,12 +129,14 @@ export function ProfileForm({ profile, currencies }: { profile: Profile; currenc
           {...field('upiVpa')}
           {...form.register('upiVpa')}
         />
-        <p className="text-sm text-muted-foreground">So friends can pay you back by UPI.</p>
+        <p className="text-[13px] leading-[18px] text-muted-foreground">
+          So friends can pay you back by UPI.
+        </p>
         {fieldError('upiVpa')}
       </div>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" loading={form.formState.isSubmitting} disabled={!isDirty}>
+        <Button type="submit" size="md" loading={form.formState.isSubmitting} disabled={!isDirty}>
           Save changes
         </Button>
         <p aria-live="polite" className="text-sm text-muted-foreground">
@@ -133,7 +145,10 @@ export function ProfileForm({ profile, currencies }: { profile: Profile; currenc
       </div>
       {update.error &&
         !(update.error instanceof ApiError && update.error.code === 'VALIDATION_FAILED') && (
-          <p role="alert" className="text-sm text-destructive">
+          <p
+            role="alert"
+            className="rounded-md bg-destructive-muted px-3 py-2 text-sm text-destructive"
+          >
             {errorMessage(update.error)}
           </p>
         )}

@@ -7,7 +7,7 @@ import { expect, newEmail, signIn, test } from './fixtures';
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 async function createGroup(page: Page, name: string, members: string[]) {
@@ -36,7 +36,13 @@ test('a simple sentence fills the form and saves (Blueprint 10.5 "AI entry")', a
   await expect(form.getByLabel('Amount')).toHaveValue('2,400.00');
   await expect(form.getByLabel('Description')).toHaveValue('Dinner');
   await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText(
-    'Paid by you · Split equally between 3 of 4 · ₹800.00 each',
+    'Paid by you and split equally',
+  );
+  await expect(form.getByRole('region', { name: 'Each person’s share' })).toContainText(
+    '3 of 4 people',
+  );
+  await expect(form.getByRole('region', { name: 'Each person’s share' })).toContainText(
+    '₹800.00 / person',
   );
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
@@ -67,8 +73,8 @@ test('asks which Rahul, and adds someone who isn’t in the group', async ({ pag
   await expect(zara).toContainText('Zara isn’t in Flat.');
   await zara.getByRole('button', { name: 'Add as new member' }).click();
   await expect(zara).toBeHidden();
-  await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText(
-    'Split equally between 3 of 4',
+  await expect(form.getByRole('region', { name: 'Each person’s share' })).toContainText(
+    '3 of 4 people',
   );
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
@@ -99,6 +105,6 @@ test('typed on Home, it goes to the group the names belong to', async ({ page })
   await expect(form).toBeHidden();
   // The group page's own balance line (the desktop sidebar's group row says it too).
   await expect(
-    page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/ }),
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/i }),
   ).toBeVisible();
 });

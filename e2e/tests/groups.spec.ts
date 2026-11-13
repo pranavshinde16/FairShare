@@ -37,7 +37,7 @@ test('creates a group with a placeholder, who joins through the invite and claim
   const bilalErrors = await guard(bilal);
   await bilal.goto(new URL(url).pathname);
   await expect(
-    bilal.getByRole('heading', { name: /Asha invited you to 🏖️ Goa Trip/ }),
+    bilal.getByRole('heading', { name: /Asha invited you to\s*Goa Trip/ }),
   ).toBeVisible();
   await bilal.getByRole('link', { name: 'Sign in to join' }).click();
   await signIn(bilal, newEmail('bilal'));
@@ -70,9 +70,9 @@ test('adds a friend by name and opens their page', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Chitra', exact: true })).toBeVisible();
   await expect(page.getByText('You’re settled up', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Invite Chitra' })).toBeVisible();
-  await page.goto('/');
-  // The main column's: on desktop the sidebar has a "People" heading too.
-  await expect(page.getByRole('main').getByRole('heading', { name: 'People' })).toBeVisible();
+  // The Friends tab lists her (DESIGN_SPEC §6.1).
+  await page.goto('/friends');
+  await expect(page.getByRole('heading', { level: 1, name: 'Friends' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Chitra')).toBeVisible();
 });
 

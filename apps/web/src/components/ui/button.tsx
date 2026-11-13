@@ -27,8 +27,6 @@ export const buttonVariants = cva(
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         'destructive-ghost': 'text-destructive hover:bg-destructive-muted',
         link: 'h-auto px-0 text-primary underline-offset-4 hover:underline',
-        // Kept while screens move to the variants above (Phase 4): the old bordered button.
-        outline: 'border bg-card text-foreground hover:bg-muted',
       },
       size: {
         default: 'h-11 px-4',

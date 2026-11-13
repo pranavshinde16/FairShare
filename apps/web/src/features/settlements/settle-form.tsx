@@ -1,6 +1,7 @@
 import type { Group, PaymentMethod, UpdateSettlement } from '@fairshare/contracts';
 import { MAX_AMOUNT_MINOR, toDecimalString, tryParseMoney } from '@fairshare/core';
-import { ArrowDownUp } from 'lucide-react';
+import { ArrowDownUp, ChevronDown, NotebookPen } from 'lucide-react';
+import { Avatar } from '../../components/common/avatar';
 import { useRef, useState } from 'react';
 import { AmountInput } from '../../components/ui/amount-input';
 import { Button } from '../../components/ui/button';
@@ -99,6 +100,7 @@ export function SettleForm({
   busy,
   error,
   onSubmit,
+  onCancel,
 }: {
   group: Group;
   meId: string;
@@ -114,6 +116,8 @@ export function SettleForm({
   busy: boolean;
   error: string | null;
   onSubmit: (body: UpdateSettlement) => void;
+  /** Desktop's Cancel beside the action (phones close with the header's ✕). */
+  onCancel?: () => void;
 }) {
   const [noteOpen, setNoteOpen] = useState(draft.note !== '');
   const saveRef = useRef<HTMLButtonElement>(null);
@@ -153,41 +157,45 @@ export function SettleForm({
   return (
     <form
       noValidate
-      className="flex min-h-full flex-1 flex-col gap-5"
+      className="flex min-h-full flex-1 flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
       }}
     >
-      <div className="grid grid-cols-[1fr_auto] items-end gap-x-2 gap-y-3">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="settle-from">From</Label>
-          <PersonSelect
-            id="settle-from"
-            value={draft.fromUserId}
-            options={people.map((m) => [m.user.id, label(m)])}
-            onChange={(fromUserId) => set({ fromUserId })}
-          />
+      <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="settle-from">From</Label>
+            <PersonSelect
+              id="settle-from"
+              value={draft.fromUserId}
+              people={people}
+              label={label}
+              onChange={(fromUserId) => set({ fromUserId })}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="settle-to">To</Label>
+            <PersonSelect
+              id="settle-to"
+              value={draft.toUserId}
+              people={people}
+              label={label}
+              onChange={(toUserId) => set({ toUserId })}
+            />
+          </div>
         </div>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="icon"
           aria-label="Swap who paid and who was paid"
-          className="row-span-2 self-center"
+          className="mt-5 size-12 shadow-none"
           onClick={() => set({ fromUserId: draft.toUserId, toUserId: draft.fromUserId })}
         >
-          <ArrowDownUp aria-hidden />
+          <ArrowDownUp aria-hidden strokeWidth={1.9} />
         </Button>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="settle-to">To</Label>
-          <PersonSelect
-            id="settle-to"
-            value={draft.toUserId}
-            options={people.map((m) => [m.user.id, label(m)])}
-            onChange={(toUserId) => set({ toUserId })}
-          />
-        </div>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -240,7 +248,9 @@ export function SettleForm({
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="settle-reference">Reference (optional)</Label>
+        <Label htmlFor="settle-reference">
+          Reference <span className="font-medium text-muted-foreground">(optional)</span>
+        </Label>
         <Input
           id="settle-reference"
           value={draft.reference}
@@ -266,60 +276,111 @@ export function SettleForm({
             maxLength={1000}
             value={draft.note}
             onChange={(event) => set({ note: event.target.value })}
-            className="rounded-lg border border-input bg-background px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 sm:text-sm"
+            className="rounded-lg border bg-card px-3.5 py-2.5 text-base outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-focus-ring sm:text-sm"
           />
         </div>
       ) : (
         <Button
           type="button"
-          variant="link"
-          className="self-start"
+          variant="ghost"
+          className="self-start px-1"
           onClick={() => setNoteOpen(true)}
         >
+          <NotebookPen aria-hidden strokeWidth={1.9} />
           Add a note
         </Button>
       )}
 
-      <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-card pt-2">
+      {/* The bottom bar: full width on phones (m-record-payment), Cancel and the action on desktop. */}
+      <div className="sticky bottom-0 -mx-4 mt-auto -mb-4 flex flex-col gap-2 border-t bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] lg:mx-0 lg:mb-0 lg:flex-row lg:items-center lg:bg-card lg:px-0 lg:pb-0">
         {(error ?? (draft.amountText || draft.fromUserId === draft.toUserId ? problem : null)) && (
           <p
             role={error ? 'alert' : undefined}
-            className={cn('text-sm', error ? 'text-destructive' : 'text-muted-foreground')}
+            className={cn(
+              'text-sm leading-5 lg:flex-1',
+              error
+                ? 'rounded-md bg-destructive-muted px-3 py-2 text-destructive'
+                : 'text-muted-foreground',
+            )}
           >
             {error ?? problem}
           </p>
         )}
-        <Button ref={saveRef} type="submit" size="lg" disabled={!body} loading={busy}>
-          {submitLabel}
-        </Button>
+        <div className="flex gap-2.5 lg:ml-auto">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              className="hidden lg:inline-flex"
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+          )}
+          <Button
+            ref={saveRef}
+            type="submit"
+            size="lg"
+            className="flex-1 lg:h-12 lg:flex-none"
+            disabled={!body}
+            loading={busy}
+          >
+            {submitLabel}
+          </Button>
+        </div>
       </div>
     </form>
   );
 }
 
+/**
+ * Who paid or was paid: the browser's own select (keyboard, screen readers, the phone's picker),
+ * dressed as the design's picker with the chosen person's avatar (m-record-payment).
+ */
 function PersonSelect({
   id,
   value,
-  options,
+  people,
+  label,
   onChange,
 }: {
   id: string;
   value: string;
-  options: [string, string][];
+  people: Group['members'];
+  label: (member: Group['members'][number]) => string;
   onChange: (userId: string) => void;
 }) {
+  const chosen = people.find((m) => m.user.id === value)?.user;
   return (
-    <select
-      id={id}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 sm:text-sm"
-    >
-      {options.map(([userId, text]) => (
-        <option key={userId} value={userId}>
-          {text}
-        </option>
-      ))}
-    </select>
+    <div className="relative">
+      {chosen && (
+        <Avatar
+          name={chosen.name}
+          src={chosen.avatarUrl}
+          seed={chosen.id}
+          deleted={chosen.isDeleted}
+          size={32}
+          className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2"
+        />
+      )}
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-14 w-full min-w-0 appearance-none rounded-lg border bg-card pr-10 pl-[56px] text-base font-semibold outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
+      >
+        {people.map((m) => (
+          <option key={m.user.id} value={m.user.id}>
+            {label(m)}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 right-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
+        strokeWidth={1.9}
+      />
+    </div>
   );
 }

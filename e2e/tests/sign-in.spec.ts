@@ -9,7 +9,7 @@ test('signs up with an email code and lands on an empty Home with the starter ca
   await signIn(page, newEmail('asha.kapoor'));
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: 'Hi, Asha' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Start a group' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Add a friend' })).toBeVisible();
 });
@@ -21,7 +21,7 @@ test('comes back to the page that asked for sign-in, keeps profile edits, signs 
   await signIn(page, newEmail('bilal'));
 
   await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible();
 
   const name = page.getByLabel('Name');
   await expect(name).toHaveValue('Bilal');
@@ -66,7 +66,7 @@ test('counts down the tries left for a wrong code', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Resend code in \d+s/ })).toBeDisabled();
 
   await page.getByLabel('Sign-in code').fill(code);
-  await expect(page.getByRole('heading', { name: 'Hi, Dev' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 });
 
 test('remembers the theme on this device', async ({ page }) => {
@@ -85,7 +85,7 @@ test('remembers the theme on this device', async ({ page }) => {
 test('shows the layout for the screen size', async ({ page }, testInfo) => {
   await page.goto('/');
   await signIn(page, newEmail('farah'));
-  await expect(page.getByRole('heading', { name: 'Hi, Farah' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 
   // CSS shows one of the two navigations; the hidden one is out of the accessibility tree.
   const nav = page.getByRole('navigation', { name: 'Main' });

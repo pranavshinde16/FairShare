@@ -24,8 +24,8 @@ export function MoneyLabel({
   amount?: string | null;
   tone: MoneyTone;
   layout?: 'stacked' | 'inline';
-  /** stacked only: md = 15px amount, lg = 16px. */
-  size?: 'md' | 'lg';
+  /** stacked only: md = 15px amount, lg = 16px, card = 16px growing to 20px from `lg`. */
+  size?: 'md' | 'lg' | 'card';
   className?: string;
 }) {
   const colour = TONE_TEXT[tone];
@@ -51,7 +51,8 @@ export function MoneyLabel({
           <span
             className={cn(
               'leading-5 font-extrabold whitespace-nowrap tabular-nums',
-              size === 'lg' ? 'text-base' : 'text-[15px]',
+              size === 'md' ? 'text-[15px]' : 'text-base',
+              size === 'card' && 'lg:text-xl lg:leading-7',
             )}
           >
             {amount}

@@ -42,7 +42,7 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
   }
 
   return (
-    <Dialog open size="full" title="Add expense" onClose={onClose}>
+    <Dialog open size="full" width="xl" reserveAction title="Add expense" onClose={onClose}>
       {ready && initial ? (
         <ExpenseForm
           id={id}
@@ -54,6 +54,7 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
           error={draft?.error ?? null}
           submitLabel="Save"
           entry={{ ...(entryText && { text: entryText }) }}
+          onCancel={onClose}
           onSubmit={(body, typed) => {
             void save({ id, ...body }, typed);
             onClose();
@@ -72,5 +73,13 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
 }
 
 export function FormSkeleton() {
-  return <Skeleton className="h-80 w-full rounded-xl" />;
+  return (
+    <div className="flex flex-col gap-[18px]">
+      <Skeleton className="h-9 w-48 rounded-full" />
+      <Skeleton className="h-[50px] w-full rounded-lg" />
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-28 w-full rounded-xl" />
+    </div>
+  );
 }

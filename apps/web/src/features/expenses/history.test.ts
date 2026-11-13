@@ -1,6 +1,6 @@
 import type { ActivityEntry } from '@fairshare/contracts';
 import { describe, expect, it } from 'vitest';
-import { describeEntry } from './history';
+import { changeLines, describeEntry, entryHeadline } from './history';
 
 const A = '01900000-0000-7000-8000-00000000000a';
 const B = '01900000-0000-7000-8000-00000000000b';
@@ -169,5 +169,42 @@ describe('describeEntry', () => {
     expect(describeEntry(entry('transaction.updated', { odd: true }, null), name, money)).toBe(
       'Asha edited it',
     );
+  });
+});
+
+describe('history as a timeline (DESIGN_SPEC §6.3)', () => {
+  it('heads each entry with who did what', () => {
+    expect(entryHeadline(entry('transaction.created', null, snapshot()))).toBe('Asha added it');
+    expect(entryHeadline(entry('transaction.updated', snapshot(), snapshot()))).toBe(
+      'Asha changed it',
+    );
+    expect(entryHeadline(entry('transaction.deleted', snapshot(), null))).toBe('Asha deleted it');
+  });
+
+  it('lists each change on its own line, with what it was and what it is', () => {
+    const before = snapshot();
+    const after = snapshot({
+      amount: 1200,
+      notes: 'Sea view',
+      payers: [{ userId: A, amount: 1200 }],
+      shares: [
+        { userId: A, amount: 400 },
+        { userId: B, amount: 400 },
+        { userId: C, amount: 400 },
+      ],
+    });
+    const you = (id: string) => (id === A ? 'you' : name(id));
+    expect(changeLines(before, after, you, money)).toEqual([
+      { label: 'Amount', from: '₹10.00', to: '₹12.00' },
+      { label: 'Notes added' },
+      { label: 'Your payment', from: '₹10.00', to: '₹12.00' },
+      { label: 'Your share', from: '₹5.00', to: '₹4.00' },
+      { label: 'Bilal’s share', from: '₹5.00', to: '₹4.00' },
+      { label: 'Added Chitra to the split' },
+    ]);
+  });
+
+  it('is empty when a snapshot can’t be read', () => {
+    expect(changeLines(null, snapshot(), name, money)).toEqual([]);
   });
 });

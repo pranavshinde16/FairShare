@@ -41,7 +41,7 @@ const api = (page: Page) => ({
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 test('the Goa example: balances, Home and the friend page agree', async ({ page }) => {
@@ -71,7 +71,7 @@ test('the Goa example: balances, Home and the friend page agree', async ({ page 
   await page.goto(`/groups/${group.id}`);
   // The group page's own balance line (the desktop sidebar's group row says it too).
   await expect(
-    page.getByRole('main').getByRole('link', { name: /you’re owed ₹1,850.00/ }),
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹1,850.00/i }),
   ).toBeVisible();
   await page.getByRole('link', { name: /^balances$/i }).click();
 
@@ -95,8 +95,12 @@ test('the Goa example: balances, Home and the friend page agree', async ({ page 
     .getByRole('navigation', { name: 'Main' })
     .getByRole('link', { name: /^(Home|Groups)$/ })
     .click();
-  await expect(page.getByText('You’re owed ₹1,850.00', { exact: true })).toBeVisible();
-  const people = page.getByRole('main').getByRole('region', { name: 'People' });
+  await expect(page.getByRole('region', { name: 'Overall' })).toContainText(
+    /Overall, you’re owed\s*₹1,850.00/,
+  );
+  // People and what we owe each other are on the Friends tab (DESIGN_SPEC §6.1).
+  await page.goto('/friends');
+  const people = page.getByRole('main');
   await expect(people.getByRole('link', { name: /Bilal/ })).toContainText('owes you ₹950.00');
   await expect(people.getByRole('link', { name: /Dev/ })).toContainText('owes you ₹750.00');
 
@@ -125,7 +129,7 @@ test('adds an expense from Home, and the balances follow without a reload', asyn
   await expect(page).toHaveURL(new RegExp(`/groups/${group.id}`));
   // The group page's own balance line (the desktop sidebar's group row says it too).
   await expect(
-    page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/ }),
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/i }),
   ).toBeVisible();
 
   // Home: "Home" in the desktop sidebar, the "Groups" tab on phones.
@@ -133,13 +137,13 @@ test('adds an expense from Home, and the balances follow without a reload', asyn
     .getByRole('navigation', { name: 'Main' })
     .getByRole('link', { name: /^(Home|Groups)$/ })
     .click();
-  await expect(page.getByText('You’re owed ₹450.00', { exact: true })).toBeVisible();
-  await expect(
-    page
-      .getByRole('main')
-      .getByRole('region', { name: 'People' })
-      .getByRole('link', { name: /Farah/ }),
-  ).toContainText('owes you ₹450.00');
+  await expect(page.getByRole('region', { name: 'Overall' })).toContainText(
+    /Overall, you’re owed\s*₹450.00/,
+  );
+  await page.goto('/friends');
+  await expect(page.getByRole('main').getByRole('link', { name: /Farah/ })).toContainText(
+    'owes you ₹450.00',
+  );
 });
 
 test('adds an expense with a friend from their page', async ({ page }) => {
@@ -156,8 +160,8 @@ test('adds an expense with a friend from their page', async ({ page }) => {
   await form.getByLabel('Amount').fill('300');
   await form.getByLabel('Description').fill('Movie');
   // A friendship takes my default currency, which follows the browser's locale (USD here).
-  await expect(form.getByRole('button', { name: /Split equally between all 2/ })).toContainText(
-    '$150.00 each',
+  await expect(form.getByRole('region', { name: 'Each person’s share' })).toContainText(
+    '$150.00 / person',
   );
   await form.getByRole('button', { name: 'Save' }).click();
 

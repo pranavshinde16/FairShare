@@ -7,7 +7,7 @@ import { expect, newEmail, signIn, test } from './fixtures';
 async function start(page: Page, name: string) {
   await page.goto('/');
   await signIn(page, newEmail(name));
-  await expect(page.getByRole('heading', { name: /^Hi, / })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /^(Groups|Home)$/ })).toBeVisible();
 }
 
 async function createGroup(page: Page, members: string[]) {
@@ -67,7 +67,7 @@ test('a percent split: preview, save, the expense page, and edit reopen as enter
   await expect(form.getByLabel('Chitra’s percentage')).toHaveValue('20');
   await expect(form.getByText('₹500.00', { exact: true })).toBeVisible();
   await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText(
-    'Split by percentages',
+    'split by percentages',
   );
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
@@ -130,7 +130,7 @@ test('two people paid: “Split payment equally”, and the balances follow', as
   // ₹1,000 each: Esha paid 2,000 (+1,000), Farah 1,000 (0), Gopal nothing (−1,000).
   // The group page's own balance line (the desktop sidebar's group row says it too).
   await expect(
-    page.getByRole('main').getByRole('link', { name: /you’re owed ₹1,000.00/ }),
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹1,000.00/i }),
   ).toBeVisible();
   await page.getByRole('link', { name: /Fuel/ }).click();
   const payers = page.getByRole('region', { name: 'Paid by' }).getByRole('listitem');

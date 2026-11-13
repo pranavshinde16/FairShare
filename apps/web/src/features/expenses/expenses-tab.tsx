@@ -1,16 +1,20 @@
 import type { Group, Transaction } from '@fairshare/contracts';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeftRight, Receipt, RotateCcw } from 'lucide-react';
+import { Receipt, RotateCcw, SearchX } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
+import { MoneyLabel } from '../../components/common/money-label';
 import { Skeleton } from '../../components/common/skeleton';
+import { IconTile } from '../../components/common/tiles';
 import { Button } from '../../components/ui/button';
+import { CapsLabel, ListCard } from '../../components/ui/list-card';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { afterTransactionChange } from '../../lib/invalidation';
-import { useFormatMoney } from '../../lib/money';
+import { plural, useFormatMoney } from '../../lib/money';
+import { transactionWords } from '../../lib/money-words';
 import { toast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 import { methodLabel, paymentSentence } from '../settlements/payment';
@@ -55,51 +59,58 @@ export function ExpensesTab({
       ? 'You'
       : (group.members.find((m) => m.user.id === userId)?.user.name ?? 'Someone');
 
+  // "1 result", "3 results" once a search or filter is on and every page is in (the server sends
+  // no total, so a count only shows when it's the whole answer).
+  const count =
+    filtering && list.data && !list.hasNextPage ? plural(items.length, 'result', 'results') : null;
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <HistoryFiltersBar group={group} meId={meId} filters={filters} onChange={onFiltersChange} />
 
       {list.error ? (
         <ErrorState error={list.error} onRetry={() => void list.refetch()} />
       ) : !list.data ? (
-        <div className="flex flex-col gap-2">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-xl" />
-          ))}
+        <div className="flex flex-col gap-2.5">
+          <Skeleton className="mt-1 h-4 w-28" />
+          <Skeleton className="h-[280px] w-full rounded-xl" />
         </div>
       ) : items.length === 0 ? (
         filtering ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
-            <p>Nothing matches.</p>
-            <Button variant="outline" size="sm" onClick={() => onFiltersChange({})}>
+          <EmptyState icon={SearchX} title="Nothing matches">
+            <p>Try another word, or fewer filters.</p>
+            <Button variant="secondary" className="mt-4" onClick={() => onFiltersChange({})}>
               Clear filters
             </Button>
-          </div>
+          </EmptyState>
         ) : (
           <EmptyState icon={Receipt} title="No expenses yet">
             Add the first one with “Add expense”.
           </EmptyState>
         )
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
+          {count && (
+            <p aria-live="polite" className="text-[13px] leading-5 text-muted-foreground">
+              {count}
+            </p>
+          )}
           {byMonth(items).map(([month, rows]) => (
-            <section key={month} aria-label={month} className="flex flex-col gap-2">
-              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                {month}
-              </h3>
-              <ul className="flex flex-col divide-y rounded-xl border">
+            <section key={month} aria-label={month} className="flex flex-col gap-2.5">
+              <CapsLabel className="mt-1">{month}</CapsLabel>
+              <ListCard inset="none">
                 {rows.map((tx) => (
                   <li key={tx.id}>
                     <Row tx={tx} meId={meId} nameOf={nameOf} />
                   </li>
                 ))}
-              </ul>
+              </ListCard>
             </section>
           ))}
           <div ref={sentinel} />
           {list.hasNextPage && (
             <Button
-              variant="outline"
+              variant="secondary"
               loading={list.isFetchingNextPage}
               onClick={() => void list.fetchNextPage()}
             >
@@ -112,6 +123,13 @@ export function ExpensesTab({
   );
 }
 
+/**
+ * One history row (DESIGN_SPEC §4 ExpenseRow): the date (month over day), a receipt or two-way
+ * arrow tile, the title with who paid, and my effect in words and colour. Text wraps; amounts are
+ * never cut. A payment reads "Bilal paid you · Payment · UPI". A deleted one (D8) is struck
+ * through, says "deleted", shows no effect (it doesn't count) and offers Restore. One still being
+ * saved is faded with "Saving…".
+ */
 function Row({
   tx,
   meId,
@@ -140,76 +158,58 @@ function Row({
   const money = (amount: number) => format({ amount, currency: tx.currency });
   const [y, m, d] = tx.occurredOn.split('-').map(Number);
   const date = new Date(y!, m! - 1, d);
+  const payment = tx.type === 'settlement';
   // A payment reads "Bilal paid you" with its method; an expense, its description and who paid.
-  const title =
-    tx.type === 'settlement'
-      ? paymentSentence(tx.payers[0].userId, tx.shares[0].userId, meId, nameOf)
-      : tx.description;
-  const who =
-    tx.type === 'settlement'
-      ? `Payment · ${methodLabel(tx.paymentMethod)}`
-      : tx.payers.length === 1
-        ? `${nameOf(tx.payers[0]!.userId)} paid ${money(tx.amount)}`
-        : `${tx.payers.length} people paid ${money(tx.amount)}`;
+  const title = payment
+    ? paymentSentence(tx.payers[0].userId, tx.shares[0].userId, meId, nameOf)
+    : tx.description;
+  const who = payment
+    ? `Payment · ${methodLabel(tx.paymentMethod)}`
+    : tx.payers.length === 1
+      ? `${nameOf(tx.payers[0]!.userId)} paid ${money(tx.amount)}`
+      : `${plural(tx.payers.length, 'person', 'people')} paid ${money(tx.amount)}`;
   const involved = [...tx.payers, ...tx.shares].some((l) => l.userId === meId);
-  const effect =
-    tx.type === 'settlement'
-      ? {
-          text:
-            tx.myNet > 0
-              ? `you paid ${money(tx.myNet)}`
-              : tx.myNet < 0
-                ? `you received ${money(-tx.myNet)}`
-                : money(tx.amount),
-          className: 'text-muted-foreground',
-        }
-      : tx.myNet > 0
-        ? {
-            text: `you lent ${money(tx.myNet)}`,
-            className: 'text-owed',
-          }
-        : tx.myNet < 0
-          ? { text: `you borrowed ${money(-tx.myNet)}`, className: 'text-owe' }
-          : { text: involved ? 'even' : 'not involved', className: 'text-muted-foreground' };
+  const { words, tone } = transactionWords(tx.myNet, payment ? 'payment' : 'expense', involved);
+  const effectAmount =
+    tx.myNet !== 0 ? money(Math.abs(tx.myNet)) : payment ? money(tx.amount) : null;
 
   const content = (
     <>
-      <span className="flex w-10 shrink-0 flex-col items-center text-muted-foreground">
-        <span className="text-[10px] uppercase">
+      <span className="flex w-[30px] shrink-0 flex-col items-center text-center">
+        <span className="text-[11px] leading-4 font-bold tracking-[0.04em] text-muted-foreground uppercase">
           {new Intl.DateTimeFormat(undefined, { month: 'short' }).format(date)}
         </span>
-        <span className="text-lg leading-none font-semibold">{d}</span>
+        <span className="text-[19px] leading-[22px] font-extrabold tabular-nums">{d}</span>
       </span>
-      <span
-        aria-hidden
-        className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"
-      >
-        {tx.type === 'settlement' ? (
-          <ArrowLeftRight className="size-4" />
-        ) : (
-          <Receipt className="size-4" />
-        )}
-      </span>
+      <IconTile kind={payment ? 'payment' : 'expense'} />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className={cn('truncate font-medium', tx.deletedAt && 'line-through')}>{title}</span>
-        <span className="truncate text-xs text-muted-foreground">
+        <span
+          className={cn(
+            'text-[15px] leading-5 font-bold break-words',
+            tx.deletedAt && 'text-muted-foreground line-through',
+          )}
+        >
+          {title}
+        </span>
+        <span className="text-[13px] leading-[18px] text-muted-foreground">
           {pending ? 'Saving…' : who}
           {tx.deletedAt && ' · deleted'}
         </span>
       </span>
       {/* A deleted one doesn't count, so it has no effect to show. */}
-      {!tx.deletedAt && (
-        <span className={cn('text-right text-sm', effect.className)}>{effect.text}</span>
-      )}
+      {!tx.deletedAt && <MoneyLabel words={words} amount={effectAmount} tone={tone} />}
     </>
   );
-  const className = cn('flex min-h-16 items-center gap-3 p-3', pending && 'opacity-60');
+  const className = cn('flex min-h-14 items-center gap-2.5 px-3.5 py-3', pending && 'opacity-60');
   if (pending) return <div className={className}>{content}</div>;
   const link = (
     <Link
       to="/transactions/$id"
       params={{ id: tx.id }}
-      className={cn(className, 'min-w-0 flex-1 hover:bg-muted')}
+      className={cn(
+        className,
+        'min-w-0 flex-1 outline-none hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-focus-ring focus-visible:ring-inset',
+      )}
     >
       {content}
     </Link>
@@ -220,14 +220,14 @@ function Row({
     <div className="flex items-center">
       {link}
       <Button
-        variant="outline"
+        variant="tint"
         size="sm"
         className="mr-3"
         loading={restoring}
-        aria-label={`Restore ${tx.type === 'settlement' ? title : `‘${title}’`}`}
+        aria-label={`Restore ${payment ? title : `‘${title}’`}`}
         onClick={() => void restore()}
       >
-        {!restoring && <RotateCcw aria-hidden />}
+        {!restoring && <RotateCcw aria-hidden strokeWidth={1.9} />}
         Restore
       </Button>
     </div>

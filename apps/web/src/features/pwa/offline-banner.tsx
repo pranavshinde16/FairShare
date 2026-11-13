@@ -11,9 +11,9 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-foreground px-4 py-2 text-center text-sm text-background"
+      className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-foreground px-4 py-2.5 text-center text-sm font-semibold text-background"
     >
-      <WifiOff aria-hidden className="size-4 shrink-0" />
+      <WifiOff aria-hidden className="size-[18px] shrink-0" strokeWidth={1.9} />
       You’re offline. Saving is off until you’re back online.
     </div>
   );
