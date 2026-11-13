@@ -19,6 +19,7 @@ import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as SignInIndexRouteImport } from './routes/sign-in.index'
 import { Route as SignInVerifyRouteImport } from './routes/sign-in.verify'
+import { Route as AuthedFriendsIndexRouteImport } from './routes/_authed/friends.index'
 import { Route as AuthedFriendsUserIdRouteImport } from './routes/_authed/friends.$userId'
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups.$groupId'
 import { Route as AuthedGroupsNewRouteImport } from './routes/_authed/groups.new'
@@ -78,6 +79,11 @@ const SignInVerifyRoute = SignInVerifyRouteImport.update({
   id: '/verify',
   path: '/verify',
   getParentRoute: () => SignInRoute,
+} as any)
+const AuthedFriendsIndexRoute = AuthedFriendsIndexRouteImport.update({
+  id: '/friends/',
+  path: '/friends/',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedFriendsUserIdRoute = AuthedFriendsUserIdRouteImport.update({
   id: '/friends/$userId',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/groups/new': typeof AuthedGroupsNewRoute
   '/settings/delete-account': typeof AuthedSettingsDeleteAccountRoute
   '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/friends/': typeof AuthedFriendsIndexRoute
   '/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
   '/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
   '/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/groups/new': typeof AuthedGroupsNewRoute
   '/settings/delete-account': typeof AuthedSettingsDeleteAccountRoute
   '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/friends': typeof AuthedFriendsIndexRoute
   '/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
   '/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
   '/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/_authed/groups/new': typeof AuthedGroupsNewRoute
   '/_authed/settings_/delete-account': typeof AuthedSettingsDeleteAccountRoute
   '/_authed/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
+  '/_authed/friends/': typeof AuthedFriendsIndexRoute
   '/_authed/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
   '/_authed/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
   '/_authed/transactions/$id/edit': typeof AuthedTransactionsIdEditRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/groups/new'
     | '/settings/delete-account'
     | '/transactions/$id'
+    | '/friends/'
     | '/friends/$userId/settle'
     | '/groups/$groupId/settle'
     | '/transactions/$id/edit'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/groups/new'
     | '/settings/delete-account'
     | '/transactions/$id'
+    | '/friends'
     | '/friends/$userId/settle'
     | '/groups/$groupId/settle'
     | '/transactions/$id/edit'
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/_authed/groups/new'
     | '/_authed/settings_/delete-account'
     | '/_authed/transactions/$id'
+    | '/_authed/friends/'
     | '/_authed/friends/$userId/settle'
     | '/_authed/groups/$groupId/settle'
     | '/_authed/transactions/$id/edit'
@@ -345,6 +357,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sign-in/verify'
       preLoaderRoute: typeof SignInVerifyRouteImport
       parentRoute: typeof SignInRoute
+    }
+    '/_authed/friends/': {
+      id: '/_authed/friends/'
+      path: '/friends'
+      fullPath: '/friends/'
+      preLoaderRoute: typeof AuthedFriendsIndexRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/friends/$userId': {
       id: '/_authed/friends/$userId'
@@ -465,6 +484,7 @@ interface AuthedRouteChildren {
   AuthedGroupsNewRoute: typeof AuthedGroupsNewRoute
   AuthedSettingsDeleteAccountRoute: typeof AuthedSettingsDeleteAccountRoute
   AuthedTransactionsIdRoute: typeof AuthedTransactionsIdRouteWithChildren
+  AuthedFriendsIndexRoute: typeof AuthedFriendsIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
@@ -476,6 +496,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedGroupsNewRoute: AuthedGroupsNewRoute,
   AuthedSettingsDeleteAccountRoute: AuthedSettingsDeleteAccountRoute,
   AuthedTransactionsIdRoute: AuthedTransactionsIdRouteWithChildren,
+  AuthedFriendsIndexRoute: AuthedFriendsIndexRoute,
 }
 
 const AuthedRouteWithChildren =

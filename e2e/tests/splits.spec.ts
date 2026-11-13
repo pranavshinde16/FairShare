@@ -128,7 +128,10 @@ test('two people paid: “Split payment equally”, and the balances follow', as
   await expect(form).toBeHidden();
 
   // ₹1,000 each: Esha paid 2,000 (+1,000), Farah 1,000 (0), Gopal nothing (−1,000).
-  await expect(page.getByRole('link', { name: /you’re owed ₹1,000.00/ })).toBeVisible();
+  // The group page's own balance line (the desktop sidebar's group row says it too).
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹1,000.00/ }),
+  ).toBeVisible();
   await page.getByRole('link', { name: /Fuel/ }).click();
   const payers = page.getByRole('region', { name: 'Paid by' }).getByRole('listitem');
   await expect(payers).toHaveCount(2);

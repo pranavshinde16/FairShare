@@ -153,7 +153,11 @@ test('shows others’ changes in Activity, with an unread badge that clears on v
 
   // Bilal corrects the amount; Asha's badge picks it up on the next look.
   await api(bilalPage).edit(dinner, 150_000, [asha, bilal]);
-  await page.getByRole('link', { name: 'FairShare home' }).first().click();
+  // Home: "Home" in the desktop sidebar, the "Groups" tab on phones.
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: /^(Home|Groups)$/ })
+    .click();
   await page.reload();
   await expect(activityLink(page)).toHaveAccessibleName(/^Activity \(1 unread\)$/);
   await activityLink(page).click();

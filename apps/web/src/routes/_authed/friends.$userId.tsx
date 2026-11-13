@@ -2,18 +2,19 @@ import { ApiError } from '@fairshare/api-client';
 import type { Money } from '@fairshare/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router';
-import { Plus, UserRound } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { BalanceText } from '../../components/common/balance-text';
 import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
+import { useRegisterAddExpense } from '../../components/layout/add-expense-action';
+import { BackLink } from '../../components/layout/page';
 import { Button } from '../../components/ui/button';
 import { friendQuery } from '../../features/balances/queries';
 import { ExpensesTab } from '../../features/expenses/expenses-tab';
 import type { HistoryFilters } from '../../features/expenses/filters';
-import { useNewExpenseShortcut } from '../../features/expenses/use-new-expense-shortcut';
 import { InviteButton } from '../../features/groups/invite-button';
 import { groupQuery } from '../../features/groups/queries';
 import { meQuery } from '../../features/profile/queries';
@@ -60,7 +61,8 @@ function FriendPage() {
   const addExpense = () => {
     if (canAdd && !open.isPending) open.mutate();
   };
-  useNewExpenseShortcut(addExpense);
+  // The shell's "Add expense" (top bar, floating button, the n key) opens our friendship's form.
+  useRegisterAddExpense(addExpense, { busy: open.isPending, enabled: canAdd });
   const flash = useFlash(
     JSON.stringify(friend.data?.total ?? null),
     `${userId} ${friend.data ? 'loaded' : 'loading'}`,
@@ -82,6 +84,7 @@ function FriendPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <BackLink to="/friends">Friends</BackLink>
       <header className="flex items-center gap-3">
         <Avatar
           name={user.name}
@@ -107,12 +110,6 @@ function FriendPage() {
             groupName={`You & ${user.name}`}
             placeholder={{ id: user.id, name: user.name }}
           />
-        )}
-        {canAdd && (
-          <Button className="hidden md:inline-flex" loading={open.isPending} onClick={addExpense}>
-            <Plus aria-hidden />
-            Add expense
-          </Button>
         )}
       </header>
 
@@ -209,18 +206,6 @@ function FriendPage() {
         )}
       </section>
 
-      {canAdd && (
-        <Button
-          size="lg"
-          aria-label="Add expense"
-          loading={open.isPending}
-          className="fixed right-4 bottom-20 z-10 rounded-full shadow-lg md:hidden"
-          onClick={addExpense}
-        >
-          <Plus aria-hidden />
-          Expense
-        </Button>
-      )}
       <Outlet />
     </div>
   );

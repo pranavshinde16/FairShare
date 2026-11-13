@@ -3,12 +3,13 @@ import { cn } from '../../lib/utils';
 
 /**
  * Where a row's divider starts (DESIGN_SPEC §4 ListCard: "1px inset dividers, inset = avatar + gap"):
- * none, after a 36px icon tile or 40px avatar, or after a 48px group tile.
+ * none, after a 36px icon tile, a 40px or 44px avatar, or a 48px group tile.
  */
 const INSETS = {
   none: '[&>li+li]:before:left-0',
   icon: '[&>li+li]:before:left-[62px]',
   avatar: '[&>li+li]:before:left-[66px]',
+  person: '[&>li+li]:before:left-[72px]',
   tile: '[&>li+li]:before:left-[76px]',
 } as const;
 

@@ -97,5 +97,8 @@ test('typed on Home, it goes to the group the names belong to', async ({ page })
   );
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
-  await expect(page.getByRole('link', { name: /you’re owed ₹450.00/ })).toBeVisible();
+  // The group page's own balance line (the desktop sidebar's group row says it too).
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/ }),
+  ).toBeVisible();
 });

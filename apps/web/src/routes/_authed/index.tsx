@@ -7,13 +7,12 @@ import { Avatar } from '../../components/common/avatar';
 import { BalanceText } from '../../components/common/balance-text';
 import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
+import { useRegisterAddExpense } from '../../components/layout/add-expense-action';
 import { GroupTile } from '../../components/common/tiles';
 import { Button } from '../../components/ui/button';
 import { HomeEntry } from '../../features/ai/home-entry';
 import { ClaimsBanner } from '../../features/claims/claims-banner';
 import { homeQuery } from '../../features/balances/queries';
-import { ExpenseTargetPicker } from '../../features/expenses/expense-target-picker';
-import { useNewExpenseShortcut } from '../../features/expenses/use-new-expense-shortcut';
 import { AddFriendDialog } from '../../features/friends/add-friend-dialog';
 import { JoinWithLink } from '../../features/invites/join-with-link';
 import { meQuery } from '../../features/profile/queries';
@@ -28,10 +27,11 @@ function HomePage() {
   const me = useQuery(meQuery);
   const home = useQuery(homeQuery);
   const [addingFriend, setAddingFriend] = useState(false);
-  const [picking, setPicking] = useState(false);
-  useNewExpenseShortcut(() => {
-    if (home.data) setPicking(true);
-  });
+  const data = home.data;
+  const empty = data && data.groups.length === 0 && data.people.length === 0;
+  // "Add expense" (the top bar, the floating button, the n key) asks who it's with; not before
+  // there's a group or a friend to pick.
+  useRegisterAddExpense(null, { enabled: Boolean(data && !empty) });
   const error = me.error ?? home.error;
   // Cached data stays on screen if a refetch fails (Blueprint 7.2); only a first load shows this.
   if (error && !home.data) {
@@ -41,8 +41,6 @@ function HomePage() {
   }
 
   const firstName = me.data?.name.split(' ')[0];
-  const data = home.data;
-  const empty = data && data.groups.length === 0 && data.people.length === 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -53,12 +51,6 @@ function HomePage() {
           </h1>
           {data && !empty && <Totals totals={data.totals} />}
         </div>
-        {data && !empty && (
-          <Button className="hidden md:inline-flex" onClick={() => setPicking(true)}>
-            <Plus aria-hidden />
-            Add expense
-          </Button>
-        )}
       </header>
       <ClaimsBanner />
       {data && !empty && me.data && <HomeEntry home={data} me={me.data} />}
@@ -185,18 +177,6 @@ function HomePage() {
               <JoinWithLink />
             </div>
           </details>
-
-          {/* The floating "＋ Expense" button on phones, above the tab bar. */}
-          <Button
-            size="lg"
-            aria-label="Add expense"
-            className="fixed right-4 bottom-20 z-10 rounded-full shadow-lg md:hidden"
-            onClick={() => setPicking(true)}
-          >
-            <Plus aria-hidden />
-            Expense
-          </Button>
-          <ExpenseTargetPicker open={picking} onClose={() => setPicking(false)} home={data} />
         </>
       )}
 

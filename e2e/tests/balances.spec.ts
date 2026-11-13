@@ -69,7 +69,10 @@ test('the Goa example: balances, Home and the friend page agree', async ({ page 
   );
 
   await page.goto(`/groups/${group.id}`);
-  await expect(page.getByRole('link', { name: /you’re owed ₹1,850.00/ })).toBeVisible();
+  // The group page's own balance line (the desktop sidebar's group row says it too).
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹1,850.00/ }),
+  ).toBeVisible();
   await page.getByRole('link', { name: /^balances$/i }).click();
 
   await expect(page.getByText('You’re owed ₹1,850.00', { exact: true })).toBeVisible();
@@ -87,7 +90,11 @@ test('the Goa example: balances, Home and the friend page agree', async ({ page 
   await bilalRow.locator('summary').click();
   await expect(bilalRow.getByRole('definition')).toHaveText(['₹1,200.00', '₹2,150.00']);
 
-  await page.getByRole('link', { name: 'FairShare home' }).first().click();
+  // Home: "Home" in the desktop sidebar, the "Groups" tab on phones.
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: /^(Home|Groups)$/ })
+    .click();
   await expect(page.getByText('You’re owed ₹1,850.00', { exact: true })).toBeVisible();
   const people = page.getByRole('main').getByRole('region', { name: 'People' });
   await expect(people.getByRole('link', { name: /Bilal/ })).toContainText('owes you ₹950.00');
@@ -116,9 +123,16 @@ test('adds an expense from Home, and the balances follow without a reload', asyn
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form).toBeHidden();
   await expect(page).toHaveURL(new RegExp(`/groups/${group.id}`));
-  await expect(page.getByRole('link', { name: /you’re owed ₹450.00/ })).toBeVisible();
+  // The group page's own balance line (the desktop sidebar's group row says it too).
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/ }),
+  ).toBeVisible();
 
-  await page.getByRole('link', { name: 'FairShare home' }).first().click();
+  // Home: "Home" in the desktop sidebar, the "Groups" tab on phones.
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: /^(Home|Groups)$/ })
+    .click();
   await expect(page.getByText('You’re owed ₹450.00', { exact: true })).toBeVisible();
   await expect(
     page

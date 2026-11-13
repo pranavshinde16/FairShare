@@ -170,7 +170,11 @@ test('asks before an overpayment, and settling up reaches zero everywhere', asyn
   await payments(page).getByRole('link', { name: 'Settle: Farah pays you ₹500.00' }).click();
   await form.getByRole('button', { name: 'Record payment' }).click();
   await expect(yourBalance(page)).toContainText('You’re settled up');
-  await page.getByRole('link', { name: 'FairShare home' }).first().click();
+  // Home: "Home" in the desktop sidebar, the "Groups" tab on phones.
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: /^(Home|Groups)$/ })
+    .click();
   await expect(page.getByText('You’re all settled up', { exact: true })).toBeVisible();
 
   // Edit the payment: it was by bank transfer.
