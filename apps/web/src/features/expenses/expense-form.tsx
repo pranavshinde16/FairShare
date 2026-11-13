@@ -1,10 +1,10 @@
 import type { Group, Transaction, UpdateExpense } from '@fairshare/contracts';
-import { formatMoney } from '@fairshare/core';
 import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { formatAmount, formatAmountInput } from '../../lib/money';
 import { readStored, writeStored } from '../../lib/storage';
 import { cn } from '../../lib/utils';
 import { applyEntry, settlePending, type Filled, type Pending } from '../ai/entry';
@@ -153,18 +153,13 @@ export function ExpenseForm({
     setUnderstood(result.understood);
   }
 
-  const money = (amount: number) =>
-    formatMoney(amount, minorUnits, Intl, { locale: navigator.language, currency: group.currency });
+  const money = (amount: number) => formatAmount(amount, group.currency, minorUnits);
   const state = useMemo(
     () =>
       evaluate(draft, {
         seed: id,
         minorUnits,
-        money: (amount) =>
-          formatMoney(amount, minorUnits, Intl, {
-            locale: navigator.language,
-            currency: group.currency,
-          }),
+        money: (amount) => formatAmount(amount, group.currency, minorUnits),
       }),
     [draft, id, minorUnits, group.currency],
   );
@@ -269,7 +264,7 @@ export function ExpenseForm({
             onBlur={() => {
               if (state.amount !== null) {
                 set({
-                  amountText: formatMoney(state.amount, minorUnits, Intl, { locale: 'en-US' }),
+                  amountText: formatAmountInput(state.amount, minorUnits),
                 });
               }
             }}

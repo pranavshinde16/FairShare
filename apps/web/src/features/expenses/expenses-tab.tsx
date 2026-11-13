@@ -166,10 +166,10 @@ function Row({
       : tx.myNet > 0
         ? {
             text: `you lent ${money(tx.myNet)}`,
-            className: 'text-emerald-700 dark:text-emerald-400',
+            className: 'text-owed',
           }
         : tx.myNet < 0
-          ? { text: `you borrowed ${money(-tx.myNet)}`, className: 'text-destructive' }
+          ? { text: `you borrowed ${money(-tx.myNet)}`, className: 'text-owe' }
           : { text: involved ? 'even' : 'not involved', className: 'text-muted-foreground' };
 
   const content = (

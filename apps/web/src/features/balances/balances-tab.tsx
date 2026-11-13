@@ -12,8 +12,8 @@ import { useFlash } from '../../lib/use-flash';
 import { cn } from '../../lib/utils';
 import { balancesQuery } from './queries';
 
-const OWED = 'text-emerald-700 dark:text-emerald-400';
-const OWES = 'text-destructive';
+const OWED = 'text-owed';
+const OWES = 'text-owe';
 
 /**
  * Blueprint 7.2 Balances tab, in the order 4.7 explains it: my position first, then the suggested

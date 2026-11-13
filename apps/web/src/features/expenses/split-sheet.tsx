@@ -445,9 +445,7 @@ function LeftBar({
         role="status"
         className={cn(
           'rounded-md px-2 py-1 text-sm font-medium tabular-nums',
-          left.amount === 0
-            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-            : 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
+          left.amount === 0 ? 'bg-owed-muted text-owed' : 'bg-owe-muted text-owe-muted-foreground',
         )}
       >
         {text}

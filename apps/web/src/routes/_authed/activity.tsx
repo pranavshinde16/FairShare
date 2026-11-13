@@ -182,9 +182,9 @@ function Row({
       className={cn(
         'text-sm',
         line.effect.tone === 'owed'
-          ? 'text-emerald-700 dark:text-emerald-400'
+          ? 'text-owed'
           : line.effect.tone === 'owes'
-            ? 'text-destructive'
+            ? 'text-owe'
             : 'text-muted-foreground',
       )}
     >

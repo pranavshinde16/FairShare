@@ -210,14 +210,10 @@ function Totals({ totals }: { totals: HomeData['totals'] }) {
       {totals.map(({ currency, owed, owe }) => (
         <p key={currency}>
           {owed > 0 && (
-            <span className="text-emerald-700 dark:text-emerald-400">
-              You’re owed {format({ amount: owed, currency })}
-            </span>
+            <span className="text-owed">You’re owed {format({ amount: owed, currency })}</span>
           )}
           {owed > 0 && owe > 0 && <span className="text-muted-foreground"> · </span>}
-          {owe > 0 && (
-            <span className="text-destructive">You owe {format({ amount: owe, currency })}</span>
-          )}
+          {owe > 0 && <span className="text-owe">You owe {format({ amount: owe, currency })}</span>}
         </p>
       ))}
     </div>

@@ -30,10 +30,7 @@ export function BalanceText({
             : `owes you ${amount}`
           : `you owe ${amount}`;
         return (
-          <span
-            key={money.currency}
-            className={owed ? 'text-emerald-700 dark:text-emerald-400' : 'text-destructive'}
-          >
+          <span key={money.currency} className={owed ? 'text-owed' : 'text-owe'}>
             {words}
           </span>
         );

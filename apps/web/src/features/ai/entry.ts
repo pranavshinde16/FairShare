@@ -1,5 +1,6 @@
 import type { Group } from '@fairshare/contracts';
-import { formatMoney, parseRules, resolveName, type NameCandidate } from '@fairshare/core';
+import { parseRules, resolveName, type NameCandidate } from '@fairshare/core';
+import { formatAmountInput } from '../../lib/money';
 import { canTakePart, emptySplit, type ExpenseDraft } from '../expenses/split-draft';
 
 /**
@@ -88,7 +89,7 @@ export function applyEntry(text: string, draft: ExpenseDraft, ctx: Context): Ent
   };
   if (parsed.amount !== null) {
     // As the amount field shows it after typing ("2,400.00").
-    next.amountText = formatMoney(parsed.amount, ctx.minorUnits, Intl, { locale: 'en-US' });
+    next.amountText = formatAmountInput(parsed.amount, ctx.minorUnits);
     filled.push('amount');
   }
   if (parsed.confidence === 'high') {

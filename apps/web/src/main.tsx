@@ -2,6 +2,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+// Manrope, bundled into /assets: the CSP allows fonts from our own origin only.
+import '@fontsource-variable/manrope';
 import { sessionQuery } from './features/auth/session';
 import { createQueryClient } from './lib/query-client';
 import { initTheme } from './lib/theme';

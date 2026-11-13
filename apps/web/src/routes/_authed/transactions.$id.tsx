@@ -1,6 +1,5 @@
 import { ApiError } from '@fairshare/api-client';
 import type { SplitInput } from '@fairshare/contracts';
-import { formatMoney } from '@fairshare/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router';
 import { Pencil, Receipt, RotateCcw, Trash2 } from 'lucide-react';
@@ -21,6 +20,7 @@ import { methodLabel, paymentSentence } from '../../features/settlements/payment
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { afterTransactionChange } from '../../lib/invalidation';
+import { formatAmount } from '../../lib/money';
 import { useMarkModalOpen } from '../../lib/modal-route';
 import { toast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
@@ -61,8 +61,7 @@ function TransactionPage() {
   const data = tx.data;
   const meId = me.data.id;
   const minorUnits = currencies.data.items.find((c) => c.code === data.currency)?.minorUnits ?? 2;
-  const money = (amount: number) =>
-    formatMoney(amount, minorUnits, Intl, { locale: navigator.language, currency: data.currency });
+  const money = (amount: number) => formatAmount(amount, data.currency, minorUnits);
   const nameOf = (userId: string) =>
     userId === meId
       ? 'You'
@@ -136,9 +135,9 @@ function TransactionPage() {
           settlement
             ? 'text-muted-foreground'
             : data.myNet > 0
-              ? 'text-emerald-700 dark:text-emerald-400'
+              ? 'text-owed'
               : data.myNet < 0
-                ? 'text-destructive'
+                ? 'text-owe'
                 : 'text-muted-foreground',
         )}
       >

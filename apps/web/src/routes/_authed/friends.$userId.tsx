@@ -233,7 +233,7 @@ function Total({ total, name }: { total: Money[]; name: string }) {
           key={money.currency}
           className={cn(
             'text-xl font-semibold tabular-nums',
-            money.amount > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-destructive',
+            money.amount > 0 ? 'text-owed' : 'text-owe',
           )}
         >
           {money.amount > 0

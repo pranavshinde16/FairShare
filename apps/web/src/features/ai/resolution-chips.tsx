@@ -77,9 +77,9 @@ function Chip({
       aria-label={
         item.status === 'ambiguous' ? `Which ${item.name}?` : `${item.name} isn’t in the group`
       }
-      className="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+      className="flex flex-col gap-2 rounded-lg border border-owe/30 bg-owe-muted p-3 text-sm"
     >
-      <p className="flex items-center gap-2 font-medium text-amber-950 dark:text-amber-100">
+      <p className="flex items-center gap-2 font-medium text-foreground">
         <HelpCircle aria-hidden className="size-4 shrink-0" />
         {item.status === 'ambiguous'
           ? `Which ${item.name}${paid}?`

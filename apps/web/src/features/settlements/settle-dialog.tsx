@@ -1,5 +1,5 @@
 import type { Group, UpdateSettlement } from '@fairshare/contracts';
-import { formatMoney, toDecimalString } from '@fairshare/core';
+import { toDecimalString } from '@fairshare/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Skeleton } from '../../components/common/skeleton';
@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
+import { formatAmount } from '../../lib/money';
 import { uuidv7 } from '../../lib/ids';
 import { afterTransactionChange } from '../../lib/invalidation';
 import { toast } from '../../lib/toast';
@@ -69,8 +70,7 @@ export function SettleDialog({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const money = (amount: number) =>
-    formatMoney(amount, minorUnits, Intl, { locale: navigator.language, currency: group.currency });
+  const money = (amount: number) => formatAmount(amount, group.currency, minorUnits);
   const nameOf = (userId: string) =>
     group.members.find((m) => m.user.id === userId)?.user.name ?? 'Someone';
 
@@ -206,11 +206,7 @@ export function NewSettlementDialog({
   const amount = suggestedAmount(transfers, pair.from, pair.to);
   const nameOf = (userId: string) =>
     userId === meId ? 'You' : (data.members.find((m) => m.user.id === userId)?.user.name ?? '');
-  const money = (value: number) =>
-    formatMoney(value, currency.minorUnits, Intl, {
-      locale: navigator.language,
-      currency: data.currency,
-    });
+  const money = (value: number) => formatAmount(value, data.currency, currency.minorUnits);
 
   return (
     <SettleDialog

@@ -1,11 +1,12 @@
 import type { Group, PaymentMethod, UpdateSettlement } from '@fairshare/contracts';
-import { formatMoney, MAX_AMOUNT_MINOR, toDecimalString, tryParseMoney } from '@fairshare/core';
+import { MAX_AMOUNT_MINOR, toDecimalString, tryParseMoney } from '@fairshare/core';
 import { ArrowDownUp } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { cn } from '../../lib/utils';
+import { formatAmount, formatAmountInput } from '../../lib/money';
 import { localDate } from '../expenses/expense-form';
 import { overpayment, overpaymentMessage, PAYMENT_METHODS, type Nets } from './payment';
 
@@ -114,8 +115,7 @@ export function SettleForm({
   const [noteOpen, setNoteOpen] = useState(draft.note !== '');
   const saveRef = useRef<HTMLButtonElement>(null);
   const set = (changes: Partial<SettleDraft>) => onChange({ ...draft, ...changes });
-  const format = (amount: number) =>
-    formatMoney(amount, minorUnits, Intl, { locale: navigator.language, currency: group.currency });
+  const format = (amount: number) => formatAmount(amount, group.currency, minorUnits);
 
   // Active members, plus anyone this payment already names (an old payment with someone who left).
   const people = group.members.filter(
@@ -205,7 +205,7 @@ export function SettleForm({
             onBlur={() => {
               if (body) {
                 set({
-                  amountText: formatMoney(body.amount, minorUnits, Intl, { locale: 'en-US' }),
+                  amountText: formatAmountInput(body.amount, minorUnits),
                 });
               }
             }}
