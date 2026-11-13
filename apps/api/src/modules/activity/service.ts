@@ -15,7 +15,7 @@ export function createActivityService(db: Db) {
         ...(query.cursor && { before: decodeCursor(query.cursor) }),
         limit: query.limit,
       }),
-      repo.seenAt(db, me).then((seenAt) => repo.unreadCount(db, scope, seenAt)),
+      repo.unreadCount(db, scope),
     ]);
     const page = rows.slice(0, query.limit);
     const { items, people } = await presentEntries(db, page, me);

@@ -2,7 +2,7 @@ import type { ActivityEntry, ActivityFeed } from '@fairshare/contracts';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Activity } from 'lucide-react';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { EmptyState } from '../../components/common/empty-state';
 import { ErrorState } from '../../components/common/error-state';
@@ -18,7 +18,8 @@ import { cn } from '../../lib/utils';
 
 /**
  * Blueprint 7.2 Activity: changes across my groups, newest first, each as a sentence with my
- * effect; changes that involve me stand out. Being here marks everything read.
+ * effect. Changes that involve me are in bold. Being here marks everything read: what was new
+ * stays marked "New" for this visit, and is plain the next time.
  */
 export const Route = createFileRoute('/_authed/activity')({
   component: ActivityPage,
@@ -28,7 +29,15 @@ function ActivityPage() {
   const me = useQuery(meQuery);
   const feed = useInfiniteQuery(activityFeedQuery);
   const unread = useQuery(unreadActivityQuery);
-  useMarkSeen(Math.max(unread.data ?? 0, feed.data?.pages[0]?.unreadCount ?? 0));
+  // Entries that were unread at some point during this visit. Marking them seen updates the cached
+  // feed at once, so this keeps them marked "New" until the person leaves the page.
+  const [fresh, setFresh] = useState<ReadonlySet<number>>(() => new Set());
+  const addFresh = useCallback(
+    (ids: number[]) =>
+      setFresh((old) => (ids.every((id) => old.has(id)) ? old : new Set([...old, ...ids]))),
+    [],
+  );
+  useMarkSeen(Math.max(unread.data ?? 0, feed.data?.pages[0]?.unreadCount ?? 0), addFresh);
   const format = useFormatMoney();
 
   const sentinel = useRef<HTMLDivElement>(null);
@@ -72,6 +81,7 @@ function ActivityPage() {
               <li key={entry.id}>
                 <Row
                   entry={entry}
+                  isNew={entry.unread || fresh.has(entry.id)}
                   meId={meId}
                   now={now}
                   line={describeActivity(entry, {
@@ -107,43 +117,65 @@ function ActivityPage() {
 }
 
 /**
- * POST /activity/seen whenever something unread is on record while the page is open: on arrival,
- * and again if the badge finds newer changes meanwhile (the feed then refreshes to show them).
+ * Marks the feed read whenever something unread is on record while the page is open: on arrival,
+ * and again if the badge finds newer changes meanwhile. In order:
+ *
+ * 1. Fetch the feed, so the newest changes show, each saying whether it's unread; those are
+ *    passed to `onNew`, to stay marked "New" for this visit.
+ * 2. POST /activity/seen.
+ * 3. Update the cached feed and badge to match, so coming back to the page shows them as read.
  */
-function useMarkSeen(unread: number) {
+function useMarkSeen(unread: number, onNew: (ids: number[]) => void) {
   const queryClient = useQueryClient();
   const sending = useRef(false);
   useEffect(() => {
     if (unread === 0 || sending.current) return;
     sending.current = true;
-    api
-      .markActivitySeen()
-      .then(async () => {
+    void (async () => {
+      try {
+        await queryClient.refetchQueries({ queryKey: activityFeedQuery.queryKey, exact: true });
+        const pages = queryClient.getQueryData(activityFeedQuery.queryKey)?.pages ?? [];
+        onNew(pages.flatMap((page) => page.items.filter((e) => e.unread).map((e) => e.id)));
+        await api.markActivitySeen();
+        queryClient.setQueryData(activityFeedQuery.queryKey, (old) =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map((page) => ({
+                  ...page,
+                  unreadCount: 0,
+                  items: page.items.map((e) => (e.unread ? { ...e, unread: false } : e)),
+                })),
+              }
+            : old,
+        );
         queryClient.setQueryData<ActivityFeed>(unreadActivityQuery.queryKey, (old) =>
           old ? { ...old, unreadCount: 0 } : old,
         );
-        await queryClient.invalidateQueries({ queryKey: activityFeedQuery.queryKey });
-      })
-      // Not marking it read is harmless: the badge just stays until the next visit.
-      .catch(() => undefined)
-      .finally(() => {
+      } catch {
+        // Not marking it read is harmless: the badge just stays until the next visit.
+      } finally {
         sending.current = false;
-      });
-  }, [unread, queryClient]);
+      }
+    })();
+  }, [unread, queryClient, onNew]);
 }
 
 function Row({
   entry,
+  isNew,
   line,
   meId,
   now,
 }: {
   entry: ActivityEntry;
+  /** Someone else's change since I last looked: tinted, and labelled "New" (not colour alone). */
+  isNew: boolean;
   line: ActivityLine;
   meId: string;
   now: Date;
 }) {
-  // Others' changes that involve me stand out (Blueprint 4.9).
+  // Others' changes that involve me stand out (Blueprint 4.9), in bold. The tint is for "new".
   const forMe = entry.involvesMe && entry.actor.id !== meId;
   const effect = line.effect && (
     <span
@@ -173,6 +205,11 @@ function Row({
         {/* On phones the effect sits under the sentence, leaving it the full width. */}
         {effect && <span className="sm:hidden">{effect}</span>}
         <span className="text-xs text-muted-foreground">
+          {isNew && (
+            <>
+              <span className="font-semibold text-primary">New</span> ·{' '}
+            </>
+          )}
           {entry.groupName && <>{entry.groupName} · </>}
           <time dateTime={entry.createdAt} title={new Date(entry.createdAt).toLocaleString()}>
             {relativeTime(entry.createdAt, now)}
@@ -182,7 +219,7 @@ function Row({
       {effect && <span className="hidden shrink-0 text-right sm:block">{effect}</span>}
     </>
   );
-  const className = cn('flex items-start gap-3 p-3', forMe && 'bg-accent/40');
+  const className = cn('flex items-start gap-3 p-3', isNew && 'bg-accent/40');
   const link = line.link;
   if (!link) return <div className={className}>{content}</div>;
   const linkClass = cn(className, 'hover:bg-muted');

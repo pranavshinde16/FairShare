@@ -65,6 +65,11 @@ export const ActivityEntry = z.object({
   createdAt: Timestamp,
   /** I paid for or share in the transaction, or I'm the target. The feed emphasizes these. */
   involvesMe: z.boolean(),
+  /**
+   * Someone else's change, made after I last opened Activity (the same rule as unreadCount). The
+   * feed marks these "New" for the visit that shows them.
+   */
+  unread: z.boolean(),
 });
 export type ActivityEntry = z.infer<typeof ActivityEntry>;
 

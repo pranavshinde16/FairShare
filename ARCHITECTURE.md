@@ -324,6 +324,10 @@ separate chunk, loaded only when configured.
 - **Web:** the Activity tab (`features/activity/describe.ts` turns each verb into a sentence, an
   optional detail line and my effect), an unread badge on both navigations ("Activity (3 unread)"
   to screen readers), refreshed every minute and on focus, and cleared on visiting.
+- **New and mine:** each entry says whether it's `unread` (by the same SQL rule as the count).
+  Visiting fetches the feed first, keeps that visit's unread rows tinted and labelled "New", then
+  marks everything seen and updates the cached feed, so coming back shows them plain. Others'
+  changes that involve me are in bold; the tint is only ever "new".
 - **History search and filters:** the Expenses list has a search box and chips for person, type,
   dates and "Show deleted" (deleted rows have Restore). On a group's page they live in the URL.
 - **Modal routes and Back** (`lib/modal-route.ts`): a page that opens its own modal route (Add

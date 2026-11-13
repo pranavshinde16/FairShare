@@ -33,6 +33,7 @@ const entry = (patch: Partial<ActivityEntry>): ActivityEntry => ({
   after: null,
   createdAt: '2026-11-12T10:00:00.000Z',
   involvesMe: false,
+  unread: false,
   ...patch,
 });
 

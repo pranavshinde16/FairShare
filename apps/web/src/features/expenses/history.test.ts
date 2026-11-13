@@ -40,6 +40,7 @@ const entry = (verb: ActivityEntry['verb'], before: unknown, after: unknown): Ac
     after,
     createdAt: '2026-11-10T10:00:00.000Z',
     involvesMe: true,
+    unread: false,
   }) as ActivityEntry;
 
 describe('describeEntry', () => {

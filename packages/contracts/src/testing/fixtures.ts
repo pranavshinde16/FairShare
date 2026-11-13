@@ -137,6 +137,7 @@ export const activityEntry = {
   after: { description: 'Dinner', amount: 120_000 },
   createdAt: at,
   involvesMe: true,
+  unread: false,
 };
 
 /** `{ ...base, ...patch }`, for one-field-off invalid fixtures. */

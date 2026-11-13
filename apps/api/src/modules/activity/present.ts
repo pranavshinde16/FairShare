@@ -2,7 +2,7 @@ import type { ActivityEntry, UserRef } from '@fairshare/contracts';
 import type { Db } from '@fairshare/db';
 import * as transactionsRepo from '../transactions/repo';
 import type { ActivityRow } from './repo';
-import { claimedPlaceholders } from './repo';
+import { claimedPlaceholders, unreadAmong } from './repo';
 
 type Snapshot = Record<string, unknown>;
 type Resolve = (userId: string) => string;
@@ -14,6 +14,8 @@ type Resolve = (userId: string) => string;
  *
  * involvesMe: I paid or have a share in the transaction (before or after the change), or I'm the
  * person the entry is about. Placeholders I claimed count as me.
+ *
+ * unread: someone else's change since I last opened Activity, the same wherever it's shown.
  */
 export async function presentEntries(
   db: Db,
@@ -21,12 +23,17 @@ export async function presentEntries(
   me: string,
 ): Promise<{ items: ActivityEntry[]; people: UserRef[] }> {
   const named = rows.flatMap((r) => [...idsIn(r.before), ...idsIn(r.after)]);
-  const [people, mine] = await Promise.all([
+  const [people, mine, unread] = await Promise.all([
     transactionsRepo.people(db, [
       ...rows.flatMap((r) => [r.actorId, ...(r.targetUser ? [r.targetUser] : [])]),
       ...named,
     ]),
     claimedPlaceholders(db, me),
+    unreadAmong(
+      db,
+      me,
+      rows.map((r) => r.id),
+    ),
   ]);
   const resolve: Resolve = (id) => people.get(id)?.id ?? id;
   const myIds = new Set([me, ...mine]);
@@ -50,6 +57,7 @@ export async function presentEntries(
       involvesMe:
         (row.targetUser !== null && myIds.has(row.targetUser)) ||
         [...idsIn(row.before, 'lines'), ...idsIn(row.after, 'lines')].some((id) => myIds.has(id)),
+      unread: unread.has(row.id),
     };
   });
 

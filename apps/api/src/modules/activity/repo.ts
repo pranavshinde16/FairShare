@@ -9,7 +9,6 @@ import {
   desc,
   eq,
   getTableColumns,
-  gt,
   inArray,
   isNull,
   lt,
@@ -63,9 +62,18 @@ function visible(me: string): SQL {
   )!;
 }
 
-/** Someone else's entry, newer than when the person last opened Activity. */
-function unread(me: string, seenAt: Date | null): SQL {
-  return and(ne(activityLog.actorId, me), ...(seenAt ? [gt(activityLog.createdAt, seenAt)] : []))!;
+/**
+ * Someone else's entry, newer than when the person last opened Activity (never: all of them).
+ * The time is compared in SQL, at Postgres's full precision: read into JavaScript it would lose its
+ * microseconds, and an entry written in the same millisecond could count wrongly.
+ */
+function unread(me: string): SQL {
+  return and(
+    ne(activityLog.actorId, me),
+    sql`${activityLog.createdAt} > coalesce(
+      (SELECT ${users.activitySeenAt} FROM ${users} WHERE ${users.id} = ${me}),
+      '-infinity'::timestamptz)`,
+  )!;
 }
 
 type FeedScope = { me: string; groupId?: string };
@@ -113,22 +121,23 @@ export async function feedPage(
  * How many entries in my feed are unread. Unread is the same for an entry wherever it's shown, so
  * a group's count is my feed's, narrowed to that group.
  */
-export async function unreadCount(db: Db, scope: FeedScope, seenAt: Date | null): Promise<number> {
+export async function unreadCount(db: Db, scope: FeedScope): Promise<number> {
   const q = await scoped(db, scope, 'count');
   if (!q) return 0;
-  const [row] = (await q.base.where(
-    and(q.inGroups, visible(scope.me), unread(scope.me, seenAt)),
-  )) as { n: number }[];
+  const [row] = (await q.base.where(and(q.inGroups, visible(scope.me), unread(scope.me)))) as {
+    n: number;
+  }[];
   return row!.n;
 }
 
-/** When the person last opened Activity (null: never). */
-export async function seenAt(db: Db, me: string): Promise<Date | null> {
-  const [row] = await db
-    .select({ seenAt: users.activitySeenAt })
-    .from(users)
-    .where(eq(users.id, me));
-  return row?.seenAt ?? null;
+/** Which of these entries are unread for me: the same rule as unreadCount. */
+export async function unreadAmong(db: Db, me: string, ids: number[]): Promise<Set<number>> {
+  if (ids.length === 0) return new Set();
+  const rows = await db
+    .select({ id: activityLog.id })
+    .from(activityLog)
+    .where(and(inArray(activityLog.id, ids), unread(me)));
+  return new Set(rows.map((r) => r.id));
 }
 
 /** POST /activity/seen: everything up to now is read. */

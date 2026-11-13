@@ -163,6 +163,13 @@ The server now gzips what the web build serves (not API responses). The main scr
    once in a parallel run. Every such read is ordered now.
 8. **The invariant tests first cloned a database per test**, which timed out when every package's
    tests ran at once; they share one now, each putting back what it broke.
+9. **Activity rows stayed green after being opened** (found by you on staging). The tint meant
+   "someone else's change that involves you", permanently; it read as "unread", which never
+   cleared. Now each entry says whether it's unread (a new `unread` field, computed in SQL by the
+   same rule as the unread count, at Postgres's full time precision). The tint and a "New" label
+   mark what was unread when the page opened, for that visit only. Involving you is shown in bold.
+   The page now fetches the feed before marking it seen, so new rows are shown before they're
+   cleared. An end-to-end test follows your steps: open a new row, go back, nothing is "New".
 
 ## Verification
 
@@ -174,9 +181,9 @@ The server now gzips what the web build serves (not API responses). The main scr
   | contracts  | 287       |
   | api-client | 64        |
   | db         | 101       |
-  | api        | 482       |
+  | api        | 483       |
   | web        | 148       |
-  | **Total**  | **1,464** |
+  | **Total**  | **1,465** |
 
 - **The authorization matrix, in full** (`apps/api/src/authorization.test.ts`): every API route ×
   {signed out, outsider, member who left, member, owner}, each against a fresh group: 36 rows, 180

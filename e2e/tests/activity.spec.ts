@@ -141,8 +141,15 @@ test('shows others’ changes in Activity, with an unread badge that clears on v
   await expect(rows.nth(1)).toContainText('Bilal joined with an invite link');
   await expect(rows.nth(2)).toContainText('You created an invite link');
   await expect(rows.nth(3)).toContainText('You created the group');
-  // Visiting marks them read.
+  // Bilal's two are new; Asha's own never are.
+  const isNew = (row: number) => rows.nth(row).getByText('New', { exact: true });
+  await expect(isNew(0)).toBeVisible();
+  await expect(isNew(1)).toBeVisible();
+  await expect(isNew(2)).toHaveCount(0);
+  await expect(isNew(3)).toHaveCount(0);
+  // Visiting marks them read. They stay marked "New" while Asha is still here.
   await expect(activityLink(page)).toHaveAccessibleName(/^Activity$/);
+  await expect(isNew(0)).toBeVisible();
 
   // Bilal corrects the amount; Asha's badge picks it up on the next look.
   await api(bilalPage).edit(dinner, 150_000, [asha, bilal]);
@@ -154,10 +161,18 @@ test('shows others’ changes in Activity, with an unread badge that clears on v
   await expect(rows.nth(0)).toContainText('Changed the amount ₹1,200.00 → ₹1,500.00');
   await expect(rows.nth(0)).toContainText('you borrowed ₹750.00');
 
+  await expect(isNew(0)).toBeVisible();
+  await expect(isNew(1)).toHaveCount(0); // seen on the last visit
+
   // A row opens what it's about.
   await rows.nth(0).getByRole('link').click();
   await expect(page.getByRole('heading', { name: 'Dinner' })).toBeVisible();
   await expect(page.getByText('Bilal changed the amount ₹1,200.00 → ₹1,500.00')).toBeVisible();
+
+  // Back on Activity, what was opened (and everything else seen) is no longer new.
+  await page.goBack();
+  await expect(rows.nth(0)).toContainText('Bilal edited ‘Dinner’');
+  await expect(page.getByRole('main').getByText('New', { exact: true })).toHaveCount(0);
 
   await bilalContext.close();
   expect(bilalErrors, 'console errors in Bilal’s browser').toEqual([]);

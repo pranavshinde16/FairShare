@@ -365,6 +365,34 @@ describe('the unread count', () => {
     expect((await feedOf(asha)).unreadCount).toBe(0);
     expect((await groupFeedOf(asha, group.id)).unreadCount).toBe(0);
   });
+
+  it('marks each entry unread by the same rule, so the feed can show which ones are new', async () => {
+    const [asha, bilal] = await Promise.all([person('asha'), person('bilal')]);
+    const group = await newGroup(asha, 'Flat');
+    await join(asha, group.id, bilal);
+    await seen(asha);
+    await expense(bilal, group.id, expenseBody(bilal.id, [asha.id, bilal.id]));
+    await expense(asha, group.id, expenseBody(asha.id, [asha.id, bilal.id]));
+
+    const unreadVerbs = (feed: {
+      items: { verb: string; actor: { id: string }; unread: boolean }[];
+    }) =>
+      feed.items
+        .filter((e) => e.unread)
+        .map((e) => `${e.actor.id === bilal.id ? 'bilal' : 'asha'} ${e.verb}`);
+    // Only Bilal's expense, made after Asha looked: not his joining (before), nor her own.
+    const feed = await feedOf(asha);
+    expect(unreadVerbs(feed)).toEqual(['bilal transaction.created']);
+    expect(feed.items.filter((e) => e.unread)).toHaveLength(feed.unreadCount);
+    expect(unreadVerbs(await groupFeedOf(asha, group.id))).toEqual(['bilal transaction.created']);
+    // Nothing is unread for Bilal that he did himself.
+    expect((await feedOf(bilal)).items.filter((e) => e.actor.id === bilal.id && e.unread)).toEqual(
+      [],
+    );
+
+    await seen(asha);
+    expect(unreadVerbs(await feedOf(asha))).toEqual([]);
+  });
 });
 
 describe('people in the feed', () => {
