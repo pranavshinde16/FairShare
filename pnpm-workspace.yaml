@@ -9,6 +9,8 @@ catalog:
   '@eslint/js': ^10.0.1
   # Manrope, self-hosted: the CSP allows fonts from our own origin only (Direction 04 "Classic").
   '@fontsource-variable/manrope': 5.3.0
+  # Outfit SemiBold for the logo's "fairshare" wordmark only (latin-600), self-hosted for the CSP.
+  '@fontsource/outfit': 5.3.0
   '@hono/node-server': ^2.1.6
   '@hono/zod-validator': ^0.9.1
   '@hookform/resolvers': ^7.0.6

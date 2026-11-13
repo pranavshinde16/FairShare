@@ -17,6 +17,7 @@
     "@fairshare/contracts": "workspace:*",
     "@fairshare/core": "workspace:*",
     "@fontsource-variable/manrope": "catalog:",
+    "@fontsource/outfit": "catalog:",
     "@hookform/resolvers": "catalog:",
     "@sentry/react": "catalog:",
     "@tanstack/react-query": "catalog:",

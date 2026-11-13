@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router';
 import { Compass } from 'lucide-react';
 import { ErrorState } from '../components/common/error-state';
-import { Logo } from '../components/common/logo';
+import { FairShareLogo } from '../components/brand/fairshare-logo';
 import { Button } from '../components/ui/button';
 import { Toaster } from '../components/ui/toaster';
 import { OfflineBanner } from '../features/pwa/offline-banner';
@@ -51,7 +51,7 @@ function NotFound() {
 function CenteredPage({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[440px] flex-col justify-center gap-7 bg-background px-6 py-10">
-      <Logo size="lg" />
+      <FairShareLogo size="lg" />
       {children}
     </main>
   );

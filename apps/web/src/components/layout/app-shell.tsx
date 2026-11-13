@@ -27,7 +27,7 @@ import { Spinner } from '../common/spinner';
 import { GroupTile } from '../common/tiles';
 import { buttonVariants } from '../ui/button';
 import { useAddExpenseAction } from './add-expense-action';
-import { LogoMark } from '../common/logo';
+import { FairShareLogo } from '../brand/fairshare-logo';
 
 /**
  * The signed-in layout (DESIGN_SPEC §2). Below `lg` (1024px): one column, a frosted bottom tab bar
@@ -117,13 +117,8 @@ function TopBar({
   const me = useQuery(meQuery);
   return (
     <header className="sticky top-0 z-30 hidden h-16 items-center gap-3 border-b bg-card px-6 lg:flex">
-      <Link
-        to="/"
-        aria-label="FairShare home"
-        className={cn('inline-flex items-center gap-2.5 rounded-md', focusRing)}
-      >
-        <LogoMark />
-        <span className="text-[19px] font-extrabold tracking-[-0.02em]">FairShare</span>
+      <Link to="/" className={cn('inline-flex items-center rounded-md', focusRing)}>
+        <FairShareLogo size="md" label="FairShare home" />
       </Link>
       <span className="flex-1" />
       <button

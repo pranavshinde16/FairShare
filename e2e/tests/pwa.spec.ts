@@ -26,7 +26,7 @@ test('installable: a manifest with its icons, and a service worker that opens th
   expect(manifest.headers()['content-type']).toContain('application/manifest+json');
   const body = (await manifest.json()) as { icons: { src: string; purpose: string }[] };
   expect(body).toMatchObject({ name: 'FairShare', display: 'standalone', start_url: '/' });
-  expect(body.icons.map((i) => i.purpose).sort()).toEqual(['any', 'any', 'maskable']);
+  expect(body.icons.map((i) => i.purpose).sort()).toEqual(['any', 'any', 'maskable', 'maskable']);
   for (const icon of body.icons) {
     const res = await page.request.get(icon.src);
     expect(res.headers()['content-type'], icon.src).toBe('image/png');

@@ -4,6 +4,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 // Manrope, bundled into /assets: the CSP allows fonts from our own origin only.
 import '@fontsource-variable/manrope';
+// Outfit SemiBold, Latin only: the logo's wordmark.
+import '@fontsource/outfit/latin-600.css';
 import { sessionQuery } from './features/auth/session';
 import { createQueryClient } from './lib/query-client';
 import { initTheme } from './lib/theme';

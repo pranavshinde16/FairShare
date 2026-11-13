@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { Link2Off } from 'lucide-react';
 import { ErrorState } from '../components/common/error-state';
-import { Logo } from '../components/common/logo';
+import { FairShareLogo } from '../components/brand/fairshare-logo';
 import { Skeleton } from '../components/common/skeleton';
 import { sessionQuery } from '../features/auth/session';
 import { InviteView, Message } from '../features/invites/invite-view';
@@ -40,7 +40,7 @@ function InvitePage() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center gap-7 px-6 py-10 lg:px-0">
-      <Logo size="lg" />
+      <FairShareLogo size="lg" />
       {body}
     </main>
   );

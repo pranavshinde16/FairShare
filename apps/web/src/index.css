@@ -49,6 +49,12 @@
      --owe-muted (4.46:1) fall just under WCAG AA's 4.5:1 (spec §7), so the text is ~3% darker. */
   --accent-foreground: #0d7767;
   --owe-muted-foreground: #be400c;
+
+  /* The logo, "Overlap" (design/fairshare-logo-overlap): you, a friend, and the share between. */
+  --logo-a: #0e7c6b;
+  --logo-b: #12a592;
+  --logo-overlap: #0a4f45;
+  --logo-tile: #0e7c6b;
 }
 
 .dark {
@@ -88,10 +94,17 @@
   --popover: var(--card);
   --accent-foreground: var(--primary);
   --owe-muted-foreground: var(--owe);
+
+  --logo-a: #2dd4bf;
+  --logo-b: #99f6e4;
+  --logo-overlap: #0e7c6b;
+  --logo-tile: #0e7c6b;
 }
 
 @theme inline {
   --font-sans: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  /* The logo's lowercase "fairshare" wordmark only. */
+  --font-wordmark: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 
   /* shadcn/ui semantic colours */
   --color-background: var(--background);
@@ -147,6 +160,12 @@
   --shadow-card: var(--elevation-card);
   --shadow-pop: var(--elevation-pop);
   --shadow-fab: var(--elevation-fab);
+
+  /* Logo */
+  --color-logo-a: var(--logo-a);
+  --color-logo-b: var(--logo-b);
+  --color-logo-overlap: var(--logo-overlap);
+  --color-logo-tile: var(--logo-tile);
 }
 
 @layer base {

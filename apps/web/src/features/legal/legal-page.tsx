@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Logo } from '../../components/common/logo';
+import { FairShareLogo } from '../../components/brand/fairshare-logo';
 
 /** When the privacy notice and the terms last changed. */
 export const LEGAL_UPDATED = '13 November 2026';
@@ -31,7 +31,7 @@ export function LegalPage({ title, children }: { title: string; children: ReactN
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[680px] flex-col gap-7 bg-background px-6 py-10">
       <div className="flex items-center justify-between gap-4">
-        <Logo size="lg" />
+        <FairShareLogo size="lg" />
         <Link
           to="/"
           className="inline-flex min-h-11 items-center gap-1 rounded-md text-[15px] font-bold text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
