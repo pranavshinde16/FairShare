@@ -20,3 +20,4 @@ comes next.
 | 11    | [Advanced splits](phase-11-advanced-splits.md)                         | Done        |
 | 12    | [Rule-based text entry](phase-12-rule-parsing.md)                      | Done        |
 | 13    | [Hardening and launch readiness](phase-13-hardening.md)                | In progress |
+| —     | [Design: Classic restyle](design-classic.md)                           | Done        |
