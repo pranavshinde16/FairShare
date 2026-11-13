@@ -143,7 +143,8 @@ export function SettleForm({
   const future = draft.occurredOn > localDate();
 
   function submit() {
-    if (body && !busy) onSubmit(body);
+    // Ctrl/⌘+Enter reaches here without the (disabled) Save button.
+    if (body && !busy && navigator.onLine) onSubmit(body);
   }
 
   return (

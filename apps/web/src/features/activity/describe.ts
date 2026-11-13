@@ -35,6 +35,8 @@ type Snapshot = {
   placeholderName?: string;
   newOwnerId?: string;
   inviteId?: string;
+  /** member.deleted: whether they left the group (settled) or stayed (still owing or owed). */
+  left?: boolean;
 };
 
 /**
@@ -137,6 +139,19 @@ export function describeActivity(entry: ActivityEntry, ctx: DescribeContext): Ac
           ? `${capitalize(name(after.newOwnerId))} ${after.newOwnerId === meId ? 'are' : 'is'} now the owner`
           : null,
         link: entry.actor.id === meId ? null : toGroup,
+      });
+    case 'member.deleted':
+      // Their name is already "Deleted user", so the sentence doesn't use it.
+      if (direct) {
+        return line('Your friend deleted their account', {
+          // While something is still owed, the friendship stays open to settle it.
+          link: after.left ? null : { to: '/friends/$userId', params: { userId: entry.actor.id } },
+        });
+      }
+      return line('A member deleted their account', {
+        detail: after.newOwnerId
+          ? `${capitalize(name(after.newOwnerId))} ${after.newOwnerId === meId ? 'are' : 'is'} now the owner`
+          : null,
       });
     case 'member.claimed':
       return line(`${actor} joined as ${after.placeholderName ?? 'a placeholder'}`);

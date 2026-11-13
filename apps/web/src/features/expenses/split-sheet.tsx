@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/utils';
 import {
   assignRemaining,
+  canTakePart,
   clampShares,
   fillRemainder,
   percentText,
@@ -19,7 +20,7 @@ import {
 } from './split-draft';
 
 const METHODS: { method: SplitMethod; label: string; name: string }[] = [
-  { method: 'equal', label: 'Equal', name: 'Equally' },
+  { method: 'equal', label: 'Equal', name: 'Equal split' },
   { method: 'exact', label: 'Exact', name: 'Exact amounts' },
   { method: 'percent', label: '%', name: 'Percentages' },
   { method: 'shares', label: 'Shares', name: 'Shares' },
@@ -54,7 +55,8 @@ export function SplitSheet({
   onChange: (changes: Partial<Pick<ExpenseDraft, 'payers' | 'split'>>) => void;
 }) {
   const { payers, split } = draft;
-  // Active members, plus anyone this expense already names who has since left (when editing).
+  // Members who can take part, plus anyone this expense already names who has since left or
+  // deleted their account (when editing).
   const named = new Set([
     ...(payers.mode === 'single' ? [payers.userId] : Object.keys(payers.amounts)),
     ...split.participants,
@@ -62,7 +64,7 @@ export function SplitSheet({
     ...Object.keys(split.percent),
     ...Object.keys(split.shares),
   ]);
-  const people = group.members.filter((m) => m.leftAt === null || named.has(m.user.id));
+  const people = group.members.filter((m) => canTakePart(m) || named.has(m.user.id));
   const nameOf = (userId: string) => {
     const m = group.members.find((x) => x.user.id === userId);
     return m ? (m.user.id === meId ? `${m.user.name} (you)` : m.user.name) : 'Someone';
@@ -210,7 +212,7 @@ export function SplitSheet({
                 variant="outline"
                 onClick={() =>
                   setSplit({
-                    participants: people.filter((m) => m.leftAt === null).map((m) => m.user.id),
+                    participants: people.filter(canTakePart).map((m) => m.user.id),
                   })
                 }
               >

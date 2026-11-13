@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { ErrorState } from '../../components/common/error-state';
 import { Skeleton } from '../../components/common/skeleton';
 import { Dialog } from '../../components/ui/dialog';
 import { uuidv7 } from '../../lib/ids';
@@ -29,6 +30,7 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
 
   const currency = currencies.data?.items.find((c) => c.code === group.data?.currency);
   const ready = group.data && me.data && currency;
+  const loadError = group.error ?? me.error ?? currencies.error;
   const save = useCreateExpense(group.data!, me.data?.id ?? '', currency?.minorUnits ?? 2);
 
   let initial: ExpenseDraft | undefined;
@@ -56,6 +58,11 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
             void save({ id, ...body }, typed);
             onClose();
           }}
+        />
+      ) : loadError ? (
+        <ErrorState
+          error={loadError}
+          onRetry={() => void Promise.all([group.refetch(), me.refetch(), currencies.refetch()])}
         />
       ) : (
         <FormSkeleton />

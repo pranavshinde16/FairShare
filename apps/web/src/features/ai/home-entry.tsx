@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { errorMessage } from '../../lib/errors';
 import { localDate } from '../expenses/expense-form';
+import { canTakePart } from '../expenses/split-draft';
 import { handOff } from './handoff';
 
 /**
@@ -40,7 +41,7 @@ export function HomeEntry({ home, me }: { home: Home; me: { id: string; name: st
           id: g.id,
           kind: 'group' as const,
           members: g.members
-            .filter((m) => m.leftAt === null)
+            .filter(canTakePart)
             .map((m) => ({ userId: m.user.id, name: m.user.name })),
           lastActivityAt: lastActivity.get(g.id) ?? '',
         })),

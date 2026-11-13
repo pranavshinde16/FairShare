@@ -12,6 +12,7 @@ export type MemberFacts = {
   joinedAt: Date;
   leftAt: Date | null;
   isPlaceholder: boolean;
+  isDeleted: boolean;
 };
 
 /**
@@ -37,12 +38,12 @@ export const isGroupSettled = (nets: NetRow[]) => nets.length === 0;
 
 /**
  * Who becomes owner when the owner leaves: the longest-standing active member with an account
- * (plan correction: never a placeholder, who can't sign in). Null when no one with an account
- * remains; then the group is closed, since nobody could see it any more.
+ * (plan correction: never a placeholder, who can't sign in, nor a deleted account). Null when no
+ * one with an account remains; then the group is closed, since nobody could see it any more.
  */
 export function nextOwner(members: MemberFacts[], leavingId: string): string | null {
   const candidates = members
-    .filter((m) => m.userId !== leavingId && m.leftAt === null && !m.isPlaceholder)
+    .filter((m) => m.userId !== leavingId && m.leftAt === null && !m.isPlaceholder && !m.isDeleted)
     .sort(
       (a, b) => a.joinedAt.getTime() - b.joinedAt.getTime() || a.userId.localeCompare(b.userId),
     );

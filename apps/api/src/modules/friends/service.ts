@@ -5,6 +5,7 @@ import { uuidv7 } from '../../lib/ids';
 import { recordActivity } from '../activity/record';
 import * as groupsRepo from '../groups/repo';
 import { invalid, memberAdded, resolveNewMember, toUserRef } from '../groups/service';
+import { isDeletedColumn } from '../users/repo';
 
 export type FriendsService = ReturnType<typeof createFriendsService>;
 
@@ -28,6 +29,7 @@ export function createFriendsService(db: Db) {
         name: users.name,
         avatarUrl: users.avatarUrl,
         isPlaceholder: users.isPlaceholder,
+        isDeleted: isDeletedColumn,
       })
       .from(users)
       .where(eq(users.id, id));

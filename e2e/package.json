@@ -10,6 +10,7 @@
     "lint": "eslint ."
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@fairshare/config": "workspace:*",
     "@fairshare/contracts": "workspace:*",
     "@playwright/test": "catalog:",

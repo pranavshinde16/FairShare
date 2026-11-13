@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const API_ORIGIN = process.env.API_ORIGIN ?? 'http://localhost:3000';
 
@@ -11,6 +12,46 @@ export default defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     react(),
     tailwindcss(),
+    // Installable, with the app shell cached (Blueprint C9, 4 "PWA": generateSW). Only the shell:
+    // API responses are never cached, so nothing financial is ever shown stale from a cache.
+    VitePWA({
+      strategies: 'generateSW',
+      // A new version waits until the person chooses to reload (UpdatePrompt), so a form being
+      // filled in is never reloaded away.
+      registerType: 'prompt',
+      // Registered from the app's own code (virtual:pwa-register/react); an injected inline
+      // script would break the CSP.
+      injectRegister: false,
+      manifest: {
+        id: '/',
+        name: 'FairShare',
+        short_name: 'FairShare',
+        description: 'Split shared expenses with friends, roommates and trip groups.',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#0f766e',
+        icons: [
+          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          {
+            src: '/maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Any app address works offline from the cached shell; the API is never answered by it.
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [],
+      },
+    }),
   ],
   server: {
     port: 5173,

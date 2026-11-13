@@ -12,7 +12,7 @@ import {
   users,
 } from '@fairshare/db';
 import { insertTransaction } from '@fairshare/db/testing';
-import { and, eq, or, sql } from 'drizzle-orm';
+import { and, asc, eq, or, sql } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { uuidv7 } from '../../lib/ids';
 import { integrationApp } from '../../testing/integration';
@@ -111,7 +111,11 @@ describe('claiming as a new user', () => {
 
     await claim(bilal, await tokenFor(asha, group.id, placeholder), placeholder);
 
-    const log = await ctx.db.select().from(activityLog).where(eq(activityLog.groupId, group.id));
+    const log = await ctx.db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.groupId, group.id))
+      .orderBy(asc(activityLog.id));
     // The append-only log still names the placeholder in the old entry (resolved at read time).
     expect(log.find((e) => e.verb === 'member.added')!.targetUser).toBe(placeholder);
     expect(log.at(-1)).toMatchObject({

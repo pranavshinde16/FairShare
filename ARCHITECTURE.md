@@ -86,17 +86,23 @@ Every request passes through the same middleware, in this order (`apps/api/src/a
 2. **Request log.** One JSON line per request: method, path, status, duration. The query string is
    never logged, invite tokens in paths are replaced with `[token]`, and pino redacts `email`,
    `otp`, `token`, `cookie` and `authorization` wherever they appear in a logged object.
-3. **Security headers.** A strict CSP (`script-src 'self'`, `frame-ancestors 'none'`, connections
-   only to ourselves and Sentry), HSTS, `nosniff`, `X-Frame-Options: DENY`,
-   `Referrer-Policy: no-referrer`. No CORS headers: the web app is same-origin.
-4. **Body-size cap** on `/api/*`: 64 KB, else 413 `PAYLOAD_TOO_LARGE`.
-5. **Routes:**
+3. **Security headers** (`http/security.ts`). A strict CSP: scripts, styles, workers and the
+   manifest from our own origin only, no inline script or style element, no `eval`, no frames
+   either way, connections only to ourselves and Sentry. HSTS for a year with subdomains,
+   `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a Permissions-Policy
+   turning off camera, microphone, location, payment, USB, serial and Bluetooth. No CORS headers:
+   the web app is same-origin. The end-to-end tests fail on any CSP violation.
+4. **Compression** of the web build's responses (gzip; scripts shrink to about a third). API
+   responses are never compressed, so nothing private is compressed next to something a request
+   put there (BREACH).
+5. **Body-size cap** on `/api/*`: 64 KB, else 413 `PAYLOAD_TOO_LARGE`.
+6. **Routes,** each group with its rate limit (see "Rate limits"):
    - `/api/health`: 200, or 503 when the database is down (the reason is logged).
    - `/api/auth/*`: Better Auth (see "Sign-in and sessions").
    - `/api/v1`: first `protectMutations` (below), then the public `GET /sign-in-options` and
      `GET /invites/:token`, then `requireUser`, then every other route. An unknown `/api/v1` path without a session is
      therefore 401, not 404, so route names can't be probed anonymously.
-6. **Web app** (when `WEB_DIST_DIR` is set): static files, with `/assets/*` (content-hashed) cached
+7. **Web app** (when `WEB_DIST_DIR` is set): static files, with `/assets/*` (content-hashed) cached
    for a year and everything else revalidated. A browser page load on any other non-API path gets
    `index.html`, for the client-side router. Missing files and API paths get the JSON 404.
 
@@ -354,6 +360,63 @@ separate chunk, loaded only when configured.
 - **Saving** is the normal create; nothing about typed entry writes anything else. The LLM path
   (`POST /ai/parse-expense`) for low-confidence sentences comes later.
 
+## Hardening
+
+**Account deletion** (`DELETE /me` with `{confirm: "DELETE"}`; Blueprint 4.1), in one database
+transaction:
+
+- In each group: settled there, the person leaves (a friendship too, which otherwise can't be
+  left); still owing or owed, they stay, as "Deleted user", so the others can record what's paid
+  back and the owner can remove them afterwards. An owner hands over to the longest-standing
+  member with an account; with none left, the group closes. Every group gets a `member.deleted`
+  entry (`after: {left, newOwnerId?}`).
+- The person's row is kept (transactions point at it) but cleared: name "Deleted user", no email,
+  picture or UPI ID, `deleted_at` set. The auth user, its sessions, linked accounts and any pending
+  sign-in code are deleted. The response clears the browser's cookies and storage.
+- `UserRef.isDeleted` lets the web app leave deleted accounts out of new expenses (default split,
+  the split sheet, typed entry) while keeping them in settle-up, and never offers them to add
+  (`GET /people`) or as a group's next owner.
+
+**Rate limits** (Blueprint 9.1), in memory (one replica):
+
+| Route group                           | Limit                                                      |
+| ------------------------------------- | ---------------------------------------------------------- |
+| Every signed-in `/api/v1` route       | 120 a minute per user                                      |
+| `GET /invites/:token` (public)        | 30 a minute per client IP                                  |
+| `/api/health`, `GET /sign-in-options` | 60 a minute per client IP, together                        |
+| `/api/auth/*` (Better Auth)           | Its own per-IP limits, stricter on sign-in; set explicitly |
+| Sign-in codes                         | 3 per email address per 10 minutes                         |
+
+Over a limit: 429 `RATE_LIMITED` with `Retry-After`. The client IP comes from
+`CLIENT_IP_HEADERS`.
+
+**Installable app** (`vite-plugin-pwa`, `generateSW`): a manifest with "any" and "maskable" icons
+(rendered from SVG by `e2e/scripts/render-icons.ts`), and a service worker that precaches the app
+shell only, never API responses, so nothing financial is shown stale from a cache. Any app address
+opens offline from the cached shell. A new version downloads in the background and waits for the
+person to choose "Reload" (`registerType: 'prompt'`), so nothing typed is lost. While offline a
+banner says so and every submit button is disabled (in `Button`, for `type="submit"`); keyboard
+shortcuts that save check too. The service worker is registered from the app's code (an injected
+inline script would break the CSP), and `/sw.js` is served `no-cache`.
+
+**zod and the CSP.** zod 4 compiles object schemas with `new Function` when it can, and finds out by
+trying as the first schema is built; under the CSP that try is reported as a violation. The
+contracts package switches it off (`jitless`) in its first import, which is why its
+`package.json` has no `"sideEffects": false`: Rolldown would drop that import.
+
+**Errors and states.** `ERROR_COPY` (`apps/web/src/lib/errors.ts`) is a full record of every error
+code, so a new code without copy fails the type check. While offline, any failure reads "Can't
+reach FairShare". Every screen loads with a skeleton shaped like its content, shows an error with
+Retry and the request ID, and has an empty state.
+
+**Accessibility.** Every screen is checked by axe (WCAG 2.1 A and AA, contrast included) in light
+and dark themes on desktop and phone sizes, plus a keyboard pass that every Tab stop is named and
+shows focus. Colours that only failed together (muted text on the accent and grey backgrounds) were
+fixed in the tokens.
+
+**Legal pages.** `/privacy` and `/terms` are open to everyone and linked from sign-in and
+Settings. Each statement in the privacy notice describes what the code does; change them together.
+
 ## Deployment
 
 - **One image** (`Dockerfile`): build web and API, then `pnpm deploy --prod` the API. tsup bundles
@@ -376,8 +439,10 @@ separate chunk, loaded only when configured.
   Vite bakes them into the bundle. They are public: never a secret.
 - **CI** builds the image on every push, runs its migrations twice against a fresh Postgres, starts
   it and runs `scripts/smoke-test.sh`, the same check that runs against staging after a deploy.
-  A separate job runs the end-to-end tests. One replica is required for now: the sign-in code
-  limits (and the planned API rate limiter) keep their counts in memory.
+  A separate job runs the end-to-end tests. One replica is required for now: the rate limits (the
+  API's and Better Auth's) keep their counts in memory.
+- **Operations:** the nightly invariant check, nightly encrypted backups and the quarterly restore
+  test are GitHub Actions workflows, described in [docs/operations.md](docs/operations.md).
 - **Shutdown:** on SIGTERM the server stops accepting connections, finishes in-flight requests,
   closes the pool and flushes Sentry, or exits after 10 seconds regardless.
 

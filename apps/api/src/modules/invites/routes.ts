@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import type { AppEnv, AuthedEnv } from '../../http/context';
 import { AppError } from '../../http/errors';
 import { clientIp } from '../../http/client-ip';
+import { rateLimit } from '../../http/rate-limit';
 import { validate } from '../../http/validate';
 import type { RateLimiter } from '../../lib/rate-limit';
 import type { InvitesService } from './service';
@@ -15,17 +16,16 @@ export function invitePreviewRoutes(
   limiter: RateLimiter,
   clientIpHeaders: string[],
 ) {
-  return new Hono<AppEnv>().get('/invites/:token', async (c) => {
-    // 30 a minute per IP (Blueprint 9.1), so tokens can't be guessed at speed.
-    const limit = limiter.consume(clientIp(c, clientIpHeaders));
-    if (!limit.allowed) {
-      c.header('Retry-After', String(limit.retryAfterSeconds));
-      throw new AppError('RATE_LIMITED', 'Too many requests. Try again in a minute.');
-    }
-    const token = InviteToken.safeParse(c.req.param('token'));
-    if (!token.success) throw unknownInvite();
-    return c.json(await invites.preview(token.data));
-  });
+  // 30 a minute per IP (Blueprint 9.1), so tokens can't be guessed at speed.
+  return new Hono<AppEnv>().get(
+    '/invites/:token',
+    rateLimit(limiter, (c) => clientIp(c, clientIpHeaders)),
+    async (c) => {
+      const token = InviteToken.safeParse(c.req.param('token'));
+      if (!token.success) throw unknownInvite();
+      return c.json(await invites.preview(token.data));
+    },
+  );
 }
 
 /** POST /invites/:token/accept: signed in. */

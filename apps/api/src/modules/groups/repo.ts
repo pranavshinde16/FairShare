@@ -3,6 +3,7 @@
 
 import { groupMembers, groups, transactions, users, type Db, type Tx } from '@fairshare/db';
 import { aliasedTable, and, asc, eq, exists, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { isDeletedColumn } from '../users/repo';
 
 type Handle = Db | Tx;
 
@@ -18,6 +19,7 @@ export type MemberRow = {
   name: string;
   avatarUrl: string | null;
   isPlaceholder: boolean;
+  isDeleted: boolean;
   mergedInto: string | null;
 };
 
@@ -29,6 +31,7 @@ const memberColumns = {
   name: users.name,
   avatarUrl: users.avatarUrl,
   isPlaceholder: users.isPlaceholder,
+  isDeleted: isDeletedColumn,
   mergedInto: users.mergedInto,
 };
 
@@ -144,6 +147,14 @@ export async function markLeft(tx: Tx, groupId: string, userId: string): Promise
     .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
 }
 
+/** An owner who stays (a deleted account still owing) but can't own the group any more. */
+export async function demote(tx: Tx, groupId: string, userId: string): Promise<void> {
+  await tx
+    .update(groupMembers)
+    .set({ role: 'member' })
+    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+}
+
 export async function makeOwner(tx: Tx, groupId: string, userId: string): Promise<void> {
   await tx
     .update(groupMembers)
@@ -188,7 +199,7 @@ export async function shareAGroup(db: Handle, me: string, other: string): Promis
   return row !== undefined;
 }
 
-/** Everyone I share an active group with, except me. */
+/** Everyone I share an active group with, except me and deleted accounts (they can't be added). */
 export async function listPeopleISeeIn(db: Handle, me: string) {
   const mine = aliasedTable(groupMembers, 'mine');
   return db
@@ -197,6 +208,7 @@ export async function listPeopleISeeIn(db: Handle, me: string) {
       name: users.name,
       avatarUrl: users.avatarUrl,
       isPlaceholder: users.isPlaceholder,
+      isDeleted: isDeletedColumn,
     })
     .from(groupMembers)
     .innerJoin(users, eq(users.id, groupMembers.userId))
@@ -205,6 +217,7 @@ export async function listPeopleISeeIn(db: Handle, me: string) {
       and(
         ne(groupMembers.userId, me),
         isNull(groupMembers.leftAt),
+        isNull(users.deletedAt),
         isNull(groups.deletedAt),
         exists(
           db

@@ -50,6 +50,12 @@ export type ExpenseDraft = {
   split: SplitDraft;
 };
 
+/**
+ * Whether a member can be put into a new expense: still in the group, and not a deleted account
+ * (one stays in a group only while something is owed, to be settled).
+ */
+export const canTakePart = (m: Group['members'][number]) => m.leftAt === null && !m.user.isDeleted;
+
 export const emptySplit = (participants: string[]): SplitDraft => ({
   method: 'equal',
   participants,
@@ -450,7 +456,7 @@ export function newDraft(
   remembered: Remembered,
   today: string,
 ): ExpenseDraft {
-  const active = group.members.filter((m) => m.leftAt === null).map((m) => m.user.id);
+  const active = group.members.filter(canTakePart).map((m) => m.user.id);
   const kept = remembered.participants?.filter((id) => active.includes(id)) ?? [];
   return {
     amountText: '',

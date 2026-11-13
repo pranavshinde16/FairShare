@@ -1,6 +1,6 @@
 import type { Group } from '@fairshare/contracts';
 import { formatMoney, parseRules, resolveName, type NameCandidate } from '@fairshare/core';
-import { emptySplit, type ExpenseDraft } from '../expenses/split-draft';
+import { canTakePart, emptySplit, type ExpenseDraft } from '../expenses/split-draft';
 
 /**
  * Typed entry (Blueprint 8.1, 8.2, 8.7): "Dinner 2400 with Rahul & Amit" → the expense form,
@@ -37,11 +37,9 @@ type Context = {
   today: string;
 };
 
-/** The group's active members, as names to match. */
+/** The members who can take part in a new expense, as names to match. */
 export function candidatesOf(group: Group): NameCandidate[] {
-  return group.members
-    .filter((m) => m.leftAt === null)
-    .map((m) => ({ userId: m.user.id, name: m.user.name }));
+  return group.members.filter(canTakePart).map((m) => ({ userId: m.user.id, name: m.user.name }));
 }
 
 /**

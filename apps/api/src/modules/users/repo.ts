@@ -1,10 +1,13 @@
 // Drizzle queries for users. Every function takes the handle to run on: the pool, or a
 // transaction from withTx.
 
-import { auth_user, users, type Db, type Tx } from '@fairshare/db';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { auth_user, auth_verification, users, type Db, type Tx } from '@fairshare/db';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 type Handle = Db | Tx;
+
+/** Whether the account was deleted (Blueprint 4.1), for UserRef.isDeleted. */
+export const isDeletedColumn = sql<boolean>`(${users.deletedAt} IS NOT NULL)`.mapWith(Boolean);
 
 const profileColumns = {
   id: users.id,
@@ -80,18 +83,21 @@ export async function insertUserForAuthUser(db: Handle, user: NewRealUser): Prom
   return id;
 }
 
-/**
- * Clears what identifies a person and marks them deleted. The row stays: other people's
- * transactions point at it, and it shows as "Deleted user". Returns the auth user it was linked
- * to, if any.
- */
-export async function anonymizeUser(tx: Tx, userId: string): Promise<string | null | undefined> {
-  const [before] = await tx
-    .select({ authUserId: users.authUserId })
+/** Locks a person's row for the rest of the transaction, returning what deletion needs. */
+export async function lockUser(tx: Tx, userId: string) {
+  const [row] = await tx
+    .select({ authUserId: users.authUserId, email: users.email, deletedAt: users.deletedAt })
     .from(users)
     .where(eq(users.id, userId))
     .for('update');
-  if (!before) return undefined;
+  return row;
+}
+
+/**
+ * Clears what identifies a person and marks them deleted. The row stays: other people's
+ * transactions point at it, and it shows as "Deleted user".
+ */
+export async function anonymizeUser(tx: Tx, userId: string): Promise<void> {
   await tx
     .update(users)
     .set({
@@ -103,10 +109,21 @@ export async function anonymizeUser(tx: Tx, userId: string): Promise<string | nu
       deletedAt: sql`coalesce(${users.deletedAt}, now())`,
     })
     .where(eq(users.id, userId));
-  return before.authUserId;
 }
 
 /** Deletes an auth user. Its sessions and linked accounts go with it (ON DELETE CASCADE). */
 export async function deleteAuthUser(tx: Tx, authUserId: string): Promise<void> {
   await tx.delete(auth_user).where(eq(auth_user.id, authUserId));
+}
+
+/**
+ * Sign-in codes not used yet, which Better Auth's email-OTP plugin keys by
+ * "<type>-otp-<email>" (the address lower-cased). They'd expire within minutes anyway.
+ */
+export async function deletePendingCodes(tx: Tx, email: string): Promise<void> {
+  const address = email.toLowerCase();
+  const identifiers = ['sign-in', 'email-verification', 'forget-password', 'change-email'].map(
+    (type) => `${type}-otp-${address}`,
+  );
+  await tx.delete(auth_verification).where(inArray(auth_verification.identifier, identifiers));
 }

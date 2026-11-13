@@ -55,8 +55,10 @@ function FriendPage() {
     },
     onError: (error) => toast(errorMessage(error), { tone: 'error' }),
   });
+  // A deleted account can still be paid back (Settle up), but not put in new expenses.
+  const canAdd = friend.data ? !friend.data.user.isDeleted : false;
   const addExpense = () => {
-    if (!open.isPending) open.mutate();
+    if (canAdd && !open.isPending) open.mutate();
   };
   useNewExpenseShortcut(addExpense);
   const flash = useFlash(
@@ -85,6 +87,11 @@ function FriendPage() {
         <div className="flex min-w-0 flex-1 flex-col">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{user.name}</h1>
           {user.isPlaceholder && <p className="text-sm text-muted-foreground">Not joined yet</p>}
+          {user.isDeleted && (
+            <p className="text-sm text-muted-foreground">
+              Account deleted. You can still record what’s paid back.
+            </p>
+          )}
         </div>
         {user.isPlaceholder && directGroupId && (
           // Not on FairShare yet: a link aimed at them, so they can join and see what we share.
@@ -95,10 +102,12 @@ function FriendPage() {
             placeholder={{ id: user.id, name: user.name }}
           />
         )}
-        <Button className="hidden md:inline-flex" loading={open.isPending} onClick={addExpense}>
-          <Plus aria-hidden />
-          Add expense
-        </Button>
+        {canAdd && (
+          <Button className="hidden md:inline-flex" loading={open.isPending} onClick={addExpense}>
+            <Plus aria-hidden />
+            Add expense
+          </Button>
+        )}
       </header>
 
       <section
@@ -194,16 +203,18 @@ function FriendPage() {
         )}
       </section>
 
-      <Button
-        size="lg"
-        aria-label="Add expense"
-        loading={open.isPending}
-        className="fixed right-4 bottom-20 z-10 rounded-full shadow-lg md:hidden"
-        onClick={addExpense}
-      >
-        <Plus aria-hidden />
-        Expense
-      </Button>
+      {canAdd && (
+        <Button
+          size="lg"
+          aria-label="Add expense"
+          loading={open.isPending}
+          className="fixed right-4 bottom-20 z-10 rounded-full shadow-lg md:hidden"
+          onClick={addExpense}
+        >
+          <Plus aria-hidden />
+          Expense
+        </Button>
+      )}
       <Outlet />
     </div>
   );

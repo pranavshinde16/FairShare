@@ -24,6 +24,7 @@ RUN pnpm install --frozen-lockfile --offline
 # Public values for the browser build (a Sentry DSN is not a secret).
 ARG VITE_SENTRY_DSN=""
 ARG VITE_SENTRY_ENVIRONMENT=""
+ARG VITE_CONTACT_EMAIL=""
 RUN pnpm turbo run build --filter=@fairshare/api --filter=@fairshare/web
 
 # The API bundles the workspace packages it uses (see apps/api/tsup.config.ts), so its runtime

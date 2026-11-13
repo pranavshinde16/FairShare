@@ -13,6 +13,7 @@ import {
   type Tx,
 } from '@fairshare/db';
 import { and, asc, desc, eq, exists, gte, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { isDeletedColumn } from '../users/repo';
 
 type Handle = Db | Tx;
 type Line = { userId: string; amount: number };
@@ -212,6 +213,7 @@ export type PersonRow = {
   name: string;
   avatarUrl: string | null;
   isPlaceholder: boolean;
+  isDeleted: boolean;
   mergedInto: string | null;
 };
 
@@ -224,6 +226,7 @@ export async function people(db: Handle, ids: string[]): Promise<Map<string, Per
     name: users.name,
     avatarUrl: users.avatarUrl,
     isPlaceholder: users.isPlaceholder,
+    isDeleted: isDeletedColumn,
     mergedInto: users.mergedInto,
   };
   const rows = await db.select(columns).from(users).where(inArray(users.id, unique));

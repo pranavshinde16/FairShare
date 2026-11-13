@@ -23,6 +23,7 @@ export const userRef = (id: string, name: string) => ({
   name,
   avatarUrl: null,
   isPlaceholder: false,
+  isDeleted: false,
 });
 
 export const at = '2026-11-05T10:00:00.000Z';

@@ -43,10 +43,16 @@ headers=$(curl -s -D - -o /dev/null "$BASE_URL/api/health" | tr -d '\r' | tr 'A-
 contains 'responses carry a request id' 'x-request-id:' "$headers"
 contains 'responses carry the content security policy' "content-security-policy: default-src 'self'" "$headers"
 contains 'responses carry HSTS' 'strict-transport-security: max-age=' "$headers"
+contains 'responses carry a permissions policy' 'permissions-policy: camera=()' "$headers"
 
 contains 'GET / serves the web app' '<title>FairShare</title>' "$(page "$BASE_URL/")"
 contains 'an app route falls back to the web app' '<title>FairShare</title>' "$(page "$BASE_URL/groups/smoke-test")"
 check 'an unknown API path answers 404' 404 "$(status -H 'Accept: text/html' "$BASE_URL/api/smoke-test")"
+
+manifest=$(curl -s -D - -o /dev/null "$BASE_URL/manifest.webmanifest" | tr -d '\r' | tr 'A-Z' 'a-z')
+contains 'the web app manifest is served' 'content-type: application/manifest+json' "$manifest"
+sw=$(curl -s -D - -o /dev/null "$BASE_URL/sw.js" | tr -d '\r' | tr 'A-Z' 'a-z')
+contains 'the service worker is always revalidated' 'cache-control: no-cache' "$sw"
 
 check 'the sign-in options answer' 200 "$(status "$BASE_URL/api/v1/sign-in-options")"
 check 'Better Auth answers (no session)' null "$(curl -s "$BASE_URL/api/auth/get-session")"

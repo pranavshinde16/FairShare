@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedActivityRouteImport } from './routes/_authed/activity'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
@@ -20,6 +22,7 @@ import { Route as SignInVerifyRouteImport } from './routes/sign-in.verify'
 import { Route as AuthedFriendsUserIdRouteImport } from './routes/_authed/friends.$userId'
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups.$groupId'
 import { Route as AuthedGroupsNewRouteImport } from './routes/_authed/groups.new'
+import { Route as AuthedSettingsDeleteAccountRouteImport } from './routes/_authed/settings_.delete-account'
 import { Route as AuthedTransactionsIdRouteImport } from './routes/_authed/transactions.$id'
 import { Route as AuthedFriendsUserIdSettleRouteImport } from './routes/_authed/friends.$userId.settle'
 import { Route as AuthedGroupsGroupIdSettleRouteImport } from './routes/_authed/groups.$groupId.settle'
@@ -31,9 +34,19 @@ const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
@@ -81,6 +94,12 @@ const AuthedGroupsNewRoute = AuthedGroupsNewRouteImport.update({
   path: '/groups/new',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSettingsDeleteAccountRoute =
+  AuthedSettingsDeleteAccountRouteImport.update({
+    id: '/settings_/delete-account',
+    path: '/settings/delete-account',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 const AuthedTransactionsIdRoute = AuthedTransactionsIdRouteImport.update({
   id: '/transactions/$id',
   path: '/transactions/$id',
@@ -119,7 +138,9 @@ const AuthedGroupsGroupIdExpensesNewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
+  '/privacy': typeof PrivacyRoute
   '/sign-in': typeof SignInRouteWithChildren
+  '/terms': typeof TermsRoute
   '/activity': typeof AuthedActivityRoute
   '/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -128,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/friends/$userId': typeof AuthedFriendsUserIdRouteWithChildren
   '/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/groups/new': typeof AuthedGroupsNewRoute
+  '/settings/delete-account': typeof AuthedSettingsDeleteAccountRoute
   '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
   '/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
   '/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
@@ -136,6 +158,8 @@ export interface FileRoutesByFullPath {
   '/groups/$groupId/expenses/new': typeof AuthedGroupsGroupIdExpensesNewRoute
 }
 export interface FileRoutesByTo {
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/activity': typeof AuthedActivityRoute
   '/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -145,6 +169,7 @@ export interface FileRoutesByTo {
   '/friends/$userId': typeof AuthedFriendsUserIdRouteWithChildren
   '/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/groups/new': typeof AuthedGroupsNewRoute
+  '/settings/delete-account': typeof AuthedSettingsDeleteAccountRoute
   '/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
   '/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
   '/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
@@ -155,7 +180,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/sign-in': typeof SignInRouteWithChildren
+  '/terms': typeof TermsRoute
   '/_authed/activity': typeof AuthedActivityRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -165,6 +192,7 @@ export interface FileRoutesById {
   '/_authed/friends/$userId': typeof AuthedFriendsUserIdRouteWithChildren
   '/_authed/groups/$groupId': typeof AuthedGroupsGroupIdRouteWithChildren
   '/_authed/groups/new': typeof AuthedGroupsNewRoute
+  '/_authed/settings_/delete-account': typeof AuthedSettingsDeleteAccountRoute
   '/_authed/transactions/$id': typeof AuthedTransactionsIdRouteWithChildren
   '/_authed/friends/$userId/settle': typeof AuthedFriendsUserIdSettleRoute
   '/_authed/groups/$groupId/settle': typeof AuthedGroupsGroupIdSettleRoute
@@ -176,7 +204,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/privacy'
     | '/sign-in'
+    | '/terms'
     | '/activity'
     | '/settings'
     | '/invite/$token'
@@ -185,6 +215,7 @@ export interface FileRouteTypes {
     | '/friends/$userId'
     | '/groups/$groupId'
     | '/groups/new'
+    | '/settings/delete-account'
     | '/transactions/$id'
     | '/friends/$userId/settle'
     | '/groups/$groupId/settle'
@@ -193,6 +224,8 @@ export interface FileRouteTypes {
     | '/groups/$groupId/expenses/new'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/privacy'
+    | '/terms'
     | '/activity'
     | '/settings'
     | '/invite/$token'
@@ -202,6 +235,7 @@ export interface FileRouteTypes {
     | '/friends/$userId'
     | '/groups/$groupId'
     | '/groups/new'
+    | '/settings/delete-account'
     | '/transactions/$id'
     | '/friends/$userId/settle'
     | '/groups/$groupId/settle'
@@ -211,7 +245,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authed'
+    | '/privacy'
     | '/sign-in'
+    | '/terms'
     | '/_authed/activity'
     | '/_authed/settings'
     | '/invite/$token'
@@ -221,6 +257,7 @@ export interface FileRouteTypes {
     | '/_authed/friends/$userId'
     | '/_authed/groups/$groupId'
     | '/_authed/groups/new'
+    | '/_authed/settings_/delete-account'
     | '/_authed/transactions/$id'
     | '/_authed/friends/$userId/settle'
     | '/_authed/groups/$groupId/settle'
@@ -231,7 +268,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
+  PrivacyRoute: typeof PrivacyRoute
   SignInRoute: typeof SignInRouteWithChildren
+  TermsRoute: typeof TermsRoute
   InviteTokenRoute: typeof InviteTokenRoute
 }
 
@@ -244,11 +283,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in': {
       id: '/sign-in'
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/': {
@@ -312,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/groups/new'
       fullPath: '/groups/new'
       preLoaderRoute: typeof AuthedGroupsNewRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/settings_/delete-account': {
+      id: '/_authed/settings_/delete-account'
+      path: '/settings/delete-account'
+      fullPath: '/settings/delete-account'
+      preLoaderRoute: typeof AuthedSettingsDeleteAccountRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/transactions/$id': {
@@ -403,6 +463,7 @@ interface AuthedRouteChildren {
   AuthedFriendsUserIdRoute: typeof AuthedFriendsUserIdRouteWithChildren
   AuthedGroupsGroupIdRoute: typeof AuthedGroupsGroupIdRouteWithChildren
   AuthedGroupsNewRoute: typeof AuthedGroupsNewRoute
+  AuthedSettingsDeleteAccountRoute: typeof AuthedSettingsDeleteAccountRoute
   AuthedTransactionsIdRoute: typeof AuthedTransactionsIdRouteWithChildren
 }
 
@@ -413,6 +474,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedFriendsUserIdRoute: AuthedFriendsUserIdRouteWithChildren,
   AuthedGroupsGroupIdRoute: AuthedGroupsGroupIdRouteWithChildren,
   AuthedGroupsNewRoute: AuthedGroupsNewRoute,
+  AuthedSettingsDeleteAccountRoute: AuthedSettingsDeleteAccountRoute,
   AuthedTransactionsIdRoute: AuthedTransactionsIdRouteWithChildren,
 }
 
@@ -434,7 +496,9 @@ const SignInRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
+  PrivacyRoute: PrivacyRoute,
   SignInRoute: SignInRouteWithChildren,
+  TermsRoute: TermsRoute,
   InviteTokenRoute: InviteTokenRoute,
 }
 export const routeTree = rootRouteImport

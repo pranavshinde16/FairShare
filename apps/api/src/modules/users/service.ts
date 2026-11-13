@@ -3,6 +3,7 @@ import { withTx, type Db } from '@fairshare/db';
 import { AppError } from '../../http/errors';
 import { uuidv7 } from '../../lib/ids';
 import * as currencies from '../currencies/repo';
+import { withdrawDeletedUser } from '../groups/service';
 import { currencyFromAcceptLanguage, initialName } from './defaults';
 import * as repo from './repo';
 
@@ -20,6 +21,8 @@ export function createUsersService(db: Db) {
     },
 
     async updateProfile(userId: string, changes: UpdateProfile): Promise<Profile> {
+      // Nothing to change (an empty body) is the profile as it is.
+      if (Object.keys(changes).length === 0) return this.getProfile(userId);
       if (changes.defaultCurrency && !(await currencies.exists(db, changes.defaultCurrency))) {
         throw new AppError('VALIDATION_FAILED', 'The request is invalid.', {
           issues: [{ path: ['defaultCurrency'], message: 'Unsupported currency', code: 'custom' }],
@@ -52,14 +55,23 @@ export function createUsersService(db: Db) {
     },
 
     /**
-     * Account deletion's first step (DELETE /me arrives in Phase 13): anonymize the domain user and
-     * delete the auth user, its sessions and linked accounts, in one transaction. Phase 13 adds
-     * leaving settled direct groups and the activity entries.
+     * DELETE /me (Blueprint 4.1), in one transaction:
+     *
+     * - groups: leave where settled, stay as "Deleted user" where still owing or owed, hand on
+     *   ownership, and a member.deleted entry in each (withdrawDeletedUser);
+     * - the person: name "Deleted user", email, picture and UPI ID cleared, deleted_at set;
+     * - sign-in: the auth user, its sessions and linked accounts, and any pending sign-in code.
+     *
+     * Expenses stay, because other people's balances depend on them. Safe to run twice.
      */
-    async anonymizeUser(userId: string): Promise<void> {
+    async deleteAccount(userId: string): Promise<void> {
       await withTx(db, async (tx) => {
-        const authUserId = await repo.anonymizeUser(tx, userId);
-        if (authUserId) await repo.deleteAuthUser(tx, authUserId);
+        const person = await repo.lockUser(tx, userId);
+        if (!person) return;
+        if (!person.deletedAt) await withdrawDeletedUser(tx, userId);
+        await repo.anonymizeUser(tx, userId);
+        if (person.authUserId) await repo.deleteAuthUser(tx, person.authUserId);
+        if (person.email) await repo.deletePendingCodes(tx, person.email);
       });
     },
   };

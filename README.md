@@ -3,10 +3,10 @@
 Split shared expenses with friends, roommates and trip groups. No daily limits, no ads, no paywalled
 basics.
 
-> Status: early development. Phases 0–11 (foundation, core domain logic, API contracts, database,
+> Status: early development. Phases 0–12 (foundation, core domain logic, API contracts, database,
 > API skeleton with a live staging deploy, sign-in and profile, groups and invites, expenses,
-> balances and Home, settlements, activity and history search, advanced splits) are complete;
-> Phase 12 (rule-based text entry) is in progress. See the
+> balances and Home, settlements, activity and history search, advanced splits, rule-based text
+> entry) are complete; Phase 13 (hardening and launch readiness) is in progress. See the
 > [development log](docs/dev-log/README.md).
 
 ## Requirements
@@ -71,6 +71,8 @@ For the end-to-end tests, install the browser once with
 `pnpm --filter @fairshare/e2e exec playwright install chromium`.
 
 Staging runs on Railway and Neon; see [docs/deploy-staging.md](docs/deploy-staging.md).
+The nightly invariant check, backups and restore tests are in
+[docs/operations.md](docs/operations.md).
 
 ## Project layout
 

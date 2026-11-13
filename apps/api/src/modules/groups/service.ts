@@ -302,6 +302,52 @@ export async function resolveNewMember(
   return id;
 }
 
+/**
+ * Account deletion's part in groups (Blueprint 4.1), inside the deletion's transaction. In every
+ * group the person is in:
+ *
+ * - Settled there: they leave, as if they'd left themselves. A friendship too, which can't
+ *   otherwise be left.
+ * - Still owing or owed: they stay, as "Deleted user", so the others can record what's paid back;
+ *   the owner can remove them once it's settled.
+ * - Owner: the next member with an account takes over. If there's none, the group closes, since
+ *   nobody could open it any more.
+ *
+ * Each group gets a member.deleted entry. Groups are locked in ID order, as everywhere, so this
+ * can't deadlock with another request.
+ */
+export async function withdrawDeletedUser(tx: Tx, userId: string): Promise<void> {
+  const mine = (await repo.listMyGroups(tx, userId)).sort((a, b) => a.id.localeCompare(b.id));
+  for (const { id } of mine) await repo.lockGroup(tx, id);
+  const nets = await netsForGroups(
+    tx,
+    mine.map((g) => g.id),
+  );
+
+  for (const group of mine) {
+    const members = await repo.listMembers(tx, group.id);
+    const leaves = isSettled(
+      userId,
+      nets.filter((row) => row.groupId === group.id),
+    );
+    const newOwner = group.myRole === 'owner' ? nextOwner(members, userId) : null;
+
+    if (leaves) await repo.markLeft(tx, group.id, userId);
+    else if (group.myRole === 'owner') await repo.demote(tx, group.id, userId);
+    if (newOwner) await repo.makeOwner(tx, group.id, newOwner);
+    await recordActivity(tx, {
+      groupId: group.id,
+      actorId: userId,
+      verb: 'member.deleted',
+      entityType: 'member',
+      entityId: userId,
+      targetUser: userId,
+      after: { left: leaves, ...(newOwner && { newOwnerId: newOwner }) },
+    });
+    if (group.myRole === 'owner' && !newOwner) await softDelete(tx, group.id, userId, group.name);
+  }
+}
+
 async function softDelete(tx: Tx, groupId: string, actorId: string, name: string | null) {
   await tx
     .update(groups)
@@ -334,12 +380,14 @@ export function toUserRef(person: {
   name: string;
   avatarUrl: string | null;
   isPlaceholder: boolean;
+  isDeleted: boolean;
 }): UserRef {
   return {
     id: (person.userId ?? person.id)!,
     name: person.name,
     avatarUrl: person.avatarUrl,
     isPlaceholder: person.isPlaceholder,
+    isDeleted: person.isDeleted,
   };
 }
 

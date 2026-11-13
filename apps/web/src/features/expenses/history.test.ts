@@ -5,7 +5,7 @@ import { describeEntry } from './history';
 const A = '01900000-0000-7000-8000-00000000000a';
 const B = '01900000-0000-7000-8000-00000000000b';
 const C = '01900000-0000-7000-8000-00000000000c';
-const ASHA = { id: A, name: 'Asha', avatarUrl: null, isPlaceholder: false };
+const ASHA = { id: A, name: 'Asha', avatarUrl: null, isPlaceholder: false, isDeleted: false };
 const names: Record<string, string> = { [A]: 'Asha', [B]: 'Bilal', [C]: 'Chitra' };
 const name = (id: string) => names[id] ?? 'someone';
 const money = (amount: number) => `₹${(amount / 100).toFixed(2)}`;

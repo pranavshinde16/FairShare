@@ -16,6 +16,7 @@ const member = (userId: string, day: number, extra: Partial<MemberFacts> = {}): 
   joinedAt: at(day),
   leftAt: null,
   isPlaceholder: false,
+  isDeleted: false,
   ...extra,
 });
 const net = (userId: string, amount: number) => ({
@@ -31,6 +32,8 @@ describe('nextOwner', () => {
       member('owner', 1, { role: 'owner' }),
       member('placeholder', 2, { isPlaceholder: true }),
       member('gone', 3, { leftAt: at(4) }),
+      // A deleted account still owing stays a member, but can't own anything.
+      member('deleted', 4, { isDeleted: true }),
       member('later', 6),
       member('earlier', 5),
     ];

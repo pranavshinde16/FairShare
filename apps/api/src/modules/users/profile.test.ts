@@ -53,6 +53,14 @@ describe('PATCH /me', () => {
     expect(Profile.parse(await res.json())).toMatchObject({ upiVpa: null, defaultCurrency: 'EUR' });
   });
 
+  it('returns the profile unchanged for an empty body', async () => {
+    // Found by the authorization matrix: an empty update used to fail with a 500.
+    const { cookie, me } = await signedIn();
+    const res = await patchMe(cookie, {});
+    expect(res.status).toBe(200);
+    expect(Profile.parse(await res.json())).toEqual(me);
+  });
+
   it('rejects a well-formed but unsupported currency, pointing at the field', async () => {
     const { cookie } = await signedIn();
 
@@ -162,14 +170,14 @@ describe('ensureDomainUser', () => {
   });
 });
 
-describe('anonymizeUser', () => {
+describe('deleteAccount (the service)', () => {
   it('clears the person’s details, keeps the row, and removes the auth user and its sessions', async () => {
     const { cookie, me } = await signedIn();
     await patchMe(cookie, { upiVpa: 'asha@okaxis' });
     const [before] = await ctx.db.select().from(users).where(eq(users.id, me.id));
     const authUserId = before!.authUserId!;
 
-    await createUsersService(ctx.db).anonymizeUser(me.id);
+    await createUsersService(ctx.db).deleteAccount(me.id);
 
     const [after] = await ctx.db.select().from(users).where(eq(users.id, me.id));
     expect(after).toMatchObject({
@@ -192,10 +200,10 @@ describe('anonymizeUser', () => {
   it('is safe to run twice and keeps the first deletion time', async () => {
     const { me } = await signedIn();
     const service = createUsersService(ctx.db);
-    await service.anonymizeUser(me.id);
+    await service.deleteAccount(me.id);
     const [first] = await ctx.db.select().from(users).where(eq(users.id, me.id));
 
-    await service.anonymizeUser(me.id);
+    await service.deleteAccount(me.id);
 
     const [second] = await ctx.db.select().from(users).where(eq(users.id, me.id));
     expect(second!.deletedAt).toEqual(first!.deletedAt);

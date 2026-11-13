@@ -10,6 +10,7 @@ import { cn } from '../../lib/utils';
 import { applyEntry, settlePending, type Filled, type Pending } from '../ai/entry';
 import { ResolutionChips } from '../ai/resolution-chips';
 import {
+  canTakePart,
   draftFromExpense,
   evaluate,
   expenseBody,
@@ -179,7 +180,7 @@ export function ExpenseForm({
           ? 'Add a description.'
           : state.problem;
 
-  const active = group.members.filter((m) => m.leftAt === null);
+  const active = group.members.filter(canTakePart);
   const nameOf = (userId: string) =>
     userId === meId
       ? 'you'
@@ -187,7 +188,8 @@ export function ExpenseForm({
   const future = draft.occurredOn > localDate();
 
   function submit() {
-    if (body && !busy) onSubmit(body, draft);
+    // Ctrl/⌘+Enter reaches here without the (disabled) Save button.
+    if (body && !busy && navigator.onLine) onSubmit(body, draft);
   }
 
   return (

@@ -6,7 +6,7 @@ import { applyEntry, settlePending } from './entry';
 const id = (n: number) => `01900000-0000-7000-8000-${String(n).padStart(12, '0')}`;
 const [ME, RS, RK, AMIT, LEFT] = [id(1), id(2), id(3), id(4), id(5)];
 const member = (userId: string, name: string, leftAt: string | null = null) => ({
-  user: { id: userId, name, avatarUrl: null, isPlaceholder: false },
+  user: { id: userId, name, avatarUrl: null, isPlaceholder: false, isDeleted: false },
   role: 'member' as const,
   joinedAt: '2026-11-01T00:00:00.000Z',
   leftAt,
@@ -112,6 +112,20 @@ describe('applyEntry', () => {
       occurredOn: '2026-11-01',
     });
     expect(result.filled).toEqual(['split']);
+  });
+
+  it('doesn’t match a deleted account', () => {
+    const gone = member(id(6), 'Deleted user');
+    const withGone = {
+      ...group,
+      members: [...group.members, { ...gone, user: { ...gone.user, isDeleted: true } }],
+    };
+    const result = applyEntry('taxi 600 with Amit', blank, { ...ctx, group: withGone });
+    expect(result.draft.split.participants).toEqual([ME, AMIT]);
+    // Nobody named: everyone who can take part, not the deleted account.
+    expect(
+      applyEntry('taxi 600', blank, { ...ctx, group: withGone }).draft.split.participants,
+    ).toEqual([ME, RS, RK, AMIT]);
   });
 
   it('ignores members who left', () => {

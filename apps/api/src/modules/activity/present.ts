@@ -125,4 +125,5 @@ const toUserRef = (p: transactionsRepo.PersonRow): UserRef => ({
   name: p.name,
   avatarUrl: p.avatarUrl,
   isPlaceholder: p.isPlaceholder,
+  isDeleted: p.isDeleted,
 });

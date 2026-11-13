@@ -1,0 +1,79 @@
+name: Nightly
+
+# The nightly jobs (Blueprint 9.2 and 4 "Backups"), at 03:00 India time. Each is off until its
+# repository variable is set to "true" (Settings → Secrets and variables → Actions → Variables),
+# so nothing runs against a database before it's configured. GitHub emails a failed scheduled run
+# to whoever last changed this file: that email is the alert.
+#
+# This repository is public, so its logs are too: neither job prints anything about the data
+# beyond counts.
+on:
+  schedule:
+    - cron: '30 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  invariants:
+    name: Invariant check
+    if: vars.INVARIANT_CHECK_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @fairshare/db...
+
+      # A login role in fairshare_readonly: it can read everything and write nothing.
+      - name: Check the production database
+        env:
+          DATABASE_URL: ${{ secrets.INVARIANTS_DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "::error::Set the INVARIANTS_DATABASE_URL secret."; exit 1; }
+          pnpm --filter @fairshare/db exec tsx src/scripts/check-invariants.ts
+
+  backup:
+    name: Database backup
+    if: vars.BACKUPS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      BACKUP_S3_BUCKET: ${{ vars.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ENDPOINT: ${{ vars.BACKUP_S3_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the configuration
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          missing=()
+          for name in DATABASE_URL BACKUP_PASSPHRASE BACKUP_S3_BUCKET BACKUP_S3_ENDPOINT \
+            AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          [ ${#missing[@]} -eq 0 ] || { echo "::error::Not set: ${missing[*]} (see docs/operations.md)"; exit 1; }
+
+      - name: Dump and encrypt
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: scripts/backup/backup.sh "$RUNNER_TEMP/fairshare.dump.gpg"
+
+      - name: Upload
+        run: scripts/backup/storage.sh upload "$RUNNER_TEMP/fairshare.dump.gpg"
+
+      - name: Delete backups older than 30 days
+        run: scripts/backup/storage.sh prune

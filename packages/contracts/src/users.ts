@@ -1,12 +1,17 @@
 import { z } from 'zod';
 import { CurrencyCode, PersonName, Timestamp, Uuid } from './primitives';
 
-/** How another person appears anywhere in the app. Placeholders are people without an account. */
+/**
+ * How another person appears anywhere in the app. Placeholders are people without an account.
+ * Deleted accounts show as "Deleted user"; they stay in groups where they still owe or are owed,
+ * so that can be settled, but aren't offered for new expenses.
+ */
 export const UserRef = z.object({
   id: Uuid,
   name: z.string(),
   avatarUrl: z.string().nullable(),
   isPlaceholder: z.boolean(),
+  isDeleted: z.boolean(),
 });
 export type UserRef = z.infer<typeof UserRef>;
 

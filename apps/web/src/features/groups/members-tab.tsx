@@ -52,9 +52,11 @@ export function MembersTab({ group, meId }: { group: Group; meId: string }) {
               <span className="text-xs text-muted-foreground">
                 {member.role === 'owner'
                   ? 'Owner'
-                  : member.user.isPlaceholder
-                    ? 'Not joined yet'
-                    : 'Member'}
+                  : member.user.isDeleted
+                    ? 'Account deleted · stays until settled'
+                    : member.user.isPlaceholder
+                      ? 'Not joined yet'
+                      : 'Member'}
               </span>
             </div>
             {(member.user.isPlaceholder || (regular && owner && member.user.id !== meId)) && (

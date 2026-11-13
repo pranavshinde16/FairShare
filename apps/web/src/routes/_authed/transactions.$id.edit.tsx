@@ -3,10 +3,12 @@ import type { Transaction } from '@fairshare/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, type ReactNode } from 'react';
+import { ErrorState } from '../../components/common/error-state';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { balancesQuery } from '../../features/balances/queries';
 import { draftFromTransaction, ExpenseForm } from '../../features/expenses/expense-form';
+import { FormSkeleton } from '../../features/expenses/new-expense-dialog';
 import { transactionQuery } from '../../features/expenses/queries';
 import { groupQuery } from '../../features/groups/queries';
 import { currenciesQuery, meQuery } from '../../features/profile/queries';
@@ -49,7 +51,25 @@ function EditTransaction() {
 
   const data = tx.data;
   const currency = currencies.data?.items.find((c) => c.code === data?.currency);
-  if (!data || !me.data || !group.data || !currency || data.deletedAt) return null;
+  // A deleted one can't be edited: the page behind offers Restore instead.
+  if (data?.deletedAt) return null;
+  if (!data || !me.data || !group.data || !currency) {
+    // The page behind shows its own error when the transaction itself can't load.
+    if (tx.error) return null;
+    const loadError = me.error ?? group.error ?? currencies.error;
+    return (
+      <Dialog open size="full" title="Edit" onClose={close}>
+        {loadError ? (
+          <ErrorState
+            error={loadError}
+            onRetry={() => void Promise.all([me.refetch(), group.refetch(), currencies.refetch()])}
+          />
+        ) : (
+          <FormSkeleton />
+        )}
+      </Dialog>
+    );
+  }
   const lastChange = data.updatedBy ?? data.createdBy;
 
   /** After a save: show the new version, refresh what it changes, and go back to it. */

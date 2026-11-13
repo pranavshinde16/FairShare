@@ -10,7 +10,7 @@ export const Route = createFileRoute('/sign-in/')({
 });
 
 function SignInPage() {
-  const { returnTo, error } = Route.useSearch();
+  const { returnTo, error, deleted } = Route.useSearch();
   const options = useQuery({
     queryKey: ['sign-in-options'],
     queryFn: ({ signal }) => api.signInOptions(signal),
@@ -25,6 +25,11 @@ function SignInPage() {
           We’ll email you a 6-digit code. No password needed.
         </p>
       </div>
+      {deleted && (
+        <p role="status" className="rounded-lg border p-3 text-sm">
+          Your account was deleted. Thanks for using FairShare.
+        </p>
+      )}
       {error && (
         <p
           role="alert"

@@ -1,6 +1,7 @@
 // Serving the built web app from the API, so production is one origin (Blueprint C1).
 
 import { serveStatic } from '@hono/node-server/serve-static';
+import { compress } from 'hono/compress';
 import type { Context, MiddlewareHandler } from 'hono';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -37,6 +38,16 @@ export function webFiles({ root }: WebAssets): MiddlewareHandler {
       return res;
     }
   };
+}
+
+/**
+ * Compresses what the web build serves (scripts, styles, index.html: about a third of the bytes
+ * on a slow phone connection). API responses are left alone, so nothing private is ever compressed
+ * alongside something a request put there (BREACH).
+ */
+export function compressWeb(): MiddlewareHandler {
+  const gzip = compress();
+  return (c, next) => (isApiPath(c.req.path) ? next() : gzip(c, next));
 }
 
 /**

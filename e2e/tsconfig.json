@@ -1,4 +1,8 @@
 {
   "extends": "@fairshare/config/tsconfig/node.json",
+  "compilerOptions": {
+    // Code passed to page.evaluate() and addInitScript() runs in the browser.
+    "lib": ["ES2023", "DOM"]
+  },
   "include": ["tests", "scripts", "playwright.config.ts"]
 }

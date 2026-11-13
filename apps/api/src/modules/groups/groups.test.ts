@@ -3,7 +3,7 @@
 import { ErrorEnvelope, Group, GroupList, Member } from '@fairshare/contracts';
 import { activityLog, groups, users } from '@fairshare/db';
 import { insertTransaction } from '@fairshare/db/testing';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { uuidv7 } from '../../lib/ids';
 import { integrationApp } from '../../testing/integration';
@@ -61,7 +61,11 @@ describe('POST /groups', () => {
       .from(users)
       .where(eq(users.id, group.members[2]!.user.id));
     expect(chitra).toMatchObject({ email: 'chitra@example.com', createdBy: asha.id });
-    const log = await ctx.db.select().from(activityLog).where(eq(activityLog.groupId, group.id));
+    const log = await ctx.db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.groupId, group.id))
+      .orderBy(asc(activityLog.id));
     expect(log.map((e) => e.verb)).toEqual(['group.created', 'member.added', 'member.added']);
   });
 
@@ -162,7 +166,11 @@ describe('PATCH /groups/:groupId', () => {
     });
 
     expect(Group.parse(res.body)).toMatchObject({ name: 'Goa 2026', emoji: null });
-    const log = await ctx.db.select().from(activityLog).where(eq(activityLog.groupId, group.id));
+    const log = await ctx.db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.groupId, group.id))
+      .orderBy(asc(activityLog.id));
     expect(log.slice(-2).map((e) => [e.verb, e.before, e.after])).toEqual([
       ['group.renamed', { name: 'Goa Trip' }, { name: 'Goa 2026' }],
       ['group.updated', { emoji: '🏖️' }, { emoji: null }],
@@ -175,7 +183,11 @@ describe('PATCH /groups/:groupId', () => {
 
     await ctx.call(asha, 'PATCH', `/api/v1/groups/${group.id}`, { name: 'Goa Trip' });
 
-    const log = await ctx.db.select().from(activityLog).where(eq(activityLog.groupId, group.id));
+    const log = await ctx.db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.groupId, group.id))
+      .orderBy(asc(activityLog.id));
     expect(log.map((e) => e.verb)).toEqual(['group.created']);
   });
 
@@ -331,7 +343,11 @@ describe('leaving', () => {
     expect(seen.members.filter((m) => m.role === 'owner').map((m) => m.user.id)).toEqual([
       bilal.id,
     ]);
-    const log = await ctx.db.select().from(activityLog).where(eq(activityLog.groupId, group.id));
+    const log = await ctx.db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.groupId, group.id))
+      .orderBy(asc(activityLog.id));
     expect(log.at(-1)).toMatchObject({
       verb: 'member.left',
       actorId: asha.id,

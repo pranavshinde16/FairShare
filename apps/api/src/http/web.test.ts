@@ -3,9 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { testApp } from '../testing/app';
-import { loadWebAssets, type WebAssets } from './web';
+import { Hono } from 'hono';
+import { gunzipSync } from 'node:zlib';
+import { compressWeb, loadWebAssets, type WebAssets } from './web';
 
 const INDEX = '<!doctype html><title>FairShare</title><div id="root"></div>';
+/** Over the 1 KB below which compressing isn't worth it. */
+const BIG = `export const words = ${JSON.stringify('fair share '.repeat(500))};`;
 let dir: string;
 let web: WebAssets;
 
@@ -16,6 +20,7 @@ beforeAll(() => {
   writeFileSync(join(dir, 'index.html'), INDEX);
   writeFileSync(join(dir, 'favicon.svg'), '<svg/>');
   writeFileSync(join(dir, 'assets', 'index-abc123.js'), 'console.log(1)');
+  writeFileSync(join(dir, 'assets', 'big-abc123.js'), BIG);
   web = loadWebAssets(dir);
 });
 afterAll(() => rmSync(dir, { recursive: true }));
@@ -101,6 +106,33 @@ describe('serving the web app', () => {
     const res = await app.request('/groups/123', page);
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('compression', () => {
+  it('sends the web build gzipped to browsers that accept it', async () => {
+    const { app } = testApp({ web });
+
+    const res = await app.request('/assets/big-abc123.js', {
+      headers: { 'Accept-Encoding': 'gzip, deflate, br' },
+    });
+
+    expect(res.headers.get('Content-Encoding')).toBe('gzip');
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+    expect(gunzipSync(Buffer.from(await res.arrayBuffer())).toString()).toBe(BIG);
+  });
+
+  it('never compresses API responses', async () => {
+    const app = new Hono()
+      .use(compressWeb())
+      .get('/api/v1/big', (c) => c.text(BIG))
+      .get('/big', (c) => c.text(BIG));
+    const headers = { 'Accept-Encoding': 'gzip' };
+
+    expect(
+      (await app.request('/api/v1/big', { headers })).headers.get('Content-Encoding'),
+    ).toBeNull();
+    expect((await app.request('/big', { headers })).headers.get('Content-Encoding')).toBe('gzip');
   });
 });
 

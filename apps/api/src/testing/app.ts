@@ -59,6 +59,8 @@ export function testApp(overrides: Partial<AppDeps> = {}) {
     balances: needsDatabase('balances'),
     activity: needsDatabase('activity'),
     invitePreviewLimiter: { consume: () => ({ allowed: true }) },
+    publicLimiter: { consume: () => ({ allowed: true }) },
+    userLimiter: { consume: () => ({ allowed: true }) },
     clientIpHeaders: ['x-real-ip'],
     ...overrides,
   };

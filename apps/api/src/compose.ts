@@ -37,6 +37,12 @@ export type ComposeOptions = {
   codeLimiter?: RateLimiter;
   /** Overrides the invite preview limit (30 a minute per IP), for tests. */
   invitePreviewLimiter?: RateLimiter;
+  /** Overrides the other public routes' limit (60 a minute per IP), for tests. */
+  publicLimiter?: RateLimiter;
+  /** Overrides the signed-in API's limit (120 a minute per user), for tests. */
+  userLimiter?: RateLimiter;
+  /** Better Auth's own per-IP limits on sign-in. On unless a test turns them off. */
+  authRateLimit?: boolean;
   /** "Now", for tests that need a fixed today. */
   clock?: () => Date;
 };
@@ -46,6 +52,12 @@ export const CODES_PER_EMAIL = { max: 3, windowMs: 10 * 60 * 1000 };
 
 /** Public invite previews per client IP (Blueprint 9.1). */
 export const INVITE_PREVIEWS_PER_IP = { max: 30, windowMs: 60 * 1000 };
+
+/** The other public routes per client IP: health checks and the sign-in screen's options. */
+export const PUBLIC_REQUESTS_PER_IP = { max: 60, windowMs: 60 * 1000 };
+
+/** The signed-in API per user (Blueprint 9.1). */
+export const API_REQUESTS_PER_USER = { max: 120, windowMs: 60 * 1000 };
 
 export function composeApp(options: ComposeOptions) {
   const { env, db, logger, reportError } = options;
@@ -62,6 +74,7 @@ export function composeApp(options: ComposeOptions) {
       secret: env.AUTH_SECRET,
       google,
       clientIpHeaders: env.CLIENT_IP_HEADERS,
+      rateLimit: options.authRateLimit ?? true,
     },
     {
       db,
@@ -99,6 +112,8 @@ export function composeApp(options: ComposeOptions) {
     balances: createBalancesService(db),
     activity: createActivityService(db),
     invitePreviewLimiter: options.invitePreviewLimiter ?? createRateLimiter(INVITE_PREVIEWS_PER_IP),
+    publicLimiter: options.publicLimiter ?? createRateLimiter(PUBLIC_REQUESTS_PER_IP),
+    userLimiter: options.userLimiter ?? createRateLimiter(API_REQUESTS_PER_USER),
     clientIpHeaders: env.CLIENT_IP_HEADERS,
   });
 }

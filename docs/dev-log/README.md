@@ -18,4 +18,5 @@ comes next.
 | 9     | [Settlements](phase-09-settlements.md)                                 | Done        |
 | 10    | [Activity feed and history search](phase-10-activity.md)               | Done        |
 | 11    | [Advanced splits](phase-11-advanced-splits.md)                         | Done        |
-| 12    | [Rule-based text entry](phase-12-rule-parsing.md)                      | In progress |
+| 12    | [Rule-based text entry](phase-12-rule-parsing.md)                      | Done        |
+| 13    | [Hardening and launch readiness](phase-13-hardening.md)                | In progress |

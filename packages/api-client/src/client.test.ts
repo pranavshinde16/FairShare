@@ -165,7 +165,7 @@ describe('group, invite, friend and claim endpoints', () => {
 describe('every endpoint method', () => {
   const ID = '01900000-0000-7000-8000-000000000100';
   const OTHER = '01900000-0000-7000-8000-000000000200';
-  const USER = { id: ID, name: 'Asha', avatarUrl: null, isPlaceholder: false };
+  const USER = { id: ID, name: 'Asha', avatarUrl: null, isPlaceholder: false, isDeleted: false };
   const MEMBER = { user: USER, role: 'owner', joinedAt: '2026-11-01T08:00:00.000Z', leftAt: null };
   const GROUP = {
     kind: 'group',
@@ -266,6 +266,7 @@ describe('every endpoint method', () => {
       GROUP,
       { name: 'Goa 2' },
     ],
+    ['deleteMe', (api) => api.deleteMe(), 'DELETE', '/api/v1/me', undefined, { confirm: 'DELETE' }],
     ['deleteGroup', (api) => api.deleteGroup(ID), 'DELETE', `/api/v1/groups/${ID}`],
     [
       'addMember',

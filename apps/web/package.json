@@ -29,6 +29,7 @@
     "react-dom": "catalog:",
     "react-hook-form": "catalog:",
     "tailwind-merge": "catalog:",
+    "workbox-window": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -47,6 +48,8 @@
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:"
+    "vite-plugin-pwa": "catalog:",
+    "vitest": "catalog:",
+    "workbox-build": "catalog:"
   }
 }

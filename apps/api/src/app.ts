@@ -4,10 +4,12 @@ import { requestId } from 'hono/request-id';
 import type { Logger } from 'pino';
 import type { AppEnv, AuthedEnv } from './http/context';
 import { errorHandler, errorResponse, type ErrorReporter } from './http/error-handler';
+import { clientIp } from './http/client-ip';
 import { limitBodySize, protectMutations } from './http/guards';
+import { rateLimit } from './http/rate-limit';
 import { requestLogger } from './http/request-logger';
 import { securityHeaders } from './http/security';
-import { REVALIDATE, wantsAppPage, webFiles, type WebAssets } from './http/web';
+import { compressWeb, REVALIDATE, wantsAppPage, webFiles, type WebAssets } from './http/web';
 import type { AuthGateway } from './modules/auth/auth';
 import type { DomainUserResolver } from './modules/auth/domain-users';
 import { requireUser } from './modules/auth/require-user';
@@ -55,6 +57,10 @@ export type AppDeps = {
   activity: ActivityService;
   /** The public invite preview: 30 a minute per client IP. */
   invitePreviewLimiter: RateLimiter;
+  /** The other public routes (health, sign-in options): per client IP. */
+  publicLimiter: RateLimiter;
+  /** Every signed-in API route: per user (Blueprint 9.1: 120 a minute). */
+  userLimiter: RateLimiter;
   /** Proxy headers holding the client IP (CLIENT_IP_HEADERS). */
   clientIpHeaders: string[];
 };
@@ -67,9 +73,14 @@ export function createApp(deps: AppDeps) {
   app.use(requestId());
   app.use(requestLogger(deps.logger));
   app.use(securityHeaders());
+  if (deps.web) app.use(compressWeb());
   app.use('/api/*', limitBodySize());
 
-  app.get('/api/health', async (c) => {
+  // Rate limits, by route group (Blueprint 9.1): sign-in is Better Auth's (per IP) plus codes per
+  // email; the invite preview has its own; the signed-in API is per user; the rest per IP.
+  const perIp = rateLimit<AppEnv>(deps.publicLimiter, (c) => clientIp(c, deps.clientIpHeaders));
+
+  app.get('/api/health', perIp, async (c) => {
     const db = await deps.pingDatabase(c.get('log'));
     const body: HealthResponse = { ok: db === 'up', db };
     return c.json(body, db === 'up' ? 200 : 503);
@@ -81,10 +92,12 @@ export function createApp(deps: AppDeps) {
   const v1 = new Hono<AppEnv>();
   v1.use(protectMutations(deps.appOrigin));
   // Public routes first: they answer before requireUser, which applies to everything after it.
+  v1.use('/sign-in-options', perIp);
   v1.route('/', signInOptionsRoutes(deps.auth));
   v1.route('/', invitePreviewRoutes(deps.invites, deps.invitePreviewLimiter, deps.clientIpHeaders));
   const signedIn = new Hono<AuthedEnv>();
   signedIn.use(requireUser(deps.auth, deps.domainUsers));
+  signedIn.use(rateLimit<AuthedEnv>(deps.userLimiter, (c) => c.var.user.id));
   signedIn.route('/', usersRoutes(deps.users));
   signedIn.route('/', currenciesRoutes(deps.currencies));
   signedIn.route('/', groupsRoutes(deps));

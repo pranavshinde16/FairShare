@@ -32,6 +32,11 @@ export type AuthConfig = {
   google?: { clientId: string; clientSecret: string };
   /** Proxy headers holding the client IP, for per-IP rate limits. */
   clientIpHeaders: string[];
+  /**
+   * Better Auth's per-IP limits on its endpoints (stricter on sign-in). Set explicitly, rather than
+   * left to Better Auth's "only when NODE_ENV=production" default.
+   */
+  rateLimit: boolean;
 };
 
 export type AuthDeps = {
@@ -75,6 +80,8 @@ export function createAuth(config: AuthConfig, deps: AuthDeps) {
       updateAge: DAY_SECONDS,
     },
     emailAndPassword: { enabled: false },
+    // In memory: one instance (Railway runs one replica), like the API's own limits.
+    rateLimit: { enabled: config.rateLimit, storage: 'memory' },
     socialProviders: config.google
       ? {
           google: {

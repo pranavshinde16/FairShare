@@ -3,21 +3,28 @@ import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router
 import { ErrorState } from '../components/common/error-state';
 import { Logo } from '../components/common/logo';
 import { Toaster } from '../components/ui/toaster';
+import { OfflineBanner } from '../features/pwa/offline-banner';
+import { UpdatePrompt } from '../features/pwa/update-prompt';
 
 export type RouterContext = { queryClient: QueryClient };
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => (
     <>
+      <OfflineBanner />
       <Outlet />
       <Toaster />
+      <UpdatePrompt />
     </>
   ),
   notFoundComponent: NotFound,
   errorComponent: ({ error, reset }) => (
-    <CenteredPage>
-      <ErrorState error={error} onRetry={reset} />
-    </CenteredPage>
+    <>
+      <OfflineBanner />
+      <CenteredPage>
+        <ErrorState error={error} onRetry={reset} />
+      </CenteredPage>
+    </>
   ),
 });
 

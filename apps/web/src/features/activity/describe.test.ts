@@ -10,6 +10,7 @@ const user = (userId: string, name: string): UserRef => ({
   name,
   avatarUrl: null,
   isPlaceholder: false,
+  isDeleted: false,
 });
 const asha = user(A, 'Asha');
 const bilal = user(B, 'Bilal');
@@ -238,6 +239,24 @@ describe('describeActivity: groups, members and invites', () => {
       text: 'You added Chitra as a friend',
       link: { to: '/friends/$userId', params: { userId: C } },
     });
+  });
+
+  it('reads an account deleted, without the "Deleted user" name', () => {
+    const gone = { ...user(id(6), 'Deleted user'), isDeleted: true };
+    const deleted = (patch: Partial<ActivityEntry>) =>
+      describeActivity(entry({ verb: 'member.deleted', actor: gone, target: gone, ...patch }), ctx);
+    expect(deleted({ after: { left: true, newOwnerId: A } })).toMatchObject({
+      text: 'A member deleted their account',
+      detail: 'You are now the owner',
+      link: toGroup,
+    });
+    expect(deleted({ after: { left: false } }).detail).toBeNull();
+    // A friendship: open while something is still owed, closed once they left it.
+    expect(deleted({ groupName: null, after: { left: false } })).toMatchObject({
+      text: 'Your friend deleted their account',
+      link: { to: '/friends/$userId', params: { userId: id(6) } },
+    });
+    expect(deleted({ groupName: null, after: { left: true } }).link).toBeNull();
   });
 
   it('falls back on someone it doesn’t know', () => {

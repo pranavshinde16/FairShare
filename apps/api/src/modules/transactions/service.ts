@@ -596,6 +596,7 @@ const toUserRef = (p: repo.PersonRow): UserRef => ({
   name: p.name,
   avatarUrl: p.avatarUrl,
   isPlaceholder: p.isPlaceholder,
+  isDeleted: p.isDeleted,
 });
 
 /** Everyone an expense names: payers and every person listed in the split, zero shares included. */

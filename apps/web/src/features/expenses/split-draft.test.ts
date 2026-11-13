@@ -2,6 +2,7 @@ import type { Group, SplitInput } from '@fairshare/contracts';
 import { computeShares } from '@fairshare/core';
 import { describe, expect, it } from 'vitest';
 import {
+  canTakePart,
   assignRemaining,
   clampShares,
   draftFromExpense,
@@ -380,7 +381,7 @@ describe('shortcuts', () => {
 
 describe('remembered defaults (Blueprint 7.3 “Smart defaults”)', () => {
   const member = (userId: string, left = false) => ({
-    user: { id: userId, name: userId, avatarUrl: null, isPlaceholder: false },
+    user: { id: userId, name: userId, avatarUrl: null, isPlaceholder: false, isDeleted: false },
     role: 'member' as const,
     joinedAt: '2026-11-01T00:00:00.000Z',
     leftAt: left ? '2026-11-02T00:00:00.000Z' : null,
@@ -401,6 +402,19 @@ describe('remembered defaults (Blueprint 7.3 “Smart defaults”)', () => {
       payers: { userId: A },
       split: { participants: [A, B, C] },
     });
+  });
+
+  it('leaves a deleted account out of a new expense, even when remembered', () => {
+    // Deleted, but still in the group because something is owed: settle-able, not split-able.
+    const gone = { ...member(C), user: { ...member(C).user, isDeleted: true } };
+    const withGone = { ...group, members: [member(A), member(B), gone] } as unknown as Group;
+    expect(newDraft(withGone, A, { payerId: C, participants: [A, C] }, '2026-11-13')).toMatchObject(
+      { payers: { userId: A }, split: { participants: [A] } },
+    );
+    expect(newDraft(withGone, A, {}, '2026-11-13').split.participants).toEqual([A, B]);
+    expect(canTakePart(gone)).toBe(false);
+    expect(canTakePart(member(A))).toBe(true);
+    expect(canTakePart(member(D, true))).toBe(false);
   });
 
   it('remembers one payer and an equal split only', () => {

@@ -14,7 +14,7 @@ import {
 } from '@fairshare/contracts';
 import { computeShares } from '@fairshare/core';
 import { activityLog, ledger, transactions, withTx } from '@fairshare/db';
-import { eq, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { uuidv7 } from '../../lib/ids';
 import { recordActivity } from '../activity/record';
@@ -315,7 +315,11 @@ describe('idempotency (C6)', () => {
     const results = await Promise.all([create(asha, group.id, body), create(asha, group.id, body)]);
 
     expect(results.map((r) => r.status).sort()).toEqual([200, 201]);
-    const log = await ctx.db.select().from(activityLog).where(eq(activityLog.entityId, body.id));
+    const log = await ctx.db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.entityId, body.id))
+      .orderBy(asc(activityLog.id));
     expect(log).toHaveLength(1);
   });
 });
@@ -342,7 +346,11 @@ describe('editing', () => {
       version: 2,
       updatedBy: { id: asha.id },
     });
-    const log = await ctx.db.select().from(activityLog).where(eq(activityLog.entityId, body.id));
+    const log = await ctx.db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.entityId, body.id))
+      .orderBy(asc(activityLog.id));
     expect(log.at(-1)).toMatchObject({ verb: 'transaction.updated' });
     expect(log.at(-1)!.before).toMatchObject({ amount: 1000 });
     expect(log.at(-1)!.after).toMatchObject({ amount: 1500 });
@@ -391,7 +399,11 @@ describe('editing', () => {
     const res = await write(asha, 'PUT', `/api/v1/transactions/${body.id}`, 1, update);
 
     expect(Transaction.parse(res.body).version).toBe(1);
-    const log = await ctx.db.select().from(activityLog).where(eq(activityLog.entityId, body.id));
+    const log = await ctx.db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.entityId, body.id))
+      .orderBy(asc(activityLog.id));
     expect(log).toHaveLength(1);
   });
 

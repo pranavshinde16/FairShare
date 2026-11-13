@@ -91,11 +91,15 @@ describe('security headers', () => {
     for (const path of ['/api/health', '/api/nope']) {
       const { headers } = await app.request(path);
       expect(headers.get('Content-Security-Policy')).toBe(
-        "default-src 'self'; script-src 'self'; img-src 'self' https://*.googleusercontent.com; " +
-          "connect-src 'self' https://*.sentry.io; " +
-          "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+        "default-src 'self'; script-src 'self'; style-src 'self'; " +
+          "img-src 'self' https://*.googleusercontent.com; connect-src 'self' https://*.sentry.io; " +
+          "worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; " +
+          "base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
       );
-      expect(headers.get('Strict-Transport-Security')).toBe('max-age=15552000; includeSubDomains');
+      expect(headers.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains');
+      expect(headers.get('Permissions-Policy')).toBe(
+        'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()',
+      );
       expect(headers.get('X-Content-Type-Options')).toBe('nosniff');
       expect(headers.get('X-Frame-Options')).toBe('DENY');
       expect(headers.get('Referrer-Policy')).toBe('no-referrer');

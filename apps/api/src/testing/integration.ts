@@ -14,6 +14,10 @@ export type IntegrationOptions = {
   google?: boolean;
   codeLimiter?: RateLimiter;
   invitePreviewLimiter?: RateLimiter;
+  publicLimiter?: RateLimiter;
+  userLimiter?: RateLimiter;
+  /** Better Auth's per-IP sign-in limits; off unless a test is about them. */
+  authRateLimit?: boolean;
   clock?: () => Date;
   /** The app's origin. Over https, cookies get the __Secure- prefix and the Secure flag. */
   appUrl?: string;
@@ -49,6 +53,9 @@ export async function integrationApp(options: IntegrationOptions = {}) {
     web: null,
     codeLimiter: options.codeLimiter,
     invitePreviewLimiter: options.invitePreviewLimiter,
+    publicLimiter: options.publicLimiter,
+    userLimiter: options.userLimiter,
+    authRateLimit: options.authRateLimit ?? false,
     clock: options.clock,
   });
 

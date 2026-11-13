@@ -4,7 +4,6 @@
   "private": true,
   "description": "zod request/response schemas shared by the web app, the API and future clients.",
   "type": "module",
-  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts"
   },

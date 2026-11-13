@@ -26,7 +26,7 @@ const uid = (n: number) => `01900000-0000-7000-8000-${String(n).padStart(12, '0'
 const [A, B, C] = [uid(1), uid(2), uid(3)];
 const SEED = '01933333-0000-7000-8000-000000000099';
 const member = (id: string, name: string) => ({
-  user: { id, name, avatarUrl: null, isPlaceholder: false },
+  user: { id, name, avatarUrl: null, isPlaceholder: false, isDeleted: false },
   role: 'member' as const,
   joinedAt: '2026-11-01T00:00:00.000Z',
   leftAt: null,

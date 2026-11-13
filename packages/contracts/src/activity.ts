@@ -14,6 +14,7 @@ export const ACTIVITY_VERBS = [
   'member.removed',
   'member.left',
   'member.claimed',
+  'member.deleted', // deleted their account (Blueprint 4.1); after: { left, newOwnerId? }
   'invite.created',
   'invite.revoked',
   'transaction.created',

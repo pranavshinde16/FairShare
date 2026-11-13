@@ -193,6 +193,10 @@ describe('an entry for every kind of change (I11)', () => {
     expect((await ctx.call(bilal, 'DELETE', `/api/v1/groups/${group.id}/members/me`)).status).toBe(
       204,
     );
+    // member.deleted: Esha joins, then (settled) deletes her account
+    const esha = await person('esha');
+    await join(asha, group.id, esha);
+    expect((await ctx.call(esha, 'DELETE', '/api/v1/me', { confirm: 'DELETE' })).status).toBe(204);
 
     const history = (await allOf(asha, group.id)).reverse();
     expect(verbs(history)).toEqual([
@@ -217,6 +221,9 @@ describe('an entry for every kind of change (I11)', () => {
       'invite.created', // the link Chitra joins with
       'member.claimed',
       'member.left',
+      'invite.created',
+      'member.added',
+      'member.deleted',
     ]);
     // Every verb but deleting the group, which comes next.
     expect(new Set(verbs(history))).toEqual(
@@ -233,6 +240,10 @@ describe('an entry for every kind of change (I11)', () => {
       actor: { id: chitra.id },
       target: { id: chitra.id },
       after: { placeholderId: chitraPlaceholder, placeholderName: 'Chitra' },
+    });
+    expect(history[23]).toMatchObject({
+      actor: { id: esha.id, name: 'Deleted user', isDeleted: true },
+      after: { left: true },
     });
     expect(history.every((e) => e.groupId === group.id && e.groupName === 'Goa 2026')).toBe(true);
 

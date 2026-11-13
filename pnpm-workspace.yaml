@@ -5,6 +5,7 @@ packages:
 
 # One place for shared dependency versions. Packages reference these with "catalog:".
 catalog:
+  '@axe-core/playwright': 4.14.0
   '@eslint/js': ^10.0.1
   '@hono/node-server': ^2.1.6
   '@hono/zod-validator': ^0.9.1
@@ -60,7 +61,10 @@ catalog:
   typescript: ~6.0.3
   typescript-eslint: ^8.72.1
   vite: ^8.3.6
+  vite-plugin-pwa: 2.0.0
   vitest: ^5.1.0
+  workbox-build: 7.4.1
+  workbox-window: 7.4.1
   zod: ^4.6.7
 
 # pnpm blocks dependency install scripts by default. Allow only the ones we need.

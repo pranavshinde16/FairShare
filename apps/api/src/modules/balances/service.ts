@@ -7,6 +7,7 @@ import * as groupsRepo from '../groups/repo';
 import { notFound, toGroup, toUserRef, type Membership } from '../groups/service';
 import { pairwiseBalances, toMoney } from './pairwise';
 import * as repo from './repo';
+import { isDeletedColumn } from '../users/repo';
 
 export type BalancesService = ReturnType<typeof createBalancesService>;
 
@@ -183,6 +184,7 @@ export function createBalancesService(db: Db) {
             name: users.name,
             avatarUrl: users.avatarUrl,
             isPlaceholder: users.isPlaceholder,
+            isDeleted: isDeletedColumn,
           })
           .from(users)
           .where(eq(users.id, other)),
@@ -251,7 +253,10 @@ function friendList(
   for (const member of members) {
     if (member.userId === me) continue;
     people.set(member.userId, member);
-    if (directIds.has(member.groupId)) directGroupOf.set(member.userId, member.groupId);
+    // A friendship counts while both are in it: a deleted account leaves its settled ones.
+    if (directIds.has(member.groupId) && member.leftAt === null) {
+      directGroupOf.set(member.userId, member.groupId);
+    }
   }
 
   const items = [...people.values()]

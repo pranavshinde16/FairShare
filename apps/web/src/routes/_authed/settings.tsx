@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { ErrorState } from '../../components/common/error-state';
@@ -73,8 +73,26 @@ function SettingsPage() {
         <CardHeader>
           <CardTitle>Account</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-wrap items-center gap-3">
           <SignOutButton />
+          <Link
+            to="/privacy"
+            className="inline-flex min-h-11 items-center px-2 text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            Privacy notice
+          </Link>
+          <Link
+            to="/terms"
+            className="inline-flex min-h-11 items-center px-2 text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            Terms of use
+          </Link>
+          <Link
+            to="/settings/delete-account"
+            className="inline-flex min-h-11 items-center px-2 text-sm text-destructive underline-offset-4 hover:underline"
+          >
+            Delete account
+          </Link>
         </CardContent>
       </Card>
     </div>

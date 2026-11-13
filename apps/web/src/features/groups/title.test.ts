@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { groupTitle } from './title';
 
 const member = (id: string, name: string) => ({
-  user: { id, name, avatarUrl: null, isPlaceholder: false },
+  user: { id, name, avatarUrl: null, isPlaceholder: false, isDeleted: false },
   role: 'member' as const,
   joinedAt: '2026-11-01T00:00:00.000Z',
   leftAt: null,

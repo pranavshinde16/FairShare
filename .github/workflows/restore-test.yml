@@ -1,0 +1,41 @@
+name: Restore test
+
+# Restores the newest backup into a throwaway database and checks it (Blueprint 4: "a restore test
+# each quarter"): it must restore cleanly, with every migration and trigger, and pass the invariant
+# check. Runs on the first of January, April, July and October, or by hand. Uses the same
+# configuration as the nightly backup.
+on:
+  schedule:
+    - cron: '0 22 1 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    name: Restore the newest backup
+    if: vars.BACKUPS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      BACKUP_S3_BUCKET: ${{ vars.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ENDPOINT: ${{ vars.BACKUP_S3_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @fairshare/db...
+
+      - name: Download the newest backup
+        run: scripts/backup/storage.sh latest "$RUNNER_TEMP/fairshare.dump.gpg"
+
+      # Prints table row counts, which are only counts: fine for the public log.
+      - name: Restore and check
+        run: scripts/backup/restore-check.sh "$RUNNER_TEMP/fairshare.dump.gpg"

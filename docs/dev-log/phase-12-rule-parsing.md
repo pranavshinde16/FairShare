@@ -1,8 +1,7 @@
 # Phase 12: Rule-based text entry
 
 - **Dates:** 2026-11-13 (code part)
-- **Status:** In progress. The code is done and verified locally (unit, component, end-to-end,
-  Docker image). It goes live with the next push; then check it on staging (see "Lined up next").
+- **Status:** Done. Committed as 74e666b and marked done on your go-ahead.
 - **Plan reference:** Implementation blueprint §8.1 (flow), §8.2 (rule-based parser), §8.6 (name
   resolution, group selection), §8.7 (ambiguous and unknown names), §8.8 (fallback), §7.3 (the bar
   in Add expense), §7.2 (Home's entry bar), C7, §10.2, §11 Phase 12

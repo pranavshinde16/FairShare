@@ -2,6 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { Slot } from 'radix-ui';
 import type { ComponentProps } from 'react';
 import { cn } from '../../lib/utils';
+import { useOnline } from '../../lib/online';
 import { Spinner } from '../common/spinner';
 
 // shadcn/ui's Button. Default height is 44px, the minimum touch target (Blueprint 7.1).
@@ -35,6 +36,11 @@ export type ButtonProps = ComponentProps<'button'> &
     loading?: boolean;
   };
 
+/**
+ * A submit button is disabled while offline (Blueprint C9): every form sends to the server, and
+ * nothing is queued to send later. The offline banner says why.
+ */
+
 export function Button({
   className,
   variant,
@@ -43,8 +49,10 @@ export function Button({
   loading = false,
   disabled,
   children,
+  type,
   ...props
 }: ButtonProps) {
+  const online = useOnline();
   const classes = cn(buttonVariants({ variant, size }), className);
   if (asChild) {
     return (
@@ -56,7 +64,8 @@ export function Button({
   return (
     <button
       className={classes}
-      disabled={disabled || loading}
+      type={type}
+      disabled={disabled || loading || (type === 'submit' && !online)}
       aria-busy={loading || undefined}
       {...props}
     >

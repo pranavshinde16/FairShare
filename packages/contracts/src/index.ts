@@ -6,6 +6,9 @@
 //   the API adds a field. Value types mirrored from core (Line, SplitInput) are strict everywhere.
 // - Every schema is exported with a same-named type: `CreateExpense` is both.
 
+// First: settings the schemas below are built with.
+import './zod-config';
+
 export * from './primitives';
 export * from './errors';
 export * from './concurrency';

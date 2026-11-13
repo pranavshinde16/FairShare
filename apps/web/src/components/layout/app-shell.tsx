@@ -44,8 +44,11 @@ function Sidebar() {
             key={label}
             to={to}
             activeOptions={{ exact: to === '/' }}
-            className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-            activeProps={{ className: 'bg-accent text-accent-foreground hover:bg-accent' }}
+            className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium"
+            // Colours only in one state or the other: both at once, the muted text would win over
+            // the accent's and fail contrast on it.
+            inactiveProps={{ className: inactiveLink }}
+            activeProps={{ className: activeLink }}
           >
             <Icon aria-hidden className="size-4" />
             {label}
@@ -62,8 +65,9 @@ function Sidebar() {
   );
 }
 
-const sidebarLink =
-  'flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground';
+const sidebarLink = 'flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm';
+const inactiveLink = 'text-muted-foreground hover:bg-muted hover:text-foreground';
+const activeLink = 'bg-accent text-accent-foreground';
 
 function SidebarSection({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -90,7 +94,8 @@ function SidebarGroups() {
               to="/groups/$groupId"
               params={{ groupId: group.id }}
               className={sidebarLink}
-              activeProps={{ className: 'bg-accent text-accent-foreground' }}
+              inactiveProps={{ className: inactiveLink }}
+              activeProps={{ className: activeLink }}
             >
               <span aria-hidden className="w-5 text-center">
                 {group.emoji ?? '•'}
@@ -100,7 +105,7 @@ function SidebarGroups() {
           </li>
         ))}
       </ul>
-      <Link to="/groups/new" className={sidebarLink}>
+      <Link to="/groups/new" className={`${sidebarLink} ${inactiveLink}`}>
         <Plus aria-hidden className="size-4" />
         New group
       </Link>
@@ -122,7 +127,8 @@ function SidebarPeople() {
               to="/friends/$userId"
               params={{ userId: user.id }}
               className={sidebarLink}
-              activeProps={{ className: 'bg-accent text-accent-foreground' }}
+              inactiveProps={{ className: inactiveLink }}
+              activeProps={{ className: activeLink }}
             >
               <Avatar
                 name={user.name}
@@ -220,7 +226,8 @@ function BottomTabs() {
           key={label}
           to={to}
           activeOptions={{ exact: to === '/' }}
-          className="relative flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground"
+          className="relative flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium"
+          inactiveProps={{ className: 'text-muted-foreground' }}
           activeProps={{ className: 'text-primary' }}
         >
           <Icon aria-hidden className="size-5" />

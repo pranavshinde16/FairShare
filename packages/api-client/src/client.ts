@@ -58,6 +58,9 @@ export function createApiClient(options: ApiClientOptions) {
 
     me: (signal?: AbortSignal) => request(Profile, '/api/v1/me', { signal }),
     updateMe: (body: UpdateProfile) => request(Profile, '/api/v1/me', { method: 'PATCH', body }),
+    /** Deletes the account (Blueprint 4.1). The session ends with it. */
+    deleteMe: () =>
+      requestNoContent('/api/v1/me', { method: 'DELETE', body: { confirm: 'DELETE' } }),
 
     groups: (signal?: AbortSignal) => request(GroupList, '/api/v1/groups', { signal }),
     group: (groupId: string, signal?: AbortSignal) =>
