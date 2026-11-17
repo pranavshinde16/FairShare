@@ -429,3 +429,43 @@ describe('remembered defaults (Blueprint 7.3 “Smart defaults”)', () => {
     ).toEqual({});
   });
 });
+
+describe('editing: the saved shares while the split is unchanged', () => {
+  // ₹1,000 three ways leaves a paisa over; pretend it was saved on someone else (as after a
+  // placeholder is claimed and their ID sorts differently).
+  const computed = computeShares(100_000, { method: 'equal', participants: [A, B, C] }, SEED);
+  const extra = computed.findIndex((l) => l.amount === 33_334);
+  const other = (extra + 1) % 3;
+  const savedShares = computed.map((l, i) =>
+    i === extra ? { ...l, amount: 33_333 } : i === other ? { ...l, amount: 33_334 } : l,
+  );
+  const stored = {
+    amount: 100_000,
+    split: { method: 'equal', participants: [C, B, A] } satisfies SplitInput,
+    shares: savedShares,
+  };
+
+  it('shows the saved shares, whatever order the participants are in', () => {
+    const state = evaluate(draft({ amountText: '1000' }), { ...ctx, stored });
+    expect(state.shares).toEqual(savedShares);
+  });
+
+  it('recomputes once the split or the amount changes', () => {
+    expect(
+      evaluate(draft({ amountText: '1000', split: split({ participants: [A, B] }) }), {
+        ...ctx,
+        stored,
+      }).shares,
+    ).toEqual(computeShares(100_000, { method: 'equal', participants: [A, B] }, SEED));
+    expect(evaluate(draft({ amountText: '1000.01' }), { ...ctx, stored }).shares).toEqual(
+      computeShares(100_001, { method: 'equal', participants: [A, B, C] }, SEED),
+    );
+  });
+
+  it('recomputes when nothing was saved with a split input', () => {
+    expect(
+      evaluate(draft({ amountText: '1000' }), { ...ctx, stored: { ...stored, split: null } })
+        .shares,
+    ).toEqual(computed);
+  });
+});

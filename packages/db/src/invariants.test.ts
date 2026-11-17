@@ -54,7 +54,12 @@ async function withoutTriggers(text: string, values: unknown[]) {
 describe('checkInvariants', () => {
   it('finds nothing on a correct database', async () => {
     const report = await checkInvariants(t.db);
-    expect(report).toEqual({ transactionSums: [], groupNets: [], inactiveMembers: [] });
+    expect(report).toEqual({
+      transactionSums: [],
+      groupNets: [],
+      inactiveMembers: [],
+      claimedInSplitInput: [],
+    });
     expect(isClean(report)).toBe(true);
   });
 
@@ -68,7 +73,12 @@ describe('checkInvariants', () => {
         { transactionId, amount: 2000, paid: 2000, shared: 2001 },
       ]);
       expect(report.groupNets).toEqual([{ groupId, currency: 'INR', total: -1 }]);
-      expect(summarize(report)).toEqual({ transactionSums: 1, groupNets: 1, inactiveMembers: 0 });
+      expect(summarize(report)).toEqual({
+        transactionSums: 1,
+        groupNets: 1,
+        inactiveMembers: 0,
+        claimedInSplitInput: 0,
+      });
       expect(isClean(report)).toBe(false);
     } finally {
       await withoutTriggers(share, [transactionId, b, -1]);
@@ -104,6 +114,37 @@ describe('checkInvariants', () => {
         [groupId, b],
       );
     }
+  });
+
+  it('finds a live split input naming a claimed placeholder, but not a deleted one', async () => {
+    // B was a placeholder, since claimed by C; the expense's split input still names B.
+    const c = (await insertUser(t.db, { name: 'C' })).id;
+    const setInput = 'UPDATE transactions SET split_method = $2, split_input = $3 WHERE id = $1';
+    await t.pool.query(setInput, [
+      transactionId,
+      'equal',
+      JSON.stringify({ method: 'equal', participants: [a, b] }),
+    ]);
+    await t.pool.query('UPDATE users SET merged_into = $2 WHERE id = $1', [b, c]);
+    try {
+      const report = await checkInvariants(t.db);
+      expect(report.claimedInSplitInput).toEqual([{ transactionId, userId: b }]);
+      expect(summarize(report).claimedInSplitInput).toBe(1);
+      expect(isClean(report)).toBe(false);
+
+      await t.pool.query(
+        'UPDATE transactions SET deleted_at = now(), deleted_by = $2 WHERE id = $1',
+        [transactionId, a],
+      );
+      expect((await checkInvariants(t.db)).claimedInSplitInput).toEqual([]);
+    } finally {
+      await t.pool.query('UPDATE users SET merged_into = NULL WHERE id = $1', [b]);
+      await t.pool.query(
+        'UPDATE transactions SET deleted_at = NULL, deleted_by = NULL, split_method = $2, split_input = NULL WHERE id = $1',
+        [transactionId, 'exact'],
+      );
+    }
+    expect(isClean(await checkInvariants(t.db))).toBe(true);
   });
 
   it('needs nothing more than the read-only role, which can’t write', async () => {

@@ -12,6 +12,8 @@ export type InvariantReport = {
   groupNets: { groupId: string; currency: string; total: number }[];
   /** I8: a live transaction, last written after someone in it had left the group (or never joined). */
   inactiveMembers: { transactionId: string; userId: string }[];
+  /** I12: a live transaction whose split input still names a claimed placeholder. */
+  claimedInSplitInput: { transactionId: string; userId: string }[];
 };
 
 /** At most this many examples of each kind, so one systematic bug can't flood the report. */
@@ -63,6 +65,17 @@ export async function checkInvariants(db: Db): Promise<InvariantReport> {
         ORDER BY t.id, l.user_id
         LIMIT ${LIMIT}`);
 
+      // A claim renames the placeholder in every split input naming it (and the pre-deploy repair
+      // fixed older claims), so no live input names someone merged into another user.
+      const claimed = await tx.execute<{ transaction_id: string; user_id: string }>(sql`
+        SELECT DISTINCT t.id AS transaction_id, u.id AS user_id
+        FROM transactions t
+        CROSS JOIN LATERAL jsonb_path_query(t.split_input, 'strict $.** ? (@.type() == "string")') v
+        JOIN users u ON u.id::text = v #>> '{}' AND u.merged_into IS NOT NULL
+        WHERE t.deleted_at IS NULL
+        ORDER BY t.id, u.id
+        LIMIT ${LIMIT}`);
+
       return {
         transactionSums: sums.rows.map((r) => ({
           transactionId: r.transaction_id,
@@ -79,6 +92,10 @@ export async function checkInvariants(db: Db): Promise<InvariantReport> {
           transactionId: r.transaction_id,
           userId: r.user_id,
         })),
+        claimedInSplitInput: claimed.rows.map((r) => ({
+          transactionId: r.transaction_id,
+          userId: r.user_id,
+        })),
       };
     },
     { accessMode: 'read only', isolationLevel: 'repeatable read' },
@@ -91,6 +108,7 @@ export function summarize(report: InvariantReport) {
     transactionSums: report.transactionSums.length,
     groupNets: report.groupNets.length,
     inactiveMembers: report.inactiveMembers.length,
+    claimedInSplitInput: report.claimedInSplitInput.length,
   };
 }
 

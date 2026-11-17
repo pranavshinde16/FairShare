@@ -12,7 +12,8 @@ import {
   users,
   type Tx,
 } from '@fairshare/db';
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { renameInSplit, type SplitInput } from '@fairshare/core';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { AppError } from '../../http/errors';
 import { recordActivity } from '../activity/record';
 
@@ -28,7 +29,10 @@ export type MergeResult = { groupIds: string[]; replaced: Map<string, string> };
  *    app's role can't delete membership rows to make room.)
  * 3. Direct groups: for P's friendship with X, if U already has one with X, move P's transactions
  *    into U's and close P's; otherwise the pair becomes (U, X).
- * 4. Repoint P's memberships, payer rows and share rows to U.
+ * 4. Repoint P's memberships, payer rows and share rows to U, and rename P to U in the split
+ *    input of every transaction naming P (deleted ones too), bumping its version so a form left
+ *    open from before the claim gets VERSION_CONFLICT. Its shares stay as stored: recomputing can
+ *    move a leftover paisa, so an unchanged edit keeps them (see rewriteSplitInputs).
  * 5. Mark P merged into U, and record member.claimed in each group.
  *
  * The activity log is append-only and keeps naming P; readers resolve it through merged_into.
@@ -67,6 +71,10 @@ export async function mergePlaceholder(
       .limit(1);
     if (overlap.length > 0) throw mergeConflict();
   }
+
+  // Before the friendship moves below: P only ever appears in transactions of P's own groups.
+  // Locking these rows first matches the edit path's order (transaction, then group).
+  await rewriteSplitInputs(tx, placeholderId, userId, groupIds);
 
   // Groups the claim lands U in: P's live groups, with a closed friendship replaced by U's own.
   const affected = new Set(memberships.filter((m) => m.deletedAt === null).map((m) => m.groupId));
@@ -137,6 +145,46 @@ export async function mergePlaceholder(
     })),
   );
   return { groupIds: groupsJoined, replaced };
+}
+
+/**
+ * Renames `from` to `to` in the split input of every transaction that names `from`, optionally
+ * only in some groups, and bumps each one's version. Deleted transactions are included, since a
+ * restore brings them back as they are. Returns how many were rewritten.
+ *
+ * Only the version changes besides the split input: updated_at feeds the nightly check for people
+ * who left (I8), updated_by would credit someone with an edit nobody made, and the activity log is
+ * append-only, with readers resolving merged_into. Shared by the claim and by the repair of rows
+ * claimed before this existed (repair.ts).
+ */
+export async function rewriteSplitInputs(
+  tx: Tx,
+  from: string,
+  to: string,
+  groupIds?: readonly string[],
+): Promise<number> {
+  if (groupIds?.length === 0) return 0;
+  const rows = await tx
+    .select({ id: transactions.id, splitInput: transactions.splitInput })
+    .from(transactions)
+    .where(
+      and(
+        groupIds && inArray(transactions.groupId, [...groupIds]),
+        sql`jsonb_path_exists(${transactions.splitInput}, '$.** ? (@ == $id)', jsonb_build_object('id', ${from}::text))`,
+      ),
+    )
+    .orderBy(asc(transactions.id))
+    .for('no key update');
+  for (const row of rows) {
+    await tx
+      .update(transactions)
+      .set({
+        splitInput: renameInSplit(row.splitInput as SplitInput, from, to),
+        version: sql`${transactions.version} + 1`,
+      })
+      .where(eq(transactions.id, row.id));
+  }
+  return rows.length;
 }
 
 const sorted = (a: string, b: string): [string, string] => (a < b ? [a, b] : [b, a]);

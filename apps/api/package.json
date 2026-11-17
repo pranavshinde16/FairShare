@@ -13,7 +13,8 @@
     "start": "node --env-file-if-exists=../../.env --enable-source-maps dist/main.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "repair:split-inputs": "tsx --env-file-if-exists=../../.env src/repair-split-inputs.ts"
   },
   "dependencies": {
     "@hono/node-server": "catalog:",

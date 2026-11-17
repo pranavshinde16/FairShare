@@ -20,6 +20,7 @@ import {
   toRemember,
   type ExpenseDraft,
   type Remembered,
+  type StoredSplit,
 } from './split-draft';
 import { SplitSheet } from './split-sheet';
 
@@ -38,6 +39,11 @@ export function draftFromTransaction(
   minorUnits: number,
 ): ExpenseDraft {
   return draftFromExpense({ ...tx, split: tx.splitInput }, minorUnits);
+}
+
+/** A stored expense's amount, split input and shares, so an unchanged split shows them as saved. */
+export function storedSplitOf(tx: Extract<Transaction, { type: 'expense' }>): StoredSplit {
+  return { amount: tx.amount, split: tx.splitInput, shares: tx.shares };
 }
 
 // The last payer and equal-split participants, per group, on this device (Blueprint 7.3).
@@ -86,6 +92,7 @@ export function ExpenseForm({
   minorUnits,
   symbol,
   initial,
+  stored,
   submitLabel,
   busy = false,
   error = null,
@@ -99,6 +106,8 @@ export function ExpenseForm({
   minorUnits: number;
   symbol: string;
   initial: ExpenseDraft;
+  /** When editing: the saved split, shown as saved while it's unchanged. */
+  stored?: StoredSplit;
   submitLabel: string;
   busy?: boolean;
   error?: string | null;
@@ -183,14 +192,17 @@ export function ExpenseForm({
   }
 
   const money = (amount: number) => formatAmount(amount, group.currency, minorUnits);
+  // Fixed for the form's life (a newer version remounts it), so the memo below stays stable.
+  const [saved] = useState(stored);
   const state = useMemo(
     () =>
       evaluate(draft, {
         seed: id,
         minorUnits,
         money: (amount) => formatAmount(amount, group.currency, minorUnits),
+        ...(saved && { stored: saved }),
       }),
-    [draft, id, minorUnits, group.currency],
+    [draft, id, minorUnits, group.currency, saved],
   );
   // Save waits until every name from a typed entry is settled (Blueprint 8.7).
   const body = pending.length === 0 ? expenseBody(draft, state, group.currency) : null;

@@ -19,6 +19,8 @@ export {
   type SplitMethod,
 } from './split/computeShares';
 export { splitPaymentEqually, validatePayers } from './split/payers';
+export { canonicalSplitInput, sameSplitInput } from './split/canonical';
+export { renameInSplit, splitInputUsers } from './split/rename';
 
 // ledger and balances
 export type {

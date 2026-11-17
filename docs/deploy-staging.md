@@ -212,7 +212,9 @@ separate development client), and put its ID and secret in your `.env`.
      then the health check keeps the previous version live.
 
 8. Deploy. The deploy logs should show:
-   - from the pre-deploy step: `Migrations and reference data are up to date.`
+   - from the pre-deploy step: `Migrations and reference data are up to date.`, then
+     `Split inputs naming a claimed placeholder: 0 repaired.` (the data repair; more than 0 only
+     on the first deploy after claims made before the fix)
    - then from the server: `FairShare API listening`
    - then the health check passing.
 

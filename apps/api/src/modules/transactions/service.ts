@@ -16,9 +16,11 @@ import {
   assertTransactionInvariants,
   canonicalSnapshot,
   computeShares,
+  sameSplitInput,
   DomainError,
   settlementLines,
   validatePayers,
+  type Line,
   type SplitInput,
   type TransactionSnapshot,
 } from '@fairshare/core';
@@ -115,9 +117,15 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
     }
   }
 
-  async function prepareExpenseForGroup(tx: Tx, id: string, groupId: string, input: UpdateExpense) {
+  async function prepareExpenseForGroup(
+    tx: Tx,
+    id: string,
+    groupId: string,
+    input: UpdateExpense,
+    stored?: StoredSplit,
+  ) {
     await checkAgainstGroup(tx, groupId, 'expense', { ...input, people: peopleIn(input) });
-    return prepareExpense(id, input);
+    return prepareExpense(id, input, stored);
   }
 
   async function prepareSettlementForGroup(
@@ -196,7 +204,7 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
     me: string,
     id: string,
     ifMatch: number,
-    prepare: (tx: Tx, row: repo.TransactionRow) => Promise<Prepared>,
+    prepare: (tx: Tx, row: repo.TransactionRow, lines: repo.TransactionLines) => Promise<Prepared>,
   ): Promise<Transaction> {
     await withTx(db, async (tx) => {
       const row = await lockedForWrite(tx, me, id, ifMatch);
@@ -206,8 +214,9 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
           `This ${NOUN[row.type]} was deleted. Restore it first.`,
         );
       }
-      const after = await prepare(tx, row);
-      const before = snapshotOf(row, (await repo.linesFor(tx, [row.id])).get(row.id)!);
+      const lines = (await repo.linesFor(tx, [row.id])).get(row.id)!;
+      const after = await prepare(tx, row, lines);
+      const before = snapshotOf(row, lines);
       if (sameSnapshot(before, after.snapshot)) return;
 
       await repo.replaceLines(tx, row.id, after.lines);
@@ -337,9 +346,13 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
         );
       }
       const input = parseBody(UpdateExpense, body);
-      return edit(me, id, ifMatch, async (tx, locked) => {
+      return edit(me, id, ifMatch, async (tx, locked, lines) => {
         await checkAiRequest(tx, me, input.aiRequestId);
-        return prepareExpenseForGroup(tx, locked.id, locked.groupId, input);
+        return prepareExpenseForGroup(tx, locked.id, locked.groupId, input, {
+          amount: locked.amount,
+          splitInput: locked.splitInput as SplitInput | null,
+          shares: lines.shares,
+        });
       });
     },
 
@@ -433,11 +446,27 @@ export function createTransactionsService(db: Db, clock: () => Date = () => new 
   }
 }
 
-/** Core's checks and computation: payers, shares (seeded by the ID), invariants. No database. */
-export function prepareExpense(id: string, input: UpdateExpense): Prepared {
+/** An expense's stored amount, split input and shares, for an edit to compare against. */
+export type StoredSplit = { amount: number; splitInput: SplitInput | null; shares: Line[] };
+
+/**
+ * Core's checks and computation: payers, shares (seeded by the ID), invariants. No database.
+ *
+ * An edit that leaves the amount and split input as stored keeps the stored shares instead of
+ * recomputing them. Normally they're identical (I5); they can differ by a paisa after a
+ * placeholder is claimed, since the claimer's ID can sort differently and rounding ties go by
+ * position. Keeping them makes an unchanged edit a no-op and never moves money silently.
+ */
+export function prepareExpense(id: string, input: UpdateExpense, stored?: StoredSplit): Prepared {
   const payers = validatePayers(input.amount, input.payers.map(lower));
   const split = lowerSplit(input.split);
-  const shares = computeShares(input.amount, split, id);
+  const computed = computeShares(input.amount, split, id);
+  const unchanged =
+    stored !== undefined &&
+    stored.splitInput !== null &&
+    stored.amount === input.amount &&
+    sameSplitInput(split, stored.splitInput);
+  const shares = unchanged ? stored.shares : computed;
   assertTransactionInvariants({
     id,
     type: 'expense',

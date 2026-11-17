@@ -43,7 +43,7 @@ always zero.
    - Variable `INVARIANT_CHECK_ENABLED`: `true`.
 
 3. **Try it now:** Actions → Nightly → Run workflow. The job prints one line such as
-   `{"transactionSums":0,"groupNets":0,"inactiveMembers":0}`.
+   `{"transactionSums":0,"groupNets":0,"inactiveMembers":0,"claimedInSplitInput":0}`.
 
 ### When it finds something
 
@@ -58,6 +58,13 @@ A finding is a bug that got past core, the service and the database's own trigge
 the data by hand first. Record what was found, find how it was written (the transaction's history,
 `GET /transactions/:id/history`, and the server logs around its `created_at` or `updated_at`), and
 fix the cause.
+
+One exception has a ready repair: `claimedInSplitInput` (I12) counts expenses whose split input
+still names a placeholder someone has claimed. The pre-deploy step repairs those on every deploy
+(`node dist/migrate.js` prints `Split inputs naming a claimed placeholder: N repaired.`), so a
+finding after a deploy means a claim path that skips `rewriteSplitInputs`. To repair without
+deploying, run `pnpm --filter @fairshare/api repair:split-inputs` with `MIGRATION_DATABASE_URL`
+(the owner role) set.
 
 ## 2. Nightly backups
 
@@ -144,7 +151,8 @@ If the database is lost or damaged and Neon's own point-in-time restore can't he
    must be zero.
 6. **Point the app at it:** update `DATABASE_URL` and `MIGRATION_DATABASE_URL` in Railway, and
    the GitHub secrets. Scale back to one replica. The pre-deploy migration step is a no-op on a
-   restored database.
+   restored database, apart from its split-input repair, which fixes any claims older than that
+   repair if the backup predates it.
 7. **Sessions:** they're in the database, so people stay signed in unless the backup is older than
    their last sign-in.
 

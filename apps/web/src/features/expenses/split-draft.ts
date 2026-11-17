@@ -7,6 +7,7 @@ import {
   MAX_AMOUNT_MINOR,
   MAX_SHARES_PER_PERSON,
   parsePercent,
+  sameSplitInput,
   splitPaymentEqually,
   toDecimalString,
   tryParseMoney,
@@ -84,12 +85,20 @@ export type SplitState = {
   problem: string | null;
 };
 
+/** A saved expense's amount, split input and shares, when editing it. */
+export type StoredSplit = { amount: number; split: SplitInput | null; shares: Line[] };
+
 type Context = {
   /** The expense's ID: the seed for every rounding decision. */
   seed: string;
   minorUnits: number;
   /** Formats minor units in the group's currency. */
   money: (amount: number) => string;
+  /**
+   * When editing: while the amount and split are as saved, show the saved shares, which is what
+   * the server keeps. They can differ from a recompute by a paisa after a placeholder is claimed.
+   */
+  stored?: StoredSplit;
 };
 
 /** 3333 → "33.33", 1250 → "12.5", 5000 → "50". */
@@ -241,7 +250,10 @@ export function evaluate(draft: ExpenseDraft, ctx: Context): SplitState {
 
   if (input && amount !== null) {
     try {
-      state.shares = computeShares(amount, input, ctx.seed);
+      const computed = computeShares(amount, input, ctx.seed);
+      const { stored } = ctx;
+      const saved = stored && stored.split !== null && stored.amount === amount ? stored : null;
+      state.shares = saved?.split && sameSplitInput(input, saved.split) ? saved.shares : computed;
       state.split = input;
     } catch (error) {
       if (!(error instanceof DomainError)) throw error;

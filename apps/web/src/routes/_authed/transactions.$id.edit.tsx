@@ -8,7 +8,11 @@ import { ErrorState } from '../../components/common/error-state';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { balancesQuery } from '../../features/balances/queries';
-import { draftFromTransaction, ExpenseForm } from '../../features/expenses/expense-form';
+import {
+  draftFromTransaction,
+  ExpenseForm,
+  storedSplitOf,
+} from '../../features/expenses/expense-form';
 import { FormSkeleton } from '../../features/expenses/new-expense-dialog';
 import { transactionQuery } from '../../features/expenses/queries';
 import { groupQuery } from '../../features/groups/queries';
@@ -145,6 +149,7 @@ function EditTransaction() {
           minorUnits={currency.minorUnits}
           symbol={currency.symbol}
           initial={draftFromTransaction(data, currency.minorUnits)}
+          stored={storedSplitOf(data)}
           submitLabel="Save changes"
           onCancel={close}
           busy={busy}
