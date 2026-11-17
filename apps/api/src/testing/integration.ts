@@ -7,6 +7,7 @@ import { composeApp } from '../compose';
 import { loadEnv } from '../config/env';
 import { createOutbox } from '../lib/email/sender';
 import type { RateLimiter } from '../lib/rate-limit';
+import type { AiConfig } from '../modules/ai/service';
 import { captureLogs, TEST_ORIGIN } from './app';
 
 export type IntegrationOptions = {
@@ -16,6 +17,9 @@ export type IntegrationOptions = {
   invitePreviewLimiter?: RateLimiter;
   publicLimiter?: RateLimiter;
   userLimiter?: RateLimiter;
+  /** Typed entry's providers (FakeProviders); off unless given. */
+  ai?: AiConfig;
+  aiLimiter?: RateLimiter;
   /** Better Auth's per-IP sign-in limits; off unless a test is about them. */
   authRateLimit?: boolean;
   clock?: () => Date;
@@ -55,6 +59,8 @@ export async function integrationApp(options: IntegrationOptions = {}) {
     invitePreviewLimiter: options.invitePreviewLimiter,
     publicLimiter: options.publicLimiter,
     userLimiter: options.userLimiter,
+    ai: options.ai,
+    aiLimiter: options.aiLimiter,
     authRateLimit: options.authRateLimit ?? false,
     clock: options.clock,
   });

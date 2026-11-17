@@ -2,6 +2,7 @@ import { createDb } from '@fairshare/db';
 import { serve } from '@hono/node-server';
 import { resolve } from 'node:path';
 import { composeApp } from './compose';
+import { aiConfigFromEnv } from './modules/ai/config';
 import { loadEnv, type Env } from './config/env';
 import { createPool, pingDatabase } from './db/pool';
 import { loadWebAssets } from './http/web';
@@ -29,6 +30,7 @@ const app = composeApp({
   reportError,
   emailSender: createEmailSender(env),
   web,
+  ai: aiConfigFromEnv(env),
 });
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, ({ port }) => {

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ExpenseDraft,
   LlmExpenseExtraction,
   llmExpenseExtractionJsonSchema,
   ParseExpenseRequest,
@@ -139,56 +138,93 @@ describe('ParseExpenseRequest', () => {
 });
 
 describe('ParseResult', () => {
+  const draft = {
+    amount: 240_000,
+    description: 'Dinner',
+    occurredOn: '2026-11-07',
+    payerId: ids.a,
+    splitMethod: 'equal',
+    split: { method: 'equal', participants: [ids.a, ids.d] },
+  };
   const result = {
     requestId: 12,
     path: 'llm',
     groupId: ids.group,
-    draft: { description: 'Dinner', amount: 240_000, currency: 'INR' },
+    draft,
     resolutions: [
       {
         name: 'Rahul',
+        role: 'participant',
+        value: null,
         status: 'ambiguous',
         candidates: [userRef(ids.b, 'Rahul S'), userRef(ids.c, 'Rahul K')],
       },
-      { name: 'Amit', status: 'unknown' },
-      { name: 'Dev', status: 'resolved', userId: ids.d },
+      { name: 'Amit', role: 'payer', value: null, status: 'unknown' },
+      { name: 'Dev', role: 'participant', value: '600', status: 'resolved', userId: ids.d },
     ],
     issues: [{ code: 'PERCENT_SUM_INVALID', message: 'Percentages add up to 90%.' }],
   };
 
   it('accepts a draft with resolutions and issues', () => expectValid(ParseResult, result));
 
-  it('accepts the rule-based path with no request row and an empty draft', () => {
+  it('accepts a fallback with nothing settled', () => {
     expectValid(ParseResult, {
       ...result,
       requestId: null,
-      path: 'rules',
-      draft: {},
+      path: 'fallback',
+      draft: {
+        amount: null,
+        description: null,
+        occurredOn: null,
+        payerId: null,
+        splitMethod: 'equal',
+        split: null,
+      },
       resolutions: [],
       issues: [],
+    });
+  });
+
+  it('accepts a split whose values don’t add up yet (the issues say so)', () => {
+    expectValid(ParseResult, {
+      ...result,
+      draft: {
+        ...draft,
+        splitMethod: 'percent',
+        split: { method: 'percent', basisPoints: [{ userId: ids.a, bp: 6000 }] },
+      },
     });
   });
 
   it.each([
     [{ path: 'magic' }, 'path'],
     [{ requestId: 0 }, 'requestId'],
-    [{ draft: { amount: 0 } }, 'draft.amount'],
+    [{ draft: { ...draft, amount: 0 } }, 'draft.amount'],
+    [{ draft: { ...draft, payerId: 'me' } }, 'draft.payerId'],
     [
       {
         resolutions: [
-          { name: 'Rahul', status: 'ambiguous', candidates: [userRef(ids.b, 'Rahul')] },
+          {
+            name: 'Rahul',
+            role: 'participant',
+            value: null,
+            status: 'ambiguous',
+            candidates: [userRef(ids.b, 'Rahul')],
+          },
         ],
       },
       'resolutions.0.candidates',
     ],
-    [{ resolutions: [{ name: 'Dev', status: 'resolved' }] }, 'resolutions.0.userId'],
+    [
+      { resolutions: [{ name: 'Dev', role: 'participant', value: null, status: 'resolved' }] },
+      'resolutions.0.userId',
+    ],
+    [
+      { resolutions: [{ name: 'Dev', role: 'friend', value: null, status: 'unknown' }] },
+      'resolutions.0.role',
+    ],
     [{ issues: [{ code: 'CONFUSED', message: '?' }] }, 'issues.0.code'],
   ])('rejects %j', (patch, path) =>
     expect(rejectedPaths(ParseResult, withField(result, patch))).toEqual([path]),
   );
-
-  it('has a draft in the form’s own shape, every field optional', () => {
-    expectValid(ExpenseDraft, { split: { method: 'equal', participants: [ids.a] } });
-    expect(ExpenseDraft.safeParse({ total: 5 }).success).toBe(false);
-  });
 });

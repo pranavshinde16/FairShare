@@ -199,6 +199,21 @@ separate development client), and put its ID and secret in your `.env`.
    VITE_SENTRY_ENVIRONMENT=staging
    ```
 
+   Optional, for typed entry's AI path (docs/operations.md, section 7; without them sentences the
+   rules can't read open in the form as typed):
+
+   ```text
+   AI_PRIMARY_BASE_URL=https://api.groq.com/openai/v1
+   AI_PRIMARY_API_KEY=<Groq API key>
+   AI_PRIMARY_TEXT_MODEL=openai/gpt-oss-120b
+   AI_PRIMARY_EXTRA_PARAMS={"reasoning_effort":"low"}
+   AI_PRIMARY_DAILY_TOKENS=160000
+   AI_FALLBACK_BASE_URL=https://api.cloudflare.com/client/v4/accounts/<account ID>/ai/v1
+   AI_FALLBACK_API_KEY=<Cloudflare API token>
+   AI_FALLBACK_TEXT_MODEL=@cf/meta/llama-4-scout-17b-16e-instruct
+   AI_FALLBACK_SCHEMA_MODE=json_object
+   ```
+
    - Don't set `PORT`: Railway provides it. `VITE_*` values reach the web build automatically,
      because the Dockerfile declares them as build arguments.
    - `APP_URL` is exactly the address people open (the domain generated in item 6 above, later the

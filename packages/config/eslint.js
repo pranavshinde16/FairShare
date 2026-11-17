@@ -139,6 +139,35 @@ export function createConfig({ tsconfigRootDir }) {
       ]),
     },
 
+    // The AI module only drafts (Blueprint 8.1): it can't reach the transactions module or the
+    // transaction tables. apps/api/src/architecture.test.ts checks the same, in case of an inline
+    // eslint-disable.
+    {
+      files: ['apps/api/src/modules/ai/**/*.ts'],
+      // Its tests may check what a saved expense links back to.
+      ignores: ['**/*.test.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['**/transactions', '**/transactions/*'],
+                message: 'The AI module must never write transactions: it only returns a draft.',
+              },
+            ],
+            paths: [
+              {
+                name: '@fairshare/db',
+                importNames: ['transactions', 'transactionPayers', 'transactionShares', 'ledger'],
+                message: 'The AI module must never touch transactions: it only returns a draft.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+
     // ---- Environment-specific settings -------------------------------------
 
     {

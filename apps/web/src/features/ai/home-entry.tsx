@@ -1,4 +1,4 @@
-import type { Home } from '@fairshare/contracts';
+import type { Home, ParseResult } from '@fairshare/contracts';
 import { chooseGroup, parseRules, type GroupCandidate } from '@fairshare/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -73,12 +73,23 @@ export function HomeEntry({ home, me }: { home: Home; me: { id: string; name: st
         ...(parsed.payer.kind === 'person' ? [parsed.payer.name] : []),
         ...parsed.people,
       ];
-      const groupId = chooseGroup(names, candidates, me.id);
+      let groupId = chooseGroup(names, candidates, me.id);
+      let result: ParseResult | undefined;
+      if (parsed.confidence === 'low' && groupId !== null) {
+        // The rules can't read all of it (Blueprint 8.1): the server reads it and picks the group
+        // from the names it finds. If that fails, the rules' choice stands.
+        try {
+          result = await api.parseExpense({ text: sentence, today: localDate() });
+          groupId = result.groupId ?? groupId;
+        } catch {
+          result = undefined;
+        }
+      }
       if (groupId === null) {
         setError('Start a group or add a friend first: expenses are always shared with someone.');
         return;
       }
-      handOff(groupId, sentence);
+      handOff(groupId, sentence, result);
       const friend = home.people.find((p) => p.directGroupId === groupId);
       await (friend
         ? navigate({ to: '/friends/$userId/expenses/new', params: { userId: friend.user.id } })

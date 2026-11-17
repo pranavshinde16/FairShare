@@ -11,6 +11,7 @@ public, and so are its Actions logs: the jobs print counts only, never data.
 | What                            | Where                                                            | When                               |
 | ------------------------------- | ---------------------------------------------------------------- | ---------------------------------- |
 | Invariant check (Blueprint 9.2) | `.github/workflows/nightly.yml`                                  | Every night, 03:00 India time      |
+| Maintenance (forgetting)        | `.github/workflows/nightly.yml`                                  | Every night, 03:00 India time      |
 | Database backup                 | `.github/workflows/nightly.yml`                                  | Every night, 03:00 India time      |
 | Restore test                    | `.github/workflows/restore-test.yml`                             | 1 January, April, July and October |
 | Scripts behind them             | `scripts/backup/`, `packages/db/src/scripts/check-invariants.ts` | Also runnable by hand              |
@@ -167,7 +168,83 @@ can re-enter what's missing.
 
 Add a row after each quarterly restore test, and after the first one against production.
 
-## 6. Other settings
+## 6. Nightly maintenance
+
+It forgets what the privacy notice promises to forget: the sentences people typed for an AI
+provider to read (`ai_requests.input_text`), 30 days after they were sent. Account deletion clears a
+person's sentences at once; this catches everyone else's. It prints one line such as
+`{"ranAt":"…","aiInputsPurged":3}`.
+
+### Set it up
+
+1. **A login that may update those rows.** In Neon's SQL Editor (database `neondb`), with a new
+   password from `openssl rand -hex 24`:
+
+   ```sql
+   CREATE ROLE fairshare_maintenance LOGIN PASSWORD '<the password>' IN ROLE fairshare_app;
+   ```
+
+   The connection string: the branch's **direct** host, user `fairshare_maintenance`, database
+   `neondb`, `?sslmode=require`.
+
+2. **GitHub:** secret `MAINTENANCE_DATABASE_URL` (that string) and variable
+   `MAINTENANCE_ENABLED` = `true`.
+
+3. **Try it now:** Actions → Nightly → Run workflow, and check the Maintenance job's line. By hand:
+   `pnpm --filter @fairshare/db maintenance` with `DATABASE_URL` set.
+
+Until it's on, sentences older than 30 days aren't forgotten, which breaks the privacy notice: turn
+it on together with the AI provider.
+
+## 7. Typed entry's AI providers
+
+Sentences the rule-based parser can't fully read go to Groq, then Cloudflare Workers AI
+(ARCHITECTURE.md, "The LLM path"). Without `AI_PRIMARY_API_KEY` that path is simply off: the form
+opens with what the rules found.
+
+### Set it up
+
+1. **Groq:** at [console.groq.com](https://console.groq.com) create an API key, and under
+   **Settings → Data Controls** turn on **Zero Data Retention**, so Groq keeps no inputs even for its
+   30-day abuse logs. On the **Limits** page, note the text model's tokens per day.
+2. **Cloudflare (optional fallback):** in the dashboard, **AI → Workers AI**: note the account ID and
+   create an API token with Workers AI permission. Its free allowance is 10,000 neurons a day.
+3. **Railway's service variables** (copy the names and defaults from `.env.example`):
+   `AI_PRIMARY_API_KEY`, `AI_PRIMARY_BASE_URL`, `AI_PRIMARY_TEXT_MODEL`,
+   `AI_PRIMARY_DAILY_TOKENS` (about 80% of the model's free tokens per day), and for Cloudflare
+   `AI_FALLBACK_API_KEY`, `AI_FALLBACK_BASE_URL`
+   (`https://api.cloudflare.com/client/v4/accounts/<account ID>/ai/v1`) and
+   `AI_FALLBACK_TEXT_MODEL`.
+4. **Score the model before turning it on** (below), then turn on the nightly maintenance (section
+   6), which the privacy notice relies on.
+
+### Changing the prompt or the model
+
+A model can be retired at short notice (Groq retired `qwen3.6-27b` in September 2026). To move to
+another model, or after any change to `modules/ai/prompts/`:
+
+1. Put the new model in `.env` locally and run `pnpm --filter @fairshare/api eval:parse` (and
+   `-- --provider fallback` for Cloudflare). It reads 105 sentences, takes about 15 minutes at the
+   free tier's pace and costs about 105,000 tokens: half of Groq's free day, so run it when the app
+   is quiet.
+2. It prints accuracy per field and the release gate's verdict: amounts ≥ 95%, people ≥ 90%,
+   payer ≥ 90%, split method ≥ 90%. Below the gate, don't ship it: adjust the prompt (as a new
+   version, `parse-expense.v2.ts`) or choose another model.
+3. Commit the snapshot it saves under `apps/api/src/modules/ai/eval/snapshots/`: CI keeps
+   checking it whenever core or the scorer changes.
+4. Change the model variable in Railway. No deploy of code is needed.
+
+### When something's wrong
+
+- **Every sentence falls back:** check the API logs for provider errors (`an AI provider failed`)
+  and `ai_requests.outcome` (`error`, `timeout`, `rate_limited`, `invalid_output`). A key revoked or
+  a model retired shows as `error`; a model whose answers stopped matching the schema shows as
+  `invalid_output`.
+- **Stop it at once:** set `AI_ENABLED=false`. Typed entry keeps working with the rules alone.
+- **How it's doing:** `ai_requests` rows by outcome and provider, and the share of `ok` requests that
+  an expense points back to (`transactions.ai_request_id`).
+
+## 8. Other settings
 
 - **Privacy contact.** `/privacy` and `/terms` show `VITE_CONTACT_EMAIL` if it's set (a Docker
   build argument; set it in Railway's service variables, which Railway passes to the build), and

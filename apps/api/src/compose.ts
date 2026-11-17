@@ -13,6 +13,7 @@ import { createAuth } from './modules/auth/auth';
 import { createDomainUserResolver } from './modules/auth/domain-users';
 import { createSignInCodeSender } from './modules/auth/sign-in-email';
 import { createActivityService } from './modules/activity/service';
+import { AI_OFF, createAiService, type AiConfig } from './modules/ai/service';
 import { createBalancesService } from './modules/balances/service';
 import { createClaimsService } from './modules/claims/service';
 import { createCurrenciesService } from './modules/currencies/service';
@@ -41,6 +42,10 @@ export type ComposeOptions = {
   publicLimiter?: RateLimiter;
   /** Overrides the signed-in API's limit (120 a minute per user), for tests. */
   userLimiter?: RateLimiter;
+  /** Typed entry's providers (aiConfigFromEnv in production). Off unless given. */
+  ai?: AiConfig;
+  /** Overrides the LLM calls limit (10 a minute per user), for tests. */
+  aiLimiter?: RateLimiter;
   /** Better Auth's own per-IP limits on sign-in. On unless a test turns them off. */
   authRateLimit?: boolean;
   /** "Now", for tests that need a fixed today. */
@@ -58,6 +63,9 @@ export const PUBLIC_REQUESTS_PER_IP = { max: 60, windowMs: 60 * 1000 };
 
 /** The signed-in API per user (Blueprint 9.1). */
 export const API_REQUESTS_PER_USER = { max: 120, windowMs: 60 * 1000 };
+
+/** Sentences read by an LLM per user (Blueprint 8.9). Rule-only parses aren't counted. */
+export const AI_CALLS_PER_USER = { max: 10, windowMs: 60 * 1000 };
 
 export function composeApp(options: ComposeOptions) {
   const { env, db, logger, reportError } = options;
@@ -111,6 +119,15 @@ export function composeApp(options: ComposeOptions) {
     transactions: createTransactionsService(db, options.clock),
     balances: createBalancesService(db),
     activity: createActivityService(db),
+    ai: createAiService(db, options.ai ?? AI_OFF, {
+      limiter: options.aiLimiter ?? createRateLimiter(AI_CALLS_PER_USER),
+      clock: options.clock,
+      onUnexpected: (err) => {
+        const request = currentRequest();
+        (request?.log ?? logger).error({ err }, 'an AI provider failed unexpectedly');
+        reportError(err, { requestId: request?.requestId });
+      },
+    }),
     invitePreviewLimiter: options.invitePreviewLimiter ?? createRateLimiter(INVITE_PREVIEWS_PER_IP),
     publicLimiter: options.publicLimiter ?? createRateLimiter(PUBLIC_REQUESTS_PER_IP),
     userLimiter: options.userLimiter ?? createRateLimiter(API_REQUESTS_PER_USER),

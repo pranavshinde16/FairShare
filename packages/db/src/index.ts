@@ -13,3 +13,4 @@ export {
 } from './client';
 export { MIGRATIONS_FOLDER, runMigrations } from './migrate';
 export { applyReferenceData, CURRENCIES } from './reference';
+export { AI_INPUT_RETENTION_DAYS, runMaintenance, type MaintenanceReport } from './maintenance';

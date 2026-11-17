@@ -1,7 +1,21 @@
-import type { Group } from '@fairshare/contracts';
-import { parseRules, resolveName, type NameCandidate } from '@fairshare/core';
+import type { Group, ParseResult, SplitMethod } from '@fairshare/contracts';
+import {
+  DomainError,
+  parsePercent,
+  parseRules,
+  readAmount,
+  resolveName,
+  toDecimalString,
+  type NameCandidate,
+} from '@fairshare/core';
 import { formatAmountInput } from '../../lib/money';
-import { canTakePart, emptySplit, type ExpenseDraft } from '../expenses/split-draft';
+import {
+  canTakePart,
+  emptySplit,
+  percentText,
+  splitDraftFrom,
+  type ExpenseDraft,
+} from '../expenses/split-draft';
 
 /**
  * Typed entry (Blueprint 8.1, 8.2, 8.7): "Dinner 2400 with Rahul & Amit" → the expense form,
@@ -15,6 +29,13 @@ export type Pending = {
   name: string;
   /** Whether the sentence named them as the payer or as sharing the expense. */
   role: 'payer' | 'participant';
+  /**
+   * Whether answering puts them in the split. The rule-based parser counts the payer in; a server
+   * read lists the payer and each person sharing separately.
+   */
+  joins: boolean;
+  /** Their part of an exact, percent or shares split, as the form takes it ("500.00", "60", 2). */
+  value?: string | number;
 } & ({ status: 'ambiguous'; candidates: string[] } | { status: 'unknown' });
 
 export type Filled = 'amount' | 'description' | 'date' | 'split';
@@ -63,8 +84,8 @@ export function applyEntry(text: string, draft: ExpenseDraft, ctx: Context): Ent
     if (r.status === 'resolved') return r.userId;
     pending.push(
       r.status === 'ambiguous'
-        ? { name, role, status: 'ambiguous', candidates: r.candidates }
-        : { name, role, status: 'unknown' },
+        ? { name, role, joins: true, status: 'ambiguous', candidates: r.candidates }
+        : { name, role, joins: true, status: 'unknown' },
     );
     return null;
   };
@@ -116,12 +137,102 @@ export function applyEntry(text: string, draft: ExpenseDraft, ctx: Context): Ent
   };
 }
 
-/** A chip answered: this pending name is `userId` (picked from the candidates, or just added). */
+/**
+ * A server read of the sentence (Blueprint 8.1: the LLM path) into `draft`, the same way applyEntry
+ * reads one locally: what it settled fills the form, names it couldn't settle become chips, and
+ * what the text doesn't mention keeps its value.
+ */
+export function applyParsed(
+  result: ParseResult,
+  draft: ExpenseDraft,
+  ctx: { meId: string; minorUnits: number },
+): EntryResult {
+  const { draft: read } = result;
+  const filled: EntryResult['filled'] = ['split'];
+  const next: ExpenseDraft = {
+    ...draft,
+    payers: { mode: 'single', userId: read.payerId ?? ctx.meId },
+    split: read.split
+      ? splitDraftFrom(read.split, ctx.minorUnits)
+      : { ...emptySplit([]), method: read.splitMethod },
+  };
+  if (read.amount !== null) {
+    next.amountText = formatAmountInput(read.amount, ctx.minorUnits);
+    filled.push('amount');
+  }
+  if (read.description !== null) {
+    next.description = read.description;
+    filled.push('description');
+  }
+  if (read.occurredOn !== null) {
+    next.occurredOn = read.occurredOn;
+    filled.push('date');
+  }
+  const pending: Pending[] = result.resolutions.flatMap((r): Pending[] => {
+    if (r.status === 'resolved') return [];
+    const value =
+      r.role === 'participant' && r.value !== null
+        ? formValue(read.splitMethod, r.value, ctx.minorUnits)
+        : undefined;
+    const base = {
+      name: r.name,
+      role: r.role,
+      joins: r.role === 'participant',
+      ...(value !== undefined && { value }),
+    };
+    return [
+      r.status === 'ambiguous'
+        ? { ...base, status: 'ambiguous', candidates: r.candidates.map((c) => c.id) }
+        : { ...base, status: 'unknown' },
+    ];
+  });
+  const understood = result.path !== 'fallback';
+  return {
+    draft: next,
+    pending,
+    filled,
+    understood,
+    confident: understood && pending.length === 0 && result.issues.length === 0,
+  };
+}
+
+/** One person's split value as the form's input holds it, or undefined if it can't be used. */
+function formValue(method: SplitMethod, text: string, minorUnits: number) {
+  if (method === 'exact') {
+    const amount = readAmount(text, minorUnits);
+    return amount === null ? undefined : toDecimalString(amount, minorUnits);
+  }
+  if (method === 'shares') return /^\d{1,4}$/.test(text.trim()) ? Number(text.trim()) : undefined;
+  if (method === 'percent') {
+    try {
+      return percentText(parsePercent(text.trim().replace(/\s*%$/, '')));
+    } catch (error) {
+      if (error instanceof DomainError) return undefined;
+      throw error;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * A chip answered: this pending name is `userId` (picked from the candidates, or just added). An
+ * equal split takes them in; another method takes their value when the sentence gave one, and is
+ * otherwise left to the split sheet.
+ */
 export function settlePending(draft: ExpenseDraft, pending: Pending, userId: string): ExpenseDraft {
-  const split =
-    draft.split.method === 'equal' && !draft.split.participants.includes(userId)
-      ? { ...draft.split, participants: [...draft.split.participants, userId] }
-      : draft.split;
+  let split = draft.split;
+  if (pending.joins && split.method === 'equal' && !split.participants.includes(userId)) {
+    split = { ...split, participants: [...split.participants, userId] };
+  }
+  if (pending.joins && pending.value !== undefined) {
+    if (split.method === 'exact') {
+      split = { ...split, exact: { ...split.exact, [userId]: String(pending.value) } };
+    } else if (split.method === 'percent') {
+      split = { ...split, percent: { ...split.percent, [userId]: String(pending.value) } };
+    } else if (split.method === 'shares') {
+      split = { ...split, shares: { ...split.shares, [userId]: Number(pending.value) } };
+    }
+  }
   if (pending.role === 'payer') return { ...draft, payers: { mode: 'single', userId }, split };
   return { ...draft, split };
 }

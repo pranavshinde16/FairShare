@@ -57,18 +57,37 @@ function PrivacyPage() {
         <li>
           Service providers that run FairShare, who handle data only to do that: Railway (runs the
           app) and Neon (the database), both in Singapore; Resend (sends the sign-in emails); Google
-          (only if you choose to sign in with Google); and Sentry (error reports, with personal
-          details removed).
+          (only if you choose to sign in with Google); Sentry (error reports, with personal details
+          removed); and, for typed expenses the app can’t read itself, Groq and Cloudflare (see
+          below).
         </li>
         <li>Nobody else. FairShare doesn’t sell data, show ads, or use analytics or tracking.</li>
       </ul>
 
       <h2>Typed expenses</h2>
       <p>
-        A sentence you type to fill in an expense (“Dinner 2400 with Rahul”) is read in your
-        browser. It isn’t sent anywhere unless you save the expense. If that ever changes, this
-        notice will say so first.
+        A sentence you type to fill in an expense (“Dinner 2400 with Rahul”) is read in your browser
+        first. Most are read there and go nowhere until you save the expense.
       </p>
+      <p>
+        When the app can’t read all of a sentence (Hinglish, say, or “Rahul paid, only the two of
+        us”), it sends the sentence to an AI service to read: Groq, in the United States, or
+        Cloudflare Workers AI if Groq is unavailable. Sent with it: today’s date, the group’s
+        currency and your name (so “I” and “me” mean you). Nothing else is sent: no other names from
+        your groups, no email addresses, no balances. The answer only fills in the form; you check
+        it and decide whether to save.
+      </p>
+      <ul>
+        <li>
+          FairShare keeps the sentence for 30 days, to see how well this works and to fix mistakes,
+          then deletes it. Deleting your account deletes it at once.
+        </li>
+        <li>
+          Groq says it keeps no inputs from these requests except, for up to 30 days, logs it needs
+          to investigate abuse or failures. Cloudflare says it keeps neither the sentence nor the
+          answer, and doesn’t use them to train AI models.
+        </li>
+      </ul>
 
       <h2>How long it’s kept</h2>
       <p>
@@ -87,6 +106,7 @@ function PrivacyPage() {
           expenses and payments you were part of stay, because other people’s balances depend on
           them; you’re shown in them as “Deleted user”;
         </li>
+        <li>sentences you typed for an AI service to read are deleted at once;</li>
         <li>copies in the database backups disappear as the backups expire, within 30 days.</li>
       </ul>
 

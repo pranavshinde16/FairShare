@@ -1,15 +1,30 @@
-import type { Group, Transaction, UpdateExpense } from '@fairshare/contracts';
+import { ApiError } from '@fairshare/api-client';
+import type {
+  Group,
+  ParseIssue,
+  ParseResult,
+  Transaction,
+  UpdateExpense,
+} from '@fairshare/contracts';
 import { ArrowLeft, CalendarDays, ChevronDown, NotepadText, Sparkles } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '../../components/common/avatar';
 import { GroupTile } from '../../components/common/tiles';
 import { Button } from '../../components/ui/button';
 import { DateQuickPick, shortDate } from '../../components/ui/date-quick-pick';
 import { Label } from '../../components/ui/label';
+import { api } from '../../lib/api';
 import { formatAmount, formatAmountInput, formatWholeAmount, plural } from '../../lib/money';
 import { readStored, writeStored } from '../../lib/storage';
 import { cn } from '../../lib/utils';
-import { applyEntry, settlePending, type Filled, type Pending } from '../ai/entry';
+import {
+  applyEntry,
+  applyParsed,
+  settlePending,
+  type EntryResult,
+  type Filled,
+  type Pending,
+} from '../ai/entry';
 import { ResolutionChips } from '../ai/resolution-chips';
 import {
   canTakePart,
@@ -113,16 +128,22 @@ export function ExpenseForm({
   error?: string | null;
   /**
    * New expenses: the "Type it" bar (Blueprint 7.3, 8). `text`: a sentence typed elsewhere (Home),
-   * read into the form as it opens.
+   * read into the form as it opens; `result`: the server's read of it, when Home asked for one.
    */
-  entry?: { text?: string };
+  entry?: { text?: string; result?: ParseResult };
   onSubmit: (body: UpdateExpense, draft: ExpenseDraft) => void;
   /** Desktop's Cancel beside Save (phones close with the header's ✕). */
   onCancel?: () => void;
 }) {
   const read = (text: string, from: ExpenseDraft) =>
     applyEntry(text, from, { group, meId, minorUnits, today: localDate() });
-  const [opening] = useState(() => (entry?.text ? read(entry.text, initial) : null));
+  /** A server read that understood the sentence (not a fallback), applied to `from`. */
+  const readParsed = (result: ParseResult, from: ExpenseDraft): EntryResult | null =>
+    result.path === 'fallback' ? null : applyParsed(result, from, { meId, minorUnits });
+  const [opening] = useState(() => {
+    if (!entry?.text) return null;
+    return (entry.result && readParsed(entry.result, initial)) ?? read(entry.text, initial);
+  });
   const [draft, setDraft] = useState(() => {
     const start = opening?.draft ?? initial;
     // An expense being edited shows its amount as it's written everywhere else: "4,800.00".
@@ -141,6 +162,19 @@ export function ExpenseForm({
   const [pending, setPending] = useState<Pending[]>(opening?.pending ?? []);
   const [filled, setFilled] = useState<Filled[]>(opening?.filled ?? []);
   const [understood, setUnderstood] = useState(opening?.understood ?? true);
+  // The LLM path (Blueprint 8.1): reading on the server, what it flagged, and the request a saved
+  // expense links back to (ai_requests, for the acceptance rate).
+  const openedWithRead = Boolean(entry?.result && entry.result.path !== 'fallback');
+  const [reading, setReading] = useState(false);
+  const [aiNote, setAiNote] = useState<string | null>(null);
+  const [issues, setIssues] = useState<ParseIssue[]>(
+    openedWithRead ? (entry?.result?.issues ?? []) : [],
+  );
+  const [aiRequestId, setAiRequestId] = useState<number | null>(
+    openedWithRead ? (entry?.result?.requestId ?? null) : null,
+  );
+  // The latest sentence: an older one's answer arriving late is dropped.
+  const sentence = useRef(0);
   // Anything but one payer and an equal split opens with the sheet showing, so it's never hidden.
   const [splitOpen, setSplitOpen] = useState(
     initial.payers.mode === 'multiple' || initial.split.method !== 'equal',
@@ -172,23 +206,62 @@ export function ExpenseForm({
   const highlight = (field: Filled) =>
     filled.includes(field) && 'bg-accent/60 ring-1 ring-primary/40';
 
-  function fill() {
-    const text = entryText.trim();
-    if (!text) return;
-    // A new sentence replaces what the last one filled (fields still as it left them); anything
-    // changed by hand stays.
-    const base: ExpenseDraft = {
-      ...draft,
-      ...(filled.includes('amount') && { amountText: initial.amountText }),
-      ...(filled.includes('description') && { description: initial.description }),
-      ...(filled.includes('date') && { occurredOn: initial.occurredOn }),
-      ...(filled.includes('split') && { payers: initial.payers, split: initial.split }),
-    };
-    const result = read(text, base);
+  /** The draft without what the last sentence filled (as it left them); hand changes stay. */
+  const rebase = (from: ExpenseDraft, sentenceFilled: Filled[]): ExpenseDraft => ({
+    ...from,
+    ...(sentenceFilled.includes('amount') && { amountText: initial.amountText }),
+    ...(sentenceFilled.includes('description') && { description: initial.description }),
+    ...(sentenceFilled.includes('date') && { occurredOn: initial.occurredOn }),
+    ...(sentenceFilled.includes('split') && { payers: initial.payers, split: initial.split }),
+  });
+  const show = (result: EntryResult) => {
     setDraft(result.draft);
     setPending(result.pending);
     setFilled(result.filled);
     setUnderstood(result.understood);
+  };
+  // Read when an answer arrives, which may be after the person has changed something.
+  const latest = useRef({ draft, filled });
+  useEffect(() => {
+    latest.current = { draft, filled };
+  }, [draft, filled]);
+
+  function fill() {
+    const text = entryText.trim();
+    if (!text) return;
+    // The rule-based parser first, instantly (Blueprint 8.1). A new sentence replaces what the
+    // last one filled; anything changed by hand stays.
+    const result = read(text, rebase(draft, filled));
+    show(result);
+    setIssues([]);
+    setAiNote(null);
+    setAiRequestId(null);
+    const current = ++sentence.current;
+    if (result.understood || !navigator.onLine) return;
+
+    // Not fully understood: the server reads it (rules again, then a model), never a dead end.
+    setReading(true);
+    api
+      .parseExpense({ text, groupId: group.id, today: localDate() })
+      .then((parsed) => {
+        if (current !== sentence.current) return;
+        const { draft: now, filled: nowFilled } = latest.current;
+        const applied = readParsed(parsed, rebase(now, nowFilled));
+        if (!applied) return; // a fallback: what the rules found stays
+        show(applied);
+        setIssues(parsed.issues);
+        setAiRequestId(parsed.requestId);
+      })
+      .catch((error: unknown) => {
+        if (current !== sentence.current) return;
+        if (error instanceof ApiError && error.code === 'AI_RATE_LIMITED') {
+          setAiNote('Try again in a minute.');
+        }
+        // Anything else: what the rules found stays, with "Couldn’t fully understand".
+      })
+      .finally(() => {
+        if (current === sentence.current) setReading(false);
+      });
   }
 
   const money = (amount: number) => formatAmount(amount, group.currency, minorUnits);
@@ -226,7 +299,9 @@ export function ExpenseForm({
 
   function submit() {
     // Ctrl/⌘+Enter reaches here without the (disabled) Save button.
-    if (body && !busy && navigator.onLine) onSubmit(body, draft);
+    if (body && !busy && navigator.onLine) {
+      onSubmit(aiRequestId === null ? body : { ...body, aiRequestId }, draft);
+    }
   }
 
   const friend =
@@ -319,15 +394,27 @@ export function ExpenseForm({
                 variant="tint"
                 className="h-10 rounded-[10px]"
                 disabled={!entryText.trim()}
+                loading={reading}
                 onClick={fill}
               >
                 Fill
               </Button>
             </div>
-            {!understood && (
-              <p role="status" className="text-sm leading-5 text-muted-foreground">
-                Couldn’t fully understand. Please check the details.
-              </p>
+            <div role="status" className="text-sm leading-5 text-muted-foreground empty:hidden">
+              {reading
+                ? 'Reading it…'
+                : (aiNote ??
+                  (!understood ? 'Couldn’t fully understand. Please check the details.' : null))}
+            </div>
+            {!reading && issues.length > 0 && (
+              <ul
+                aria-label="To check"
+                className="flex flex-col gap-1 text-sm text-muted-foreground"
+              >
+                {issues.map((issue) => (
+                  <li key={issue.code}>{issue.message}</li>
+                ))}
+              </ul>
             )}
             <ResolutionChips
               group={group}

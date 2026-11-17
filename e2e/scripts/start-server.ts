@@ -1,9 +1,11 @@
 // Starts the production build for the end-to-end tests: a fresh, migrated `fairshare_e2e`
-// database, then the API serving the built web app, in production mode, sending email to Mailpit.
+// database, then the API serving the built web app, in production mode, sending email to Mailpit
+// and reading typed sentences with a local stand-in for the AI provider (llm-stub.ts).
 
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { startLlmStub } from './llm-stub.ts';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const PORT = process.env.E2E_PORT ?? '3100';
@@ -26,6 +28,9 @@ const migrated = spawnSync('pnpm', ['--filter', '@fairshare/db', 'migrate'], {
 });
 if (migrated.status !== 0) process.exit(migrated.status ?? 1);
 
+const LLM_STUB_PORT = Number(PORT) + 99;
+const stub = await startLlmStub(LLM_STUB_PORT);
+
 const server = spawn('node', ['--enable-source-maps', 'apps/api/dist/main.js'], {
   cwd: ROOT,
   stdio: 'inherit',
@@ -41,9 +46,17 @@ const server = spawn('node', ['--enable-source-maps', 'apps/api/dist/main.js'], 
     LOG_LEVEL: 'warn',
     // Each test sends its own X-Real-IP, so Better Auth's per-IP limits don't pool all tests.
     CLIENT_IP_HEADERS: 'x-real-ip',
+    // Typed entry's provider: the stub, through the real OpenAI-compatible client.
+    AI_PRIMARY_PROVIDER: 'stub',
+    AI_PRIMARY_BASE_URL: `http://127.0.0.1:${LLM_STUB_PORT}/v1`,
+    AI_PRIMARY_API_KEY: 'stub-key',
+    AI_PRIMARY_TEXT_MODEL: 'stub-model',
   },
 });
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => server.kill(signal));
 }
-server.on('exit', (code) => process.exit(code ?? 0));
+server.on('exit', (code) => {
+  stub.close();
+  process.exit(code ?? 0);
+});

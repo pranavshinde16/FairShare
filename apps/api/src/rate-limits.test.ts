@@ -5,6 +5,7 @@
 import { ErrorEnvelope } from '@fairshare/contracts';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
+  AI_CALLS_PER_USER,
   API_REQUESTS_PER_USER,
   CODES_PER_EMAIL,
   INVITE_PREVIEWS_PER_IP,
@@ -67,6 +68,7 @@ describe('sign-in (Better Auth)', () => {
 describe('the production budgets', () => {
   it('are the plan’s', () => {
     expect(API_REQUESTS_PER_USER).toEqual({ max: 120, windowMs: 60_000 });
+    expect(AI_CALLS_PER_USER).toEqual({ max: 10, windowMs: 60_000 });
     expect(INVITE_PREVIEWS_PER_IP).toEqual({ max: 30, windowMs: 60_000 });
     expect(PUBLIC_REQUESTS_PER_IP).toEqual({ max: 60, windowMs: 60_000 });
     expect(CODES_PER_EMAIL).toEqual({ max: 3, windowMs: 600_000 });

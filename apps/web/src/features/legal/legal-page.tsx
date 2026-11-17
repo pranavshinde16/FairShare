@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { FairShareLogo } from '../../components/brand/fairshare-logo';
 
 /** When the privacy notice and the terms last changed. */
-export const LEGAL_UPDATED = '13 November 2026';
+export const LEGAL_UPDATED = '16 November 2026';
 
 /** Where privacy requests and questions go: a build setting, else the project's public page. */
 export const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || null;

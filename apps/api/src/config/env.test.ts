@@ -16,6 +16,12 @@ describe('loadEnv', () => {
       LOG_LEVEL: 'info',
       APP_URL: DEV_APP_URL,
       CLIENT_IP_HEADERS: ['x-real-ip'],
+      AI_ENABLED: true,
+      AI_TIMEOUT_MS: 8000,
+      AI_PRIMARY_PROVIDER: 'groq',
+      AI_PRIMARY_SCHEMA_MODE: 'strict',
+      AI_FALLBACK_PROVIDER: 'cloudflare',
+      AI_FALLBACK_SCHEMA_MODE: 'strict',
     });
   });
 
@@ -108,5 +114,61 @@ describe('loadDatabaseEnv', () => {
   it('needs only the database settings, so migrations run without the server’s secrets', () => {
     expect(loadDatabaseEnv({ DATABASE_URL, PORT: 'ignored' })).toEqual({ DATABASE_URL });
     expect(() => loadDatabaseEnv({})).toThrow(/DATABASE_URL/);
+  });
+});
+
+describe('loadEnv: typed entry’s providers', () => {
+  const groq = {
+    AI_PRIMARY_BASE_URL: 'https://api.groq.com/openai/v1',
+    AI_PRIMARY_API_KEY: 'test-key',
+    AI_PRIMARY_TEXT_MODEL: 'openai/gpt-oss-120b',
+  };
+
+  it('reads a provider, its extra parameters, cap and price', () => {
+    const env = loadEnv({
+      ...base,
+      ...groq,
+      AI_ENABLED: 'false',
+      AI_PRIMARY_SCHEMA_MODE: 'json_object',
+      AI_PRIMARY_EXTRA_PARAMS: '{"reasoning_effort":"low"}',
+      AI_PRIMARY_DAILY_TOKENS: '160000',
+      AI_PRIMARY_PRICE: '0.15, 0.60',
+      AI_DAILY_BUDGET_MICROS: '50000',
+    });
+    expect(env).toMatchObject({
+      AI_ENABLED: false,
+      AI_PRIMARY_SCHEMA_MODE: 'json_object',
+      AI_PRIMARY_EXTRA_PARAMS: { reasoning_effort: 'low' },
+      AI_PRIMARY_DAILY_TOKENS: 160000,
+      AI_PRIMARY_PRICE: { input: 0.15, output: 0.6 },
+      AI_DAILY_BUDGET_MICROS: 50000,
+    });
+  });
+
+  it('needs the URL and model with a key', () => {
+    expect(() => loadEnv({ ...base, AI_PRIMARY_API_KEY: 'k' })).toThrow(
+      /AI_PRIMARY_BASE_URL: is required with AI_PRIMARY_API_KEY[\s\S]*AI_PRIMARY_TEXT_MODEL/,
+    );
+  });
+
+  it('needs a primary before a fallback', () => {
+    expect(() =>
+      loadEnv({
+        ...base,
+        AI_FALLBACK_BASE_URL: 'https://api.cloudflare.com/client/v4/accounts/x/ai/v1',
+        AI_FALLBACK_API_KEY: 'k',
+        AI_FALLBACK_TEXT_MODEL: '@cf/meta/llama-4-scout-17b-16e-instruct',
+      }),
+    ).toThrow(/AI_PRIMARY_API_KEY: is required when a fallback provider is set/);
+  });
+
+  it.each([
+    [{ AI_PRIMARY_EXTRA_PARAMS: '[1]' }, /AI_PRIMARY_EXTRA_PARAMS: must be a JSON object/],
+    [{ AI_PRIMARY_EXTRA_PARAMS: '{oops' }, /AI_PRIMARY_EXTRA_PARAMS: must be a JSON object/],
+    [{ AI_PRIMARY_PRICE: '0.15' }, /AI_PRIMARY_PRICE/],
+    [{ AI_PRIMARY_SCHEMA_MODE: 'loose' }, /AI_PRIMARY_SCHEMA_MODE/],
+    [{ AI_TIMEOUT_MS: '100' }, /AI_TIMEOUT_MS/],
+  ])('refuses %j', (patch, message) => {
+    expect(() => loadEnv({ ...base, ...groq, ...patch })).toThrow(message);
   });
 });

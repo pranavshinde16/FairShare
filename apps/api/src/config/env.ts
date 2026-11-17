@@ -15,6 +15,35 @@ const Origin = z
 /** Where the browser opens the app with `pnpm dev`: Vite, which proxies /api to the server. */
 export const DEV_APP_URL = 'http://localhost:5173';
 
+/** "0.10,0.50": US dollars per million input and output tokens. */
+const Price = z
+  .string()
+  .regex(
+    /^\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?\s*$/,
+    'must be "input,output" dollars per million tokens',
+  )
+  .transform((value) => {
+    const [input, output] = value.split(',').map((part) => Number(part.trim())) as [number, number];
+    return { input, output };
+  });
+
+/** A JSON object of extra request fields for a model, e.g. {"reasoning_effort":"low"}. */
+const ExtraParams = z.string().transform((value, ctx) => {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // reported below
+  }
+  ctx.addIssue({ code: 'custom', message: 'must be a JSON object' });
+  return z.NEVER;
+});
+
+const SchemaMode = z.enum(['strict', 'json_object']).default('strict');
+const DailyTokens = z.coerce.number().int().min(1).optional();
+
 const DatabaseSchema = z.object({
   DATABASE_URL: z.string({ error: 'is required' }).pipe(PostgresUrl),
   // The pre-deploy migration's connection: the owner role, unpooled. Defaults to DATABASE_URL,
@@ -64,6 +93,29 @@ const EnvSchema = DatabaseSchema.extend({
   SENTRY_ENVIRONMENT: z.string().optional(), // defaults to NODE_ENV; set "staging" on staging
   SENTRY_RELEASE: z.string().optional(), // usually the git commit
 
+  // Typed entry with an LLM (Blueprint 8.3): sentences the rule-based parser can't read go to the
+  // primary provider, then the fallback. Both speak the OpenAI /chat/completions API (Groq,
+  // Cloudflare Workers AI). Without AI_PRIMARY_API_KEY, every such sentence falls back to the form.
+  AI_ENABLED: z.stringbool().default(true), // the kill switch
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(8000), // per call
+  AI_DAILY_BUDGET_MICROS: z.coerce.number().int().min(0).optional(), // US dollar micros per UTC day
+  AI_PRIMARY_PROVIDER: z.string().default('groq'), // the name logged in ai_requests
+  AI_PRIMARY_BASE_URL: z.url().optional(), // e.g. https://api.groq.com/openai/v1
+  AI_PRIMARY_API_KEY: z.string().optional(),
+  AI_PRIMARY_TEXT_MODEL: z.string().optional(), // e.g. openai/gpt-oss-120b
+  AI_PRIMARY_SCHEMA_MODE: SchemaMode,
+  AI_PRIMARY_EXTRA_PARAMS: ExtraParams.optional(),
+  AI_PRIMARY_DAILY_TOKENS: DailyTokens, // skip it past this many tokens a day (free tier)
+  AI_PRIMARY_PRICE: Price.optional(),
+  AI_FALLBACK_PROVIDER: z.string().default('cloudflare'),
+  AI_FALLBACK_BASE_URL: z.url().optional(), // …/accounts/<id>/ai/v1
+  AI_FALLBACK_API_KEY: z.string().optional(),
+  AI_FALLBACK_TEXT_MODEL: z.string().optional(),
+  AI_FALLBACK_SCHEMA_MODE: SchemaMode,
+  AI_FALLBACK_EXTRA_PARAMS: ExtraParams.optional(),
+  AI_FALLBACK_DAILY_TOKENS: DailyTokens,
+  AI_FALLBACK_PRICE: Price.optional(),
+
   // The built web app (apps/web/dist). When set, the API serves it with an SPA fallback, as in the
   // Docker image. Unset in development, where Vite serves the app.
   WEB_DIST_DIR: z.string().optional(),
@@ -84,6 +136,25 @@ const EnvSchema = DatabaseSchema.extend({
         code: 'custom',
         path: ['RESEND_API_KEY'],
         message: 'or MAILPIT_URL is required, so sign-in codes can be sent',
+      });
+    }
+    for (const slot of ['PRIMARY', 'FALLBACK'] as const) {
+      if (!env[`AI_${slot}_API_KEY`]) continue;
+      for (const key of [`AI_${slot}_BASE_URL`, `AI_${slot}_TEXT_MODEL`] as const) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `is required with AI_${slot}_API_KEY`,
+          });
+        }
+      }
+    }
+    if (env.AI_FALLBACK_API_KEY && !env.AI_PRIMARY_API_KEY) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AI_PRIMARY_API_KEY'],
+        message: 'is required when a fallback provider is set (the fallback comes second)',
       });
     }
     if (env.RESEND_API_KEY && !env.EMAIL_FROM) {

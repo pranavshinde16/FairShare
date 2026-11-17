@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "repair:split-inputs": "tsx --env-file-if-exists=../../.env src/repair-split-inputs.ts"
+    "repair:split-inputs": "tsx --env-file-if-exists=../../.env src/repair-split-inputs.ts",
+    "eval:parse": "tsx --env-file-if-exists=../../.env src/modules/ai/eval/run.ts"
   },
   "dependencies": {
     "@hono/node-server": "catalog:",

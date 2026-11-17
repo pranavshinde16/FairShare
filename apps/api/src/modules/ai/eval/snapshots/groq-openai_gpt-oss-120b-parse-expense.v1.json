@@ -1,0 +1,3126 @@
+{
+  "provider": "groq",
+  "model": "openai/gpt-oss-120b",
+  "promptVersion": "parse-expense.v1",
+  "recordedAt": "2026-11-17T12:12:18.854Z",
+  "accuracy": {
+    "amount": 0.9619047619047619,
+    "payer": 0.9714285714285714,
+    "participants": 0.9047619047619048,
+    "method": 0.9714285714285714,
+    "values": 0.9619047619047619,
+    "date": 0.8461538461538461,
+    "unknown": 1
+  },
+  "answers": {
+    "en-01": {
+      "output": {
+        "amount": "2400",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-02": {
+      "output": {
+        "amount": "2400",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-03": {
+      "output": {
+        "amount": "450",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Taxi",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-04": {
+      "output": {
+        "amount": "1,250.50",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Groceries",
+        "category": "Groceries",
+        "notes": null
+      }
+    },
+    "en-05": {
+      "output": {
+        "amount": "600",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Priya"
+        },
+        "people": [
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "movie tickets",
+        "category": "Entertainment",
+        "notes": null
+      }
+    },
+    "en-06": {
+      "output": {
+        "amount": "3,200",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Dev"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "hotel",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-07": {
+      "error": "error"
+    },
+    "en-08": {
+      "output": {
+        "amount": "900",
+        "currency": "INR",
+        "date": "2026-11-16",
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Lunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-09": {
+      "output": {
+        "amount": "2.4k",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Petrol",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-10": {
+      "output": {
+        "amount": "5000",
+        "currency": "INR",
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Airbnb",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-11": {
+      "output": {
+        "amount": "1500",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Amit"
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "petrol",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-12": {
+      "output": {
+        "amount": "820",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Rahul"
+        },
+        "people": [
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Snacks",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-13": {
+      "output": {
+        "amount": "1100",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "me",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Pizza",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-14": {
+      "output": {
+        "amount": "650",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul Sharma",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Cab to airport",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-15": {
+      "output": {
+        "amount": "2,345",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Electricity bill",
+        "category": "Utilities",
+        "notes": null
+      }
+    },
+    "en-16": {
+      "output": {
+        "amount": "360",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "priya",
+            "isMe": false
+          },
+          {
+            "name": "dev",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Breakfast",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-17": {
+      "output": {
+        "amount": "4,999",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Neha"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "cake",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-18": {
+      "output": {
+        "amount": "240",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Ice cream",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-19": {
+      "output": {
+        "amount": "100",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Parking",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-20": {
+      "output": {
+        "amount": "1,200",
+        "currency": null,
+        "date": "2026-11-15",
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Movie",
+        "category": "Entertainment",
+        "notes": null
+      }
+    },
+    "en-21": {
+      "output": {
+        "amount": "500",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Rahul",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Ticket",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-22": {
+      "output": {
+        "amount": "2000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Birthday gift",
+        "category": "Gifts",
+        "notes": null
+      }
+    },
+    "en-23": {
+      "output": {
+        "amount": "3000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-24": {
+      "output": {
+        "amount": "6000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "exact",
+          "values": [
+            {
+              "name": "me",
+              "value": "4000"
+            },
+            {
+              "name": "Rahul",
+              "value": "2000"
+            }
+          ]
+        },
+        "description": "Hotel",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-25": {
+      "output": {
+        "amount": null,
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "exact",
+          "values": [
+            {
+              "name": "Priya",
+              "value": "600"
+            },
+            {
+              "name": "me",
+              "value": "400"
+            }
+          ]
+        },
+        "description": "Groceries",
+        "category": "Groceries",
+        "notes": null
+      }
+    },
+    "en-26": {
+      "output": {
+        "amount": "30000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "me",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "percent",
+          "values": [
+            {
+              "name": "me",
+              "value": "60"
+            },
+            {
+              "name": "Neha",
+              "value": "40"
+            }
+          ]
+        },
+        "description": "Rent",
+        "category": "Housing",
+        "notes": null
+      }
+    },
+    "en-27": {
+      "output": {
+        "amount": "4500",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "percent",
+          "values": [
+            {
+              "name": "Amit",
+              "value": "50%"
+            },
+            {
+              "name": "Karan",
+              "value": "25%"
+            },
+            {
+              "name": "me",
+              "value": "25%"
+            }
+          ]
+        },
+        "description": "Trip fuel",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-28": {
+      "error": "error"
+    },
+    "en-29": {
+      "output": {
+        "amount": "1800",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Karan",
+            "isMe": false
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "shares",
+          "values": [
+            {
+              "name": "Karan",
+              "value": "2"
+            },
+            {
+              "name": "Priya",
+              "value": "1"
+            },
+            {
+              "name": "me",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Drinks",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-30": {
+      "output": {
+        "amount": "4500",
+        "currency": null,
+        "date": "2026-11-14",
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Concert tickets",
+        "category": "Entertainment",
+        "notes": null
+      }
+    },
+    "en-31": {
+      "output": {
+        "amount": "750",
+        "currency": null,
+        "date": "2026-11-12",
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Lunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-32": {
+      "output": {
+        "amount": "2,100",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Priya"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "boat ride",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-33": {
+      "output": {
+        "amount": "640",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Karan",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Cab",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-34": {
+      "output": {
+        "amount": "1,350",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Dev"
+        },
+        "people": [
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-35": {
+      "output": {
+        "amount": "99.50",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Snacks",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-36": {
+      "output": {
+        "amount": "1,100",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Gas cylinder",
+        "category": "Utilities",
+        "notes": null
+      }
+    },
+    "en-37": {
+      "output": {
+        "amount": "300",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Neha"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Lunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "en-38": {
+      "output": {
+        "amount": "999",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Wifi",
+        "category": "Utilities",
+        "notes": null
+      }
+    },
+    "en-39": {
+      "output": {
+        "amount": "412",
+        "currency": null,
+        "date": "2026-11-14",
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Uber",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "en-40": {
+      "output": {
+        "amount": "1,500",
+        "currency": "INR",
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "exact",
+          "values": [
+            {
+              "name": "Priya",
+              "value": "500"
+            },
+            {
+              "name": "Dev",
+              "value": "500"
+            },
+            {
+              "name": "me",
+              "value": "500"
+            }
+          ]
+        },
+        "description": "Museum entry",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-01": {
+      "output": {
+        "amount": "2400",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-02": {
+      "output": {
+        "amount": "1500",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Rahul"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Petrol",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-03": {
+      "output": {
+        "amount": "1800",
+        "currency": null,
+        "date": "2026-11-15",
+        "payer": {
+          "kind": "person",
+          "name": "Priya"
+        },
+        "people": [
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-04": {
+      "output": {
+        "amount": "600",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Tea",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-05": {
+      "output": {
+        "amount": "120",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Auto",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-06": {
+      "output": {
+        "amount": "5000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Dev"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "hotel",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-07": {
+      "output": {
+        "amount": "2,200",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Neha"
+        },
+        "people": [
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "groceries",
+        "category": "Groceries",
+        "notes": null
+      }
+    },
+    "hi-08": {
+      "output": {
+        "amount": "900",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "movie tickets",
+        "category": "Entertainment",
+        "notes": null
+      }
+    },
+    "hi-09": {
+      "output": {
+        "amount": "450",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Amit"
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Cab",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-10": {
+      "output": {
+        "amount": "1100",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "pizza",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-11": {
+      "output": {
+        "amount": "30000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "percent",
+          "values": [
+            {
+              "name": "me",
+              "value": "60"
+            },
+            {
+              "name": "Neha",
+              "value": "40"
+            }
+          ]
+        },
+        "description": "Rent",
+        "category": "Housing",
+        "notes": null
+      }
+    },
+    "hi-12": {
+      "output": {
+        "amount": "1000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "exact",
+          "values": [
+            {
+              "name": "Priya",
+              "value": "700"
+            },
+            {
+              "name": "me",
+              "value": "300"
+            }
+          ]
+        },
+        "description": "Bill",
+        "category": null,
+        "notes": null
+      }
+    },
+    "hi-13": {
+      "output": {
+        "amount": "1200",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Karan"
+        },
+        "people": [
+          {
+            "name": "Karan",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Food",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-14": {
+      "output": {
+        "amount": "750",
+        "currency": null,
+        "date": "2026-11-14",
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Lunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-15": {
+      "output": {
+        "amount": "320",
+        "currency": null,
+        "date": "2026-11-16",
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Breakfast",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-16": {
+      "output": {
+        "amount": "250",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Priya"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Ticket",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-17": {
+      "output": {
+        "amount": "400",
+        "currency": null,
+        "description": "Recharge",
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Rahul",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "category": null,
+        "notes": null
+      }
+    },
+    "hi-18": {
+      "output": {
+        "amount": "3600",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-19": {
+      "output": {
+        "amount": "2k",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Petrol",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-20": {
+      "output": {
+        "amount": "1,500",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Neha"
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Flowers",
+        "category": "Gifts",
+        "notes": null
+      }
+    },
+    "hi-21": {
+      "output": {
+        "amount": "140",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Chai sutta",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-22": {
+      "output": {
+        "amount": "680",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Rahul"
+        },
+        "people": [
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Cab",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-23": {
+      "output": {
+        "amount": "24000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Dev"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Villa",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-24": {
+      "output": {
+        "amount": "1,999",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Swiggy order",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-25": {
+      "output": {
+        "amount": "900",
+        "currency": null,
+        "date": "2026-11-15",
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Food",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-26": {
+      "output": {
+        "amount": "1200",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "exact",
+          "values": [
+            {
+              "name": "Amit",
+              "value": "500"
+            },
+            {
+              "name": "me",
+              "value": "700"
+            }
+          ]
+        },
+        "description": "lunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-27": {
+      "output": {
+        "amount": "2,345",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Electricity bill",
+        "category": "Utilities",
+        "notes": null
+      }
+    },
+    "hi-28": {
+      "output": {
+        "amount": "860",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Karan"
+        },
+        "people": [
+          {
+            "name": "Karan",
+            "isMe": false
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": null,
+        "category": null,
+        "notes": null
+      }
+    },
+    "hi-29": {
+      "output": {
+        "amount": "1500",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Shopping",
+        "category": null,
+        "notes": null
+      }
+    },
+    "hi-30": {
+      "output": {
+        "amount": "2.5k",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Dev"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "cake",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-31": {
+      "output": {
+        "amount": null,
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Water bottle",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-32": {
+      "output": {
+        "amount": "1,240",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Priya"
+        },
+        "people": [
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "main",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Train ticket",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "hi-33": {
+      "output": {
+        "amount": null,
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "me",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "exact",
+          "values": [
+            {
+              "name": "me",
+              "value": "1000"
+            },
+            {
+              "name": "Rahul",
+              "value": "1000"
+            },
+            {
+              "name": "Dev",
+              "value": "1000"
+            }
+          ]
+        },
+        "description": null,
+        "category": null,
+        "notes": null
+      }
+    },
+    "hi-34": {
+      "output": {
+        "amount": "1800",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Amit"
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "shares",
+          "values": [
+            {
+              "name": "Amit",
+              "value": "2"
+            },
+            {
+              "name": "me",
+              "value": "1"
+            },
+            {
+              "name": "Karan",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Drinks",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "hi-35": {
+      "output": {
+        "amount": "3,450",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Neha"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Home supplies",
+        "category": "Household",
+        "notes": null
+      }
+    },
+    "edge-01": {
+      "output": {
+        "amount": null,
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-02": {
+      "output": {
+        "amount": null,
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "me",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "exact",
+          "values": [
+            {
+              "name": "Rahul",
+              "value": "600"
+            },
+            {
+              "name": "me",
+              "value": "400"
+            }
+          ]
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-03": {
+      "output": {
+        "amount": "2400",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-04": {
+      "output": {
+        "amount": "1,23,450",
+        "currency": "INR",
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Cab",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "edge-05": {
+      "output": {
+        "amount": "8,500",
+        "currency": "INR",
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Hotel",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "edge-06": {
+      "output": {
+        "amount": "450",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahull",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Lunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-07": {
+      "output": {
+        "amount": null,
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Neha"
+        },
+        "people": [],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": null,
+        "category": null,
+        "notes": null
+      }
+    },
+    "edge-08": {
+      "output": {
+        "amount": "1200",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": null,
+        "category": null,
+        "notes": null
+      }
+    },
+    "edge-09": {
+      "output": {
+        "amount": "2400",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-10": {
+      "output": {
+        "amount": "900",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha",
+            "isMe": true
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "snacks",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-11": {
+      "output": {
+        "amount": "30",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Karan Mehta",
+            "isMe": false
+          },
+          {
+            "name": "Amit Shah",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Tea",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-12": {
+      "output": {
+        "amount": "1,000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Priya"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "cab",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "edge-13": {
+      "output": {
+        "amount": "2,250.75",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "supplies",
+        "category": null,
+        "notes": null
+      }
+    },
+    "edge-14": {
+      "output": {
+        "amount": "1500",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "me",
+            "isMe": true
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "percent",
+          "values": [
+            {
+              "name": "me",
+              "value": "50 percent"
+            },
+            {
+              "name": "Dev",
+              "value": "25 percent"
+            },
+            {
+              "name": "Neha",
+              "value": "25 percent"
+            }
+          ]
+        },
+        "description": "Tickets",
+        "category": null,
+        "notes": null
+      }
+    },
+    "edge-15": {
+      "output": {
+        "amount": "3000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Amit"
+        },
+        "people": [
+          {
+            "name": "Amit",
+            "isMe": false
+          },
+          {
+            "name": "Karan",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-16": {
+      "output": {
+        "amount": "1,600",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Brunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-17": {
+      "output": {
+        "amount": "840",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Dev",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "books",
+        "category": "Books",
+        "notes": null
+      }
+    },
+    "edge-18": {
+      "output": {
+        "amount": null,
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Rahul"
+        },
+        "people": [],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Lunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-19": {
+      "output": {
+        "amount": "2000",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Guide fee",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "edge-20": {
+      "output": {
+        "amount": "1,200",
+        "currency": null,
+        "date": "2026-11-14",
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Bike rental",
+        "category": "Travel",
+        "notes": null
+      }
+    },
+    "edge-21": {
+      "output": {
+        "amount": "800",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Zara",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-22": {
+      "output": {
+        "amount": "500",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Karan"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Food",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-23": {
+      "output": {
+        "amount": "1,480",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Groceries",
+        "category": "Groceries",
+        "notes": null
+      }
+    },
+    "edge-24": {
+      "output": {
+        "amount": "650",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Amit",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "shares",
+          "values": [
+            {
+              "name": "me",
+              "value": "3"
+            },
+            {
+              "name": "Amit",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Water bill",
+        "category": "Utilities",
+        "notes": null
+      }
+    },
+    "edge-25": {
+      "output": {
+        "amount": "2,400",
+        "currency": null,
+        "date": "2026-11-15",
+        "payer": {
+          "kind": "person",
+          "name": "Priya"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Dinner",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-26": {
+      "output": {
+        "amount": "1,050",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "me",
+            "isMe": true
+          },
+          {
+            "name": "Rahul",
+            "isMe": false
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "lunch",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-27": {
+      "output": {
+        "amount": "5k",
+        "currency": "INR",
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Neha",
+            "isMe": false
+          },
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "deposit",
+        "category": "Housing",
+        "notes": null
+      }
+    },
+    "edge-28": {
+      "output": {
+        "amount": "210",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "unknown",
+          "name": null
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Priya",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Coffee",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-29": {
+      "output": {
+        "amount": "380",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "person",
+          "name": "Neha"
+        },
+        "people": [
+          {
+            "name": "Asha Kapoor",
+            "isMe": true
+          },
+          {
+            "name": "Dev",
+            "isMe": false
+          },
+          {
+            "name": "Neha",
+            "isMe": false
+          }
+        ],
+        "includesEveryone": false,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Popcorn",
+        "category": "Food",
+        "notes": null
+      }
+    },
+    "edge-30": {
+      "output": {
+        "amount": "1,750",
+        "currency": null,
+        "date": null,
+        "payer": {
+          "kind": "me",
+          "name": null
+        },
+        "people": [],
+        "includesEveryone": true,
+        "split": {
+          "method": "equal",
+          "values": null
+        },
+        "description": "Diwali sweets",
+        "category": "Food",
+        "notes": null
+      }
+    }
+  }
+}

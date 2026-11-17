@@ -17,7 +17,8 @@
     "generate:auth": "auth generate --config auth-schema.config.ts --output src/schema/auth.ts --yes && prettier --write src/schema/auth.ts",
     "migrate": "tsx --env-file-if-exists=../../.env src/scripts/migrate.ts",
     "seed": "tsx --env-file-if-exists=../../.env src/scripts/seed.ts",
-    "check-invariants": "tsx --env-file-if-exists=../../.env src/scripts/check-invariants.ts"
+    "check-invariants": "tsx --env-file-if-exists=../../.env src/scripts/check-invariants.ts",
+    "maintenance": "tsx --env-file-if-exists=../../.env src/scripts/maintenance.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

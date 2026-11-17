@@ -266,6 +266,14 @@ const MATRIX: Row[] = [
     expected: s(204, 404, 404, 404),
   },
 
+  // Typed entry: reads a sentence for a group I'm in, or for whichever of my groups it names.
+  {
+    route: 'POST /api/v1/ai/parse-expense',
+    path: () => '/api/v1/ai/parse-expense',
+    body: (g) => ({ text: 'Lunch 600 split equally', groupId: g.id, today: '2026-11-16' }),
+    expected: members(200),
+  },
+
   // People, friends and balances: only people I share an active group with.
   { route: 'GET /api/v1/people', path: () => '/api/v1/people', expected: anyone(200) },
   { route: 'GET /api/v1/friends', path: () => '/api/v1/friends', expected: anyone(200) },

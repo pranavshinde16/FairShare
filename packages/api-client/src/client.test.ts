@@ -461,6 +461,28 @@ describe('every endpoint method', () => {
     ['claims', (api) => api.claims(), 'GET', '/api/v1/claims', { items: [] }],
     ['claim', (api) => api.claim(ID), 'POST', `/api/v1/claims/${ID}`, { groupIds: [ID] }],
     ['dismissClaim', (api) => api.dismissClaim(ID), 'DELETE', `/api/v1/claims/${ID}`],
+    [
+      'parseExpense',
+      (api) => api.parseExpense({ text: 'dinner ka 2400', groupId: ID, today: '2026-11-16' }),
+      'POST',
+      '/api/v1/ai/parse-expense',
+      {
+        requestId: 7,
+        path: 'llm',
+        groupId: ID,
+        draft: {
+          amount: 240_000,
+          description: 'Dinner',
+          occurredOn: null,
+          payerId: ID,
+          splitMethod: 'equal',
+          split: null,
+        },
+        resolutions: [],
+        issues: [],
+      },
+      { text: 'dinner ka 2400', groupId: ID, today: '2026-11-16' },
+    ],
   ];
 
   for (const [name, call, method, path, response, body, ifMatch] of CASES) {

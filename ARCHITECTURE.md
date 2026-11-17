@@ -49,6 +49,7 @@ so a violation fails `pnpm lint` and CI.
 | `apps/api` `routes.ts`  | contracts, its service                                     | Business logic, SQL                                                   |
 | `apps/api` `service.ts` | core, repos, activity helper                               | HTTP concerns                                                         |
 | `apps/api` `repo.ts`    | db                                                         | Policy decisions, calculations                                        |
+| `apps/api` `modules/ai` | core, contracts, its repo, the groups repo                 | The transactions module or tables (it only drafts)                    |
 
 `packages/core` also compiles with no Node or DOM types, so `console`, `fetch` and `fs` are
 unavailable to it by construction. Time and seeds are passed in as arguments.
@@ -375,8 +376,62 @@ separate chunk, loaded only when configured.
     them.
   - From Home, the sentence picks its group and is handed over in memory (never in the address) to
     that group's form.
-- **Saving** is the normal create; nothing about typed entry writes anything else. The LLM path
-  (`POST /ai/parse-expense`) for low-confidence sentences comes later.
+- **Saving** is the normal create; nothing about typed entry writes anything else.
+
+### The LLM path (Phase 15)
+
+- **When:** only a sentence the rules can't fully read (low confidence) goes to the server, as
+  `POST /ai/parse-expense` `{text, groupId?, today}` (Blueprint 8.1). The bar shows "Reading it…";
+  the rules' reading is already in the form meanwhile.
+- **On the server** (`apps/api/src/modules/ai/service.ts`):
+  1. the rules run again, authoritative: a sentence they settle completely is answered
+     `path: 'rules'` with no model call (and isn't counted against any limit);
+  2. otherwise the providers are tried in order (`AI_PRIMARY_*`, then `AI_FALLBACK_*`), each with
+     the per-call timeout (`AI_TIMEOUT_MS`, 8 seconds): an error, timeout, 429 or an answer that
+     fails zod moves on to the next;
+  3. the first valid extraction (`LlmExpenseExtraction`, strings for every number) becomes a draft
+     through core's `draftFromExtraction`: amounts through `readAmount`, percentages through
+     `parsePercent`, names through `resolveName`, with a total added up from exact amounts when
+     none was written (`draftFromModel`);
+  4. nothing valid, AI off or the budget spent: `path: 'fallback'`, what the rules found with the
+     sentence as the description. Never a dead end (Blueprint 8.8).
+- **What the model is told** (prompt `parse-expense.v1`, versioned and logged): the sentence,
+  today, the group's currency and the writer's name. Never other members' names or any IDs (C7):
+  names come back as text and core matches them. No tools; the message is data, not instructions.
+- **Providers** (`modules/ai/provider.ts`): one interface (`generateStructured`, with `images`
+  reserved for receipts) and one implementation for any OpenAI-compatible API
+  (`providers/openai-compatible.ts`): Groq first, Cloudflare Workers AI second. Strict JSON Schema
+  output, or JSON mode with the schema in the prompt (`AI_*_SCHEMA_MODE`), and per-model extras
+  (`AI_*_EXTRA_PARAMS`). Model names, URLs and keys are environment variables, so a retired model
+  is a configuration change. Tests use `providers/fake.ts`; the end-to-end tests run the real
+  client against a local stand-in (`e2e/scripts/llm-stub.ts`).
+- **The answer** (`ParseResult`): the draft in the form's terms (`amount`, `description`,
+  `occurredOn`, `payerId`, `splitMethod`, `split` with settled people only), `resolutions` for
+  every name (resolved, ambiguous with `UserRef` candidates, unknown; each with its role and split
+  value) and `issues` (sums, an amount in another currency, a bad date). The web app applies it
+  with `applyParsed`: unsettled names become the same chips, now carrying their typed value, and
+  the fields it filled are highlighted. From Home the server also picks the group from the names
+  it found, and the read is handed to the form with the sentence, so it isn't read twice.
+- **Logged** in `ai_requests`, one row per provider call: provider, model, prompt version, the
+  sentence, tokens, cost, latency, outcome. A saved expense sends `aiRequestId`, which the create
+  checks is the person's own and stores with `source = 'ai_text'` (the acceptance rate is the share
+  of requests with an expense pointing back).
+- **Limits** (Blueprint 8.9): 10 model calls a minute per person (in memory) and 100 a day
+  (counted in `ai_requests` over 24 hours), answered 429 `AI_RATE_LIMITED` with `Retry-After`; the
+  web app says "Try again in a minute" and the rules' reading stays. Per provider, a daily token
+  cap (`AI_*_DAILY_TOKENS`, kept under the free tier) skips it for the rest of the UTC day; a
+  global spend budget (`AI_DAILY_BUDGET_MICROS`) stops all calls; `AI_ENABLED=false` is the kill
+  switch.
+- **Forgetting:** the sentence is cleared after 30 days by the nightly maintenance job
+  (`packages/db/src/maintenance.ts`) and at once when the person deletes their account. The
+  privacy notice says exactly this; `apps/api/src/privacy-notice.test.ts` keeps them in step.
+- **The boundary:** the AI module can't reach the transactions module or the transaction tables:
+  an ESLint rule and `apps/api/src/architecture.test.ts` (which also catches an inline disable).
+- **Evaluation** (`modules/ai/eval/`): 105 sentences (English, Hinglish, edge cases) with what a
+  correct reading gives, scored per field through `draftFromModel`. CI scores the golden answers
+  (must be 100%) and every recorded run in `eval/snapshots/` against the release gate: amounts
+  ≥ 95%, people ≥ 90%, payer ≥ 90%, split method ≥ 90%. `pnpm --filter @fairshare/api eval:parse`
+  runs it against the configured model and records a snapshot.
 
 ## Hardening
 
@@ -404,6 +459,7 @@ transaction:
 | `/api/health`, `GET /sign-in-options` | 60 a minute per client IP, together                        |
 | `/api/auth/*` (Better Auth)           | Its own per-IP limits, stricter on sign-in; set explicitly |
 | Sign-in codes                         | 3 per email address per 10 minutes                         |
+| Typed entry's model calls             | 10 a minute and 100 a day per user (`AI_RATE_LIMITED`)     |
 
 Over a limit: 429 `RATE_LIMITED` with `Retry-After`. The client IP comes from
 `CLIENT_IP_HEADERS`.
@@ -459,8 +515,9 @@ Settings. Each statement in the privacy notice describes what the code does; cha
   it and runs `scripts/smoke-test.sh`, the same check that runs against staging after a deploy.
   A separate job runs the end-to-end tests. One replica is required for now: the rate limits (the
   API's and Better Auth's) keep their counts in memory.
-- **Operations:** the nightly invariant check, nightly encrypted backups and the quarterly restore
-  test are GitHub Actions workflows, described in [docs/operations.md](docs/operations.md).
+- **Operations:** the nightly invariant check, nightly maintenance (forgetting typed sentences
+  after 30 days), nightly encrypted backups and the quarterly restore test are GitHub Actions
+  workflows, described in [docs/operations.md](docs/operations.md).
 - **Shutdown:** on SIGTERM the server stops accepting connections, finishes in-flight requests,
   closes the pool and flushes Sentry, or exits after 10 seconds regardless.
 
@@ -536,6 +593,10 @@ Issues found while reviewing the implementation plan, and the phase that resolve
 | A percent or shares split read back from Postgres serialized differently from the same split in a request (jsonb reorders each entry's keys), so an unchanged edit made a new version and an idempotent retry was refused | **Done:** `canonicalSnapshot` rebuilds every entry with fixed keys; core and API tests compare the serialized text                                                                                                                                                | 11       |
 | ISO 4217 gives IDR 2 decimals, but CLDR/Intl formats it with 0                                                                                                                                                            | **Done:** IDR stored with 0 decimals; a test keeps every currency in step with Intl                                                                                                                                                                               | 3        |
 | Claiming a placeholder repointed payer and share rows but not `split_input`, so an edit reopened with the placeholder, who isn't a member any more, and saving failed                                                     | **Done:** the claim renames it in every split input (`renameInSplit`) and bumps the version; an unchanged split keeps its stored shares; the pre-deploy step repairs older claims; the nightly check covers it (I12). See `docs/dev-log/fix-claim-split-input.md` | Fix      |
+| The parse result's draft was `CreateExpense.partial()`, but a payer line needs an amount, and the text often names the payer without one                                                                                  | **Done:** `ParsedExpense` with `payerId` and `splitMethod`; each name's resolution carries its role and its split value, so answering a chip fills it in                                                                                                          | 15       |
+| The plan's provider was Anthropic; the requirement is a free tier that doesn't train on users' sentences                                                                                                                  | **Done:** one OpenAI-compatible client for Groq (primary) and Cloudflare Workers AI (fallback); models, URLs and keys are environment variables                                                                                                                   | 15       |
+| A daily _cost_ budget can't protect a free tier (it costs nothing until it refuses)                                                                                                                                       | **Done:** a per-provider daily token cap besides the cost budget; past it the next provider is used                                                                                                                                                               | 15       |
+| The nightly job can't purge `input_text`: it runs as the read-only role                                                                                                                                                   | **Done:** a separate nightly maintenance job with a login in `fairshare_app`; account deletion clears the person's sentences at once                                                                                                                              | 15       |
 | "Phase 2" means both post-MVP features and the Contracts phase                                                                                                                                                            | Post-MVP features are called **v1.1** in this repo                                                                                                                                                                                                                | —        |
 | Library versions in the plan date from mid-2026                                                                                                                                                                           | Verified at install time; see "Version decisions"                                                                                                                                                                                                                 | 0        |
 

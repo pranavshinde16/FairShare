@@ -20,5 +20,6 @@ comes next.
 | 11    | [Advanced splits](phase-11-advanced-splits.md)                                      | Done        |
 | 12    | [Rule-based text entry](phase-12-rule-parsing.md)                                   | Done        |
 | 13    | [Hardening and launch readiness](phase-13-hardening.md)                             | In progress |
+| 15    | [AI expense entry, LLM path](phase-15-llm-entry.md)                                 | Done        |
 | —     | [Design: Classic restyle](design-classic.md)                                        | Done        |
 | —     | [Fix: claiming leaves split_input naming the placeholder](fix-claim-split-input.md) | Done        |

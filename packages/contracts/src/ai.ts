@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { IsoDate, Uuid } from './primitives';
-import { CreateExpense } from './transactions';
+import { Amount, IsoDate, Uuid } from './primitives';
+import { SplitInput, SplitMethod } from './split';
 import { UserRef } from './users';
 
 // ---- what the LLM returns ------------------------------------------------------------------------
@@ -81,19 +81,39 @@ export type ParseExpenseRequest = z.infer<typeof ParseExpenseRequest>;
 export const ParsePath = z.enum(['rules', 'llm', 'fallback']);
 export type ParsePath = z.infer<typeof ParsePath>;
 
-/** An expense form pre-filled from text: CreateExpense with every field optional. */
-export const ExpenseDraft = CreateExpense.partial();
-export type ExpenseDraft = z.infer<typeof ExpenseDraft>;
+/**
+ * The expense as read from the text, in the form's terms: only what the parser settled. A name
+ * it couldn't settle is left out of `split` (and `payerId`) and listed in `resolutions` instead.
+ *
+ * Not CreateExpense.partial() (the plan's sketch): the payer is known before the amount often
+ * enough ("Rahul paid for dinner"), and a payer line needs an amount.
+ */
+export const ParsedExpense = z.object({
+  amount: Amount.nullable(),
+  description: z.string().max(120).nullable(),
+  occurredOn: IsoDate.nullable(),
+  /** Who paid: the person typing unless the text named someone else (null while unsettled). */
+  payerId: Uuid.nullable(),
+  /** How the text says to split it, even while nobody in it is settled yet. */
+  splitMethod: SplitMethod,
+  /** The split with its settled people. Sums aren't checked here: issues say what's off. */
+  split: SplitInput.nullable(),
+});
+export type ParsedExpense = z.infer<typeof ParsedExpense>;
+
+const named = {
+  name: z.string(),
+  /** Where the text named them: as the payer, or as sharing the expense. */
+  role: z.enum(['payer', 'participant']),
+  /** Their amount, percentage or shares as written, for an exact, percent or shares split. */
+  value: z.string().max(40).nullable(),
+};
 
 /** How one name from the text was matched against the group's members. */
 export const NameResolution = z.discriminatedUnion('status', [
-  z.object({ name: z.string(), status: z.literal('resolved'), userId: Uuid }),
-  z.object({
-    name: z.string(),
-    status: z.literal('ambiguous'),
-    candidates: z.array(UserRef).min(2),
-  }),
-  z.object({ name: z.string(), status: z.literal('unknown') }),
+  z.object({ ...named, status: z.literal('resolved'), userId: Uuid }),
+  z.object({ ...named, status: z.literal('ambiguous'), candidates: z.array(UserRef).min(2) }),
+  z.object({ ...named, status: z.literal('unknown') }),
 ]);
 export type NameResolution = z.infer<typeof NameResolution>;
 
@@ -117,7 +137,7 @@ export const ParseResult = z.object({
   requestId: z.int().min(1).nullable(),
   path: ParsePath,
   groupId: Uuid.nullable(),
-  draft: ExpenseDraft,
+  draft: ParsedExpense,
   resolutions: z.array(NameResolution),
   issues: z.array(ParseIssue),
 });

@@ -306,20 +306,7 @@ export function draftFromExpense(
     method: 'exact' as const,
     amounts: expense.shares ?? [],
   };
-  const draft = emptySplit(split.method === 'equal' ? split.participants : []);
-  draft.method = split.method;
-  if (split.method === 'exact') {
-    draft.exact = Object.fromEntries(split.amounts.map((a) => [a.userId, text(a.amount)]));
-    draft.participants = split.amounts.map((a) => a.userId);
-  }
-  if (split.method === 'percent') {
-    draft.percent = Object.fromEntries(split.basisPoints.map((p) => [p.userId, percentText(p.bp)]));
-    draft.participants = split.basisPoints.map((p) => p.userId);
-  }
-  if (split.method === 'shares') {
-    draft.shares = Object.fromEntries(split.shares.map((s) => [s.userId, s.shares]));
-    draft.participants = split.shares.filter((s) => s.shares > 0).map((s) => s.userId);
-  }
+  const draft = splitDraftFrom(split, minorUnits);
   return {
     amountText: text(expense.amount),
     description: expense.description,
@@ -334,6 +321,26 @@ export function draftFromExpense(
           },
     split: draft,
   };
+}
+
+/** A split as the form edits it: its method's values as typed, and who's in. */
+export function splitDraftFrom(split: SplitInput, minorUnits: number): SplitDraft {
+  const text = (amount: number) => toDecimalString(amount, minorUnits);
+  const draft = emptySplit(split.method === 'equal' ? split.participants : []);
+  draft.method = split.method;
+  if (split.method === 'exact') {
+    draft.exact = Object.fromEntries(split.amounts.map((a) => [a.userId, text(a.amount)]));
+    draft.participants = split.amounts.map((a) => a.userId);
+  }
+  if (split.method === 'percent') {
+    draft.percent = Object.fromEntries(split.basisPoints.map((p) => [p.userId, percentText(p.bp)]));
+    draft.participants = split.basisPoints.map((p) => p.userId);
+  }
+  if (split.method === 'shares') {
+    draft.shares = Object.fromEntries(split.shares.map((s) => [s.userId, s.shares]));
+    draft.participants = split.shares.filter((s) => s.shares > 0).map((s) => s.userId);
+  }
+  return draft;
 }
 
 /**

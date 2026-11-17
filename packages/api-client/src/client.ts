@@ -15,6 +15,7 @@ import {
   InviteCreated,
   InvitePreview,
   Member,
+  ParseResult,
   PeopleList,
   Profile,
   SignInOptions,
@@ -30,6 +31,7 @@ import {
   type CreateExpense,
   type CreateSettlement,
   type CreateInvite,
+  type ParseExpenseRequest,
   type TransactionListQuery,
   type UpdateExpense,
   type UpdateSettlement,
@@ -162,6 +164,10 @@ export function createApiClient(options: ApiClientOptions) {
       request(ClaimResponse, `/api/v1/claims/${seg(placeholderId)}`, { method: 'POST' }),
     dismissClaim: (placeholderId: string) =>
       requestNoContent(`/api/v1/claims/${seg(placeholderId)}`, { method: 'DELETE' }),
+
+    /** Reads a sentence the rule-based parser couldn't fully read (Blueprint 8.1). */
+    parseExpense: (body: ParseExpenseRequest, signal?: AbortSignal) =>
+      request(ParseResult, '/api/v1/ai/parse-expense', { method: 'POST', body, signal }),
   };
 }
 

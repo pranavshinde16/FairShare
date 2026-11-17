@@ -5,6 +5,8 @@ import * as core from '@fairshare/core';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { z } from 'zod';
 import { TransactionSnapshot } from './activity';
+import type { LlmExpenseExtraction } from './ai';
+import { PARSE_ISSUE_CODES, type ParseIssue } from './ai';
 import type { Balances, Transfer } from './balances';
 import { Line } from './primitives';
 import type { SplitInput } from './split';
@@ -18,6 +20,14 @@ describe('contracts ⇄ core types', () => {
     expectTypeOf<z.output<typeof Line>>().toExtend<core.Line>();
     expectTypeOf<z.output<typeof TransactionSnapshot>>().toExtend<core.TransactionSnapshot>();
     expectTypeOf<core.TransactionSnapshot>().toExtend<z.input<typeof TransactionSnapshot>>();
+  });
+
+  it('the LLM’s extraction goes straight into core, and its issues fit ParseIssue', () => {
+    expectTypeOf<z.output<typeof LlmExpenseExtraction>>().toExtend<core.Extraction>();
+    expectTypeOf<core.Extraction>().toExtend<z.input<typeof LlmExpenseExtraction>>();
+    expectTypeOf<core.DraftIssue>().toExtend<ParseIssue>();
+    expectTypeOf<ParseIssue['code']>().toEqualTypeOf<core.DraftIssueCode>();
+    expect(PARSE_ISSUE_CODES.length).toBe(8);
   });
 
   it('core’s balance output fits the Balances response', () => {

@@ -25,7 +25,7 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
   const [draft] = useState(() => expenseDrafts.get(groupId));
   const [id] = useState(() => draft?.body.id ?? uuidv7());
   // A sentence typed on Home for this group, read into the form as it opens (not over a draft).
-  const [entryText] = useState(() => (draft ? undefined : peekHandoff(groupId)));
+  const [handoff] = useState(() => (draft ? undefined : peekHandoff(groupId)));
   useEffect(() => clearHandoff(groupId), [groupId]);
 
   const currency = currencies.data?.items.find((c) => c.code === group.data?.currency);
@@ -53,7 +53,10 @@ export function NewExpenseDialog({ groupId, onClose }: { groupId: string; onClos
           initial={initial}
           error={draft?.error ?? null}
           submitLabel="Save"
-          entry={{ ...(entryText && { text: entryText }) }}
+          entry={{
+            ...(handoff && { text: handoff.text }),
+            ...(handoff?.result && { result: handoff.result }),
+          }}
           onCancel={onClose}
           onSubmit={(body, typed) => {
             void save({ id, ...body }, typed);

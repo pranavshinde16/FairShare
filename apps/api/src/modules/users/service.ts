@@ -60,6 +60,7 @@ export function createUsersService(db: Db) {
      * - groups: leave where settled, stay as "Deleted user" where still owing or owed, hand on
      *   ownership, and a member.deleted entry in each (withdrawDeletedUser);
      * - the person: name "Deleted user", email, picture and UPI ID cleared, deleted_at set;
+     * - the sentences they typed for an AI provider to read;
      * - sign-in: the auth user, its sessions and linked accounts, and any pending sign-in code.
      *
      * Expenses stay, because other people's balances depend on them. Safe to run twice.
@@ -70,6 +71,7 @@ export function createUsersService(db: Db) {
         if (!person) return;
         if (!person.deletedAt) await withdrawDeletedUser(tx, userId);
         await repo.anonymizeUser(tx, userId);
+        await repo.forgetAiInputs(tx, userId);
         if (person.authUserId) await repo.deleteAuthUser(tx, person.authUserId);
         if (person.email) await repo.deletePendingCodes(tx, person.email);
       });

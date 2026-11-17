@@ -13,7 +13,7 @@ import {
   Profile,
   type SplitInput,
 } from '@fairshare/contracts';
-import { auth_user, auth_verification, groups, users } from '@fairshare/db';
+import { aiRequests, auth_user, auth_verification, groups, users } from '@fairshare/db';
 import { eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { z } from 'zod';
@@ -144,6 +144,28 @@ describe('DELETE /me', () => {
     expect((await deleteMe(me)).status).toBe(204);
 
     expect(await pending()).toHaveLength(0);
+  });
+
+  it('forgets the sentences they typed for an AI provider, keeping the counts', async () => {
+    const me = await person('farah');
+    const other = await person('gita');
+    const row = (userId: string) => ({
+      userId,
+      kind: 'parse_expense',
+      path: 'llm' as const,
+      outcome: 'ok' as const,
+      inputText: 'dinner ka 2400 maine diya',
+    });
+    await ctx.db.insert(aiRequests).values([row(me.id), row(me.id), row(other.id)]);
+
+    expect((await deleteMe(me)).status).toBe(204);
+
+    const texts = async (userId: string) =>
+      (await ctx.db.select().from(aiRequests).where(eq(aiRequests.userId, userId))).map(
+        (r) => r.inputText,
+      );
+    expect(await texts(me.id)).toEqual([null, null]);
+    expect(await texts(other.id)).toEqual(['dinner ka 2400 maine diya']);
   });
 
   it('needs a session', async () => {

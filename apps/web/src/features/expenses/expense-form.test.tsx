@@ -2,12 +2,14 @@
 // Component tests of the Add/Edit expense form and its split sheet (Blueprint 11 Phase 11): each
 // validation state, the shortcuts, and that what's sent is what was shown.
 
-import type { Group, UpdateExpense } from '@fairshare/contracts';
+import { ApiError } from '@fairshare/api-client';
+import type { Group, ParseResult, UpdateExpense } from '@fairshare/contracts';
 import { computeShares } from '@fairshare/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render as rtlRender, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { api } from '../../lib/api';
 import { ExpenseForm, type ExpenseDraft } from './expense-form';
 import { draftFromExpense, emptySplit } from './split-draft';
 
@@ -423,5 +425,126 @@ describe('typed entry (Blueprint 8)', () => {
       'Paid by Bilal Khan',
     );
     expect(screen.queryByText('Couldn’t fully understand. Please check the details.')).toBeNull();
+  });
+});
+
+describe('typed entry: the server’s read (Blueprint 8.1)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const read = (patch: Partial<ParseResult> = {}): ParseResult => ({
+    requestId: 41,
+    path: 'llm',
+    groupId: group.id,
+    draft: {
+      amount: 240_000,
+      description: 'Dinner',
+      occurredOn: null,
+      payerId: A,
+      splitMethod: 'equal',
+      split: { method: 'equal', participants: [A, B, C] },
+    },
+    resolutions: [],
+    issues: [],
+    ...patch,
+  });
+
+  function serverSetup(entry: { text?: string; result?: ParseResult } = {}) {
+    const onSubmit = vi.fn<(body: UpdateExpense, draft: ExpenseDraft) => void>();
+    const user = userEvent.setup();
+    render(
+      <ExpenseForm
+        id={SEED}
+        group={group}
+        meId={A}
+        minorUnits={2}
+        symbol="₹"
+        initial={blank}
+        submitLabel="Save"
+        entry={entry}
+        onSubmit={onSubmit}
+      />,
+    );
+    return { user, onSubmit, save: screen.getAllByRole('button', { name: 'Save' })[0]! };
+  }
+
+  it('asks the server when the rules can’t read it, then fills the form and links the save', async () => {
+    let answer!: (result: ParseResult) => void;
+    const parse = vi
+      .spyOn(api, 'parseExpense')
+      .mockReturnValue(new Promise<ParseResult>((resolve) => (answer = resolve)));
+    const { user, onSubmit, save } = serverSetup();
+
+    await user.type(
+      screen.getByLabelText('Type it'),
+      'dinner ka 2400 maine diya, sab mein barabar{Enter}',
+    );
+
+    expect(parse).toHaveBeenCalledWith({
+      text: 'dinner ka 2400 maine diya, sab mein barabar',
+      groupId: group.id,
+      today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) as string,
+    });
+    expect(screen.getByText('Reading it…')).toBeTruthy();
+
+    answer(read());
+    expect(await screen.findByDisplayValue('Dinner')).toBeTruthy();
+    expect(screen.queryByText('Reading it…')).toBeNull();
+    expect(screen.queryByText('Couldn’t fully understand. Please check the details.')).toBeNull();
+    expect(value(screen.getByLabelText('Amount'))).toBe('2,400.00');
+
+    await user.click(save);
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({
+      amount: 240_000,
+      description: 'Dinner',
+      split: { method: 'equal', participants: [A, B, C] },
+      aiRequestId: 41,
+    });
+  });
+
+  it('keeps the rules’ reading after a fallback, and says it couldn’t follow', async () => {
+    vi.spyOn(api, 'parseExpense').mockResolvedValue(read({ path: 'fallback', requestId: 9 }));
+    const { user, onSubmit } = serverSetup();
+
+    await user.type(screen.getByLabelText('Type it'), 'kal ka khana 2400{Enter}');
+
+    expect(
+      await screen.findByText('Couldn’t fully understand. Please check the details.'),
+    ).toBeTruthy();
+    expect(value(screen.getByLabelText('Description'))).toBe('kal ka khana 2400');
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[0]!);
+    expect(onSubmit.mock.calls[0]![0]).not.toHaveProperty('aiRequestId');
+  });
+
+  it('shows what the server flagged', async () => {
+    vi.spyOn(api, 'parseExpense').mockResolvedValue(
+      read({
+        issues: [{ code: 'PERCENT_SUM_INVALID', message: 'The percentages don’t add up to 100%.' }],
+      }),
+    );
+    const { user } = serverSetup();
+
+    await user.type(screen.getByLabelText('Type it'), 'rahul 60% mera 30%{Enter}');
+
+    const list = await screen.findByRole('list', { name: 'To check' });
+    expect(text(list)).toBe('The percentages don’t add up to 100%.');
+  });
+
+  it('says to try again in a minute when the person is over the limit', async () => {
+    vi.spyOn(api, 'parseExpense').mockRejectedValue(
+      new ApiError(429, 'AI_RATE_LIMITED', 'Too many sentences to read.'),
+    );
+    const { user } = serverSetup();
+
+    await user.type(screen.getByLabelText('Type it'), 'kal ka khana 2400{Enter}');
+
+    expect(await screen.findByText('Try again in a minute.')).toBeTruthy();
+  });
+
+  it('uses a read handed over from Home without asking again', () => {
+    const parse = vi.spyOn(api, 'parseExpense');
+    serverSetup({ text: 'dinner ka 2400 maine diya, sab mein barabar', result: read() });
+
+    expect(parse).not.toHaveBeenCalled();
+    expect(value(screen.getByLabelText('Description'))).toBe('Dinner');
   });
 });

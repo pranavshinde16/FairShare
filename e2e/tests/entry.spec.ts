@@ -117,3 +117,82 @@ test('typed on Home, it goes to the group the names belong to', async ({ page })
     page.getByRole('main').getByRole('link', { name: /you’re owed ₹450.00/i }),
   ).toBeVisible();
 });
+
+// ---- The LLM path (Blueprint 8.1): sentences the rules can't read go to the server, which reads
+// them with the provider (in these tests, the stand-in in scripts/llm-stub.ts).
+
+test('a Hinglish sentence is read on the server and saves', async ({ page }) => {
+  await start(page, 'hema');
+  const group = await createGroup(page, 'Goa Trip', ['Rahul', 'Priya', 'Dev']);
+  const form = await openAddExpense(page, group.id);
+
+  await form.getByLabel('Type it').fill('dinner ka 2400 maine diya, sab mein barabar');
+  await form.getByLabel('Type it').press('Enter');
+
+  await expect(form.getByLabel('Description')).toHaveValue('Dinner');
+  await expect(form.getByLabel('Amount')).toHaveValue('2,400.00');
+  await expect(form.getByText('Couldn’t fully understand. Please check the details.')).toBeHidden();
+  await expectShares(form, ['4 people', '₹600.00 / person'], '₹600.00 each · 4 people');
+  await form.getByRole('button', { name: 'Save' }).click();
+  await expect(form).toBeHidden();
+  await expect(page.getByRole('link', { name: /Dinner/ })).toBeVisible();
+});
+
+test('the server adds up a total from exact amounts, and the split shows them', async ({
+  page,
+}) => {
+  await start(page, 'indu');
+  const group = await createGroup(page, 'Office', ['Rahul']);
+  const form = await openAddExpense(page, group.id);
+
+  await form.getByLabel('Type it').fill('Rahul ka 600 aur mera 400, lunch');
+  await form.getByLabel('Type it').press('Enter');
+
+  await expect(form.getByLabel('Amount')).toHaveValue('1,000.00');
+  await expect(form.getByLabel('Description')).toHaveValue('Lunch');
+  await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText(
+    'split by exact amounts',
+  );
+  await form.getByRole('button', { name: 'Save' }).click();
+  await expect(form).toBeHidden();
+});
+
+test('typed on Home, the server reads it and picks the group', async ({ page }) => {
+  await start(page, 'jaya');
+  await createGroup(page, 'Flat', ['Dev']);
+  const goa = await createGroup(page, 'Goa Trip', ['Priya', 'Neha']);
+  await page.reload();
+
+  await page.getByLabel('Type an expense').fill('Priya ne cab ke 450 diye, sirf hum dono');
+  await page.getByLabel('Type an expense').press('Enter');
+
+  await expect(page).toHaveURL(new RegExp(`/groups/${goa.id}/expenses/new`));
+  const form = page.getByRole('dialog', { name: 'Add expense' });
+  await expect(form.getByLabel('Description')).toHaveValue('Cab');
+  await expect(form.getByLabel('Amount')).toHaveValue('450.00');
+  await expect(form.getByRole('button', { name: /^Paid by/ })).toContainText('Paid by Priya');
+  await form.getByRole('button', { name: 'Save' }).click();
+  await expect(form).toBeHidden();
+  // Priya paid ₹450 for the two of us: I owe her ₹225.
+  await expect(
+    page.getByRole('main').getByRole('link', { name: /you owe ₹225.00/i }),
+  ).toBeVisible();
+});
+
+test('when nothing can read it, the form keeps the sentence for the person to finish', async ({
+  page,
+}) => {
+  await start(page, 'kavya');
+  const group = await createGroup(page, 'Trip', ['Rahul']);
+  const form = await openAddExpense(page, group.id);
+
+  // The stand-in answers 500 for this one, as a provider that's down would.
+  await form.getByLabel('Type it').fill('kuch bhi 500 ka');
+  await form.getByLabel('Type it').press('Enter');
+
+  await expect(
+    form.getByText('Couldn’t fully understand. Please check the details.'),
+  ).toBeVisible();
+  await expect(form.getByLabel('Description')).toHaveValue('kuch bhi 500 ka');
+  await expect(form.getByLabel('Amount')).toHaveValue('500.00');
+});

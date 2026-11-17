@@ -15,6 +15,8 @@ import type { DomainUserResolver } from './modules/auth/domain-users';
 import { requireUser } from './modules/auth/require-user';
 import { signInOptionsRoutes } from './modules/auth/routes';
 import { activityRoutes } from './modules/activity/routes';
+import { aiRoutes } from './modules/ai/routes';
+import type { AiService } from './modules/ai/service';
 import type { ActivityService } from './modules/activity/service';
 import { balancesRoutes } from './modules/balances/routes';
 import type { BalancesService } from './modules/balances/service';
@@ -55,6 +57,8 @@ export type AppDeps = {
   transactions: TransactionsService;
   balances: BalancesService;
   activity: ActivityService;
+  /** Typed entry's server side (POST /ai/parse-expense). */
+  ai: AiService;
   /** The public invite preview: 30 a minute per client IP. */
   invitePreviewLimiter: RateLimiter;
   /** The other public routes (health, sign-in options): per client IP. */
@@ -107,6 +111,7 @@ export function createApp(deps: AppDeps) {
   signedIn.route('/', balancesRoutes(deps.balances));
   signedIn.route('/', activityRoutes(deps.activity));
   signedIn.route('/', claimsRoutes(deps.claims));
+  signedIn.route('/', aiRoutes(deps.ai));
   v1.route('/', signedIn);
   app.route('/api/v1', v1);
 

@@ -1,8 +1,8 @@
 // Drizzle queries for users. Every function takes the handle to run on: the pool, or a
 // transaction from withTx.
 
-import { auth_user, auth_verification, users, type Db, type Tx } from '@fairshare/db';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { aiRequests, auth_user, auth_verification, users, type Db, type Tx } from '@fairshare/db';
+import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 
 type Handle = Db | Tx;
 
@@ -109,6 +109,14 @@ export async function anonymizeUser(tx: Tx, userId: string): Promise<void> {
       deletedAt: sql`coalesce(${users.deletedAt}, now())`,
     })
     .where(eq(users.id, userId));
+}
+
+/** Forgets every sentence the person typed for an AI provider to read (ai_requests stays, for counts). */
+export async function forgetAiInputs(tx: Tx, userId: string): Promise<void> {
+  await tx
+    .update(aiRequests)
+    .set({ inputText: null })
+    .where(and(eq(aiRequests.userId, userId), isNotNull(aiRequests.inputText)));
 }
 
 /** Deletes an auth user. Its sessions and linked accounts go with it (ON DELETE CASCADE). */

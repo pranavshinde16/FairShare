@@ -53,6 +53,17 @@ export {
 
 // natural-language entry (Blueprint 8.2, 8.6)
 export { parseRules, type Doubt, type RuleParse, type RuleParseInput } from './parse/rules';
+export { readAmount } from './parse/amount';
+export {
+  draftFromExtraction,
+  extractionFromRules,
+  type DraftContext,
+  type DraftIssue,
+  type DraftIssueCode,
+  type Extraction,
+  type NamedResolution,
+  type ParsedDraft,
+} from './parse/draft';
 export {
   isSelf,
   normalizeName,

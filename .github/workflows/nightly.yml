@@ -42,6 +42,29 @@ jobs:
           test -n "$DATABASE_URL" || { echo "::error::Set the INVARIANTS_DATABASE_URL secret."; exit 1; }
           pnpm --filter @fairshare/db exec tsx src/scripts/check-invariants.ts
 
+  maintenance:
+    name: Maintenance
+    if: vars.MAINTENANCE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @fairshare/db...
+
+      # A login role in fairshare_app: forgets typed sentences older than 30 days (the privacy
+      # notice's promise). Prints counts only.
+      - name: Forget old data
+        env:
+          DATABASE_URL: ${{ secrets.MAINTENANCE_DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "::error::Set the MAINTENANCE_DATABASE_URL secret."; exit 1; }
+          pnpm --filter @fairshare/db exec tsx src/scripts/maintenance.ts
+
   backup:
     name: Database backup
     if: vars.BACKUPS_ENABLED == 'true'

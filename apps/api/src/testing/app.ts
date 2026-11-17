@@ -58,6 +58,7 @@ export function testApp(overrides: Partial<AppDeps> = {}) {
     transactions: needsDatabase('transactions'),
     balances: needsDatabase('balances'),
     activity: needsDatabase('activity'),
+    ai: needsDatabase('ai'),
     invitePreviewLimiter: { consume: () => ({ allowed: true }) },
     publicLimiter: { consume: () => ({ allowed: true }) },
     userLimiter: { consume: () => ({ allowed: true }) },
